@@ -13,38 +13,55 @@ export const once = false;
 
 export async function execute(interaction, client) {
     const { guild } = interaction;
-    if (!interaction.isChatInputCommand()) return;
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return await interaction.reply({ content: `${client.customEmojis.reactions.No} Command not found!`, flags: MessageFlags.Ephemeral });
 
-    if(command.commandData.developerOnly && !client.utils.DevPermissionCheck(interaction.user.id)) {
-        return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Developer Only`, `You do not have permission to use this command.`, { ephemeral: true });
-    }
-
-    if(!commandCooldown(interaction, command, client)) return;
-
-    // Bot Permissions
-    if(guild && command.botPermissions?.length > 0) {
-        const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.botPermissions, guild.members.me);
-        if (!hasPerms) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Missing Bot Permissions`, `I need the following permissions to execute this command:\n\`${missingPerms.flat().join(', ')}\``, { ephemeral: true });
-    }
-
-    // User Permissions
-    if (guild && command.commandData.userPermissions?.length > 0) {
-        const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.userPermissions, interaction.member);
-        if (!hasPerms) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Missing User Permissions`, `You need the following permissions to use this command:\n\`${missingPerms.flat().join(', ')}\``, { ephemeral: true });
-    }
-
-    try {
-        await command.execute(interaction, client);
-    } catch (error) {
-        client.utils.LogData(`Command Error: ${interaction.commandName}`, error.message, 'error');
-
-        if(interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: `${client.customEmojis.reactions.Warning} An error occurred while executing this command.`, flags: MessageFlags.Ephemeral });
-        } else {
-            await interaction.reply({ content: `${client.customEmojis.reactions.Warning} An error occurred while executing this command.`, flags: MessageFlags.Ephemeral });
+    if(interaction.isAutocomplete()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command || !command.autocomplete) return;
+        try {
+            await command.autocomplete(interaction, client);
+        } catch (error) {
+            client.utils.LogData(`Autocomplete Error: ${interaction.commandName}`, error.message, 'error');
         }
+    }
+
+
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command) return await interaction.reply({ content: `${client.customEmojis.reactions.No} Command not found!`, flags: MessageFlags.Ephemeral });
+
+        if(command.commandData.developerOnly && !client.utils.DevPermissionCheck(interaction.user.id)) {
+            return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Developer Only`, `You do not have permission to use this command.`, { ephemeral: true });
+        }
+
+        if(!commandCooldown(interaction, command, client)) return;
+
+        // Bot Permissions
+        if(guild && command.botPermissions?.length > 0) {
+            const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.botPermissions, guild.members.me);
+            if (!hasPerms) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Missing Bot Permissions`, `I need the following permissions to execute this command:\n\`${missingPerms.flat().join(', ')}\``, { ephemeral: true });
+        }
+
+        // User Permissions
+        if (guild && command.commandData.userPermissions?.length > 0) {
+            const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.userPermissions, interaction.member);
+            if (!hasPerms) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Missing User Permissions`, `You need the following permissions to use this command:\n\`${missingPerms.flat().join(', ')}\``, { ephemeral: true });
+        }
+
+        try {
+            await command.execute(interaction, client);
+        } catch (error) {
+            client.utils.LogData(`Command Error: ${interaction.commandName}`, error.message, 'error');
+
+            if(interaction.replied || interaction.deferred) {
+                await interaction.followUp({ content: `${client.customEmojis.reactions.Warning} An error occurred while executing this command.`, flags: MessageFlags.Ephemeral });
+            } else {
+                await interaction.reply({ content: `${client.customEmojis.reactions.Warning} An error occurred while executing this command.`, flags: MessageFlags.Ephemeral });
+            }
+        }
+
+        if(interaction.isMessageComponent()) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Component Error`, `This component is not functional yet.`, { ephemeral: true });
+        if(interaction.isModalSubmit()) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Modal Error`, `This modal is not functional yet.`, { ephemeral: true });
+
     }
 };
 
