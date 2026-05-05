@@ -1,34 +1,37 @@
 import fs from 'fs';
 import path from 'path';
 
+/**
+ * Checks the local package.json version against the latest GitHub repository version.
+ * @param {Function} LogData - The logging utility function
+ */
 export async function checkVersion(LogData) {
     try {
-        const packageJsonPath = path.resolve('./package.json');
-        const packageData = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-        const currentVersion = packageData.version;
+        
+        const pkgPath = path.resolve(process.cwd(), 'package.json');
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+        const localVersion = pkg.version;
 
-        if(!currentVersion) return LogData('Version Check', 'Current version not found in package.json.', 'error');
+        if (!localVersion) {
+            return LogData('Version Check', 'No version found in local package.json.', 'warning');
+        }
 
-        const repoPath = 'Dexvoo/Ovx';
-        const apiUrl = `https://api.github.com/repos/${repoPath}/releases/latest`;
-
-        const response = await fetch(apiUrl, {
-            headers: { 'User-Agent': 'MushroomBot-VersionCheck' }
+        const response = await fetch(`https://raw.githubusercontent.com/Dexvoo/Mushroom/main/package.json`, {
+            headers: { 'Cache-Control': 'no-cache' }
         });
 
-        if(!response.ok) return LogData('Version Check', `Failed to fetch latest release: ${response.status} ${response.statusText}`, 'error');
+        if (!response.ok) return LogData('Version Check', `Could not reach GitHub. Error ${response.status}: ${response.statusText}`, 'debug');
 
-        const data = await response.json();
+        const remotePkg = await response.json();
+        const remoteVersion = remotePkg.version; 
 
-        const remoteVersion = data.tag_name.replace(/^v/, '');
-
-        if(remoteVersion !== currentVersion) {
-            LogData('Version Check', `A new version of Mushroom Bot is available! Current: ${currentVersion}, Latest: ${remoteVersion}. Please update to the latest version.`, 'warning');
+        if (remoteVersion !== localVersion) {
+            LogData('Update Available!', `You are running v${localVersion}, but v${remoteVersion} is available on GitHub!`, 'warning');
         } else {
-            LogData('Version Check', `You are running the latest version of Mushroom Bot (v${currentVersion}).`, 'success');
+            LogData('Version Check', `You are running the latest version (v${localVersion}).`, 'success');
         }
 
     } catch (error) {
-        LogData('Version Check', `Error occurred while checking version: ${error.message}`, 'error');
+        LogData('Version Check', `Failed to verify version: ${error.message}`, 'error');
     }
-};
+}
