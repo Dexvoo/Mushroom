@@ -1,11 +1,15 @@
 import { ENV } from '../core/env.js';
 import enUS from '../locales/en-US.js';
 import esES from '../locales/es-ES.js';
+import fr from '../locales/fr.js';
+import de from '../locales/de.js';
 
 const locales = {
     'en-GB': enUS,
     'en-US': enUS,
     'es-ES': esES,
+    'fr-FR': fr,
+    'de-DE': de,
 };
 
 const defaultLocale = ENV.DEFAULT_LANGUAGE;

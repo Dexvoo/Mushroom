@@ -18,11 +18,11 @@ commandData.developerOnly = true;
  * @param { Client } client
  */
 export async function execute(interaction, client) {
+    
     const locale = interaction.locale;
-
     const ms = Date.now() - interaction.createdTimestamp;
     const api = Math.round(client.ws.ping);
-
+    
     const title = client.utils.Translate('ping.title', locale);
     const description = client.utils.Translate('ping.description', locale, { ms, api });
 

@@ -1,7 +1,6 @@
 import { ChatInputCommandInteraction, GuildMember, GuildChannel, ThreadChannel, PermissionsBitField } from 'discord.js';
-import Client from '../core/client.js';
+import { LogData } from './logger.js';
 import { ENV } from '../core/env.js';
-
 /**
  * Checks if a user/bot has the required permissions in a channel
  *
@@ -52,7 +51,7 @@ function PermissionCheck(interaction, permissions, member, client) {
  */
 function DevPermissionCheck(userId) {
     if (ENV.DEVELOPER_IDS.length === 0) {
-        client.utils.LogData('Developer Permission Check', 'No developer IDs defined in environment variables.', 'warning');
+        LogData('Developer Permission Check', 'No developer IDs defined in environment variables.', 'warning');
         return false;
     }
 

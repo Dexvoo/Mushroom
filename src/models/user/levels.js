@@ -46,21 +46,4 @@ const UserLevelsSchema = new Schema({
   dailyStreak: { type: Number, default: 0 },
 });
 
-/**
- * @typedef {Object} VoteType
- * @property {string} userId - The ID of the user who voted.
- * @property {number} votes - The number of votes the user has cast.
- * @property {Date} createdAt - The timestamp when this document was created.
- * @property {Date} updatedAt - The timestamp when this document was last updated.
- */
-// Vote Schema
-const VoteSchema = new Schema(
-  {
-    userId: { type: String, required: true },
-    votes: { type: Number, default: 0 },
-  },
-  { timestamps: true }
-);
-
 export const UserLevels = model('User-Levels', UserLevelsSchema);
-export const UserVotes = model('User-Votes', VoteSchema);
