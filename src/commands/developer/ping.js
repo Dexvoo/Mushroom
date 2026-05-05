@@ -18,5 +18,13 @@ commandData.developerOnly = true;
  * @param { Client } client
  */
 export async function execute(interaction, client) {
-    client.utils.Embed(interaction, 'DarkPurple', `${client.customEmojis.basic.Ping} Pong!`, `Latency: ${Date.now() - interaction.createdTimestamp}ms\nAPI Latency: ${Math.round(client.ws.ping)}ms`, { ephemeral: true });
+    const locale = interaction.locale;
+
+    const ms = Date.now() - interaction.createdTimestamp;
+    const api = Math.round(client.ws.ping);
+
+    const title = client.utils.Translate('ping.title', locale);
+    const description = client.utils.Translate('ping.description', locale, { ms, api });
+
+    client.utils.Embed(interaction, 'DarkPurple', title, description, { ephemeral: true });
 };

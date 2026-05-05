@@ -4,6 +4,7 @@ import * as Embeds from '../utils/embed.js';
 import * as ConsoleLogs from '../utils/logger.js'; 
 import * as Timestamps from '../utils/timestamps.js';
 import * as Permissions from '../utils/permissions.js';
+import * as I18n from '../utils/i18n.js'; 
 
 class MushroomClient extends Client {
     constructor(options) {
@@ -15,9 +16,10 @@ class MushroomClient extends Client {
          *  LogData: typeof ConsoleLogs.LogData,
          *  Embed: typeof Embeds.Embed,
          *  Timestamp: typeof Timestamps.Timestamp,
-         *  ShortTimestamp
+         *  ShortTimestamp: typeof Timestamps.ShortTimestamp,
          *  PermissionCheck: typeof Permissions.PermissionCheck,
-         *  DevPermissionCheck: typeof Permissions.DevPermissionCheck
+         *  DevPermissionCheck: typeof Permissions.DevPermissionCheck,
+         *  Translate: typeof I18n.Translate
          * }}
          */
 
@@ -25,7 +27,8 @@ class MushroomClient extends Client {
             ...ConsoleLogs,
             ...Embeds,
             ...Timestamps,
-            ...Permissions
+            ...Permissions,
+            ...I18n
         };
 
         this.customEmojis = emojis;

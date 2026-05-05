@@ -10,6 +10,8 @@ try {
 const requiredEnvVariables =[
     'MONGO_URI',
 
+    'DEFAULT_LANGUAGE',
+
     'DEVELOPER_MODE',
     'DEV_GUILD_ID',
 
@@ -30,6 +32,8 @@ if (missingEnvVariables.length > 0) {
 
 export const ENV = {
     MONGO_URI: process.env.MONGO_URI,
+
+    DEFAULT_LANGUAGE: process.env.DEFAULT_LANGUAGE || 'en-GB',
 
     DEVELOPER_MODE: process.env.DEVELOPER_MODE === 'true',
     DEV_GUILD_ID: process.env.DEV_GUILD_ID,

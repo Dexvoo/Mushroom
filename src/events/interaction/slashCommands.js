@@ -27,10 +27,14 @@ export async function execute(interaction, client) {
 
     if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
-        if (!command) return await interaction.reply({ content: `${client.customEmojis.reactions.No} Command not found!`, flags: MessageFlags.Ephemeral });
+        if (!command) {
+            const msg = client.utils.Translate('errors.noCommand', interaction.locale);
+            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true });
+        }
 
         if(command.commandData.developerOnly && !client.utils.DevPermissionCheck(interaction.user.id)) {
-            return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Developer Only`, `You do not have permission to use this command.`, { ephemeral: true });
+            const msg = client.utils.Translate('errors.developerOnly', interaction.locale);
+            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true });
         }
 
         if(!commandCooldown(interaction, command, client)) return;
@@ -38,18 +42,28 @@ export async function execute(interaction, client) {
         // Bot Permissions
         if(guild && command.botPermissions?.length > 0) {
             const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.botPermissions, guild.members.me);
-            if (!hasPerms) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Missing Bot Permissions`, `I need the following permissions to execute this command:\n\`${missingPerms.flat().join(', ')}\``, { ephemeral: true });
+            if (!hasPerms) {
+                const msg = client.utils.Translate('errors.missingBotPerms', interaction.locale, { perms: missingPerms.flat().join(', ') });
+                return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true }); 
+            }
         }
 
         // User Permissions
         if (guild && command.commandData.userPermissions?.length > 0) {
             const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.userPermissions, interaction.member);
-            if (!hasPerms) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Missing User Permissions`, `You need the following permissions to use this command:\n\`${missingPerms.flat().join(', ')}\``, { ephemeral: true });
+            if (!hasPerms) {
+                const msg = client.utils.Translate('errors.missingUserPerms', interaction.locale, { perms: missingPerms.flat().join(', ') });
+                return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true });
+            }
         }
 
         try {
             await command.execute(interaction, client);
         } catch (error) {
+
+            // TODO: log errors with webhook to a private channel for better visibility and debugging, instead of just console logging.
+
+            
             client.utils.LogData(`Command Error: ${interaction.commandName}`, error.message, 'error');
 
             if(interaction.replied || interaction.deferred) {
@@ -59,8 +73,8 @@ export async function execute(interaction, client) {
             }
         }
 
-        if(interaction.isMessageComponent()) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Component Error`, `This component is not functional yet.`, { ephemeral: true });
-        if(interaction.isModalSubmit()) return client.utils.Embed(interaction, 'Red', `${client.customEmojis.reactions.Warning} Modal Error`, `This modal is not functional yet.`, { ephemeral: true });
+        if(interaction.isMessageComponent()) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `This component is not functional yet.`, { ephemeral: true });
+        if(interaction.isModalSubmit()) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `This modal is not functional yet.`, { ephemeral: true });
 
     }
 };
@@ -76,8 +90,11 @@ function commandCooldown(interaction, command, client) {
     const { commandName, user } = interaction;
     if (cooldowns.has('Command', user.id, commandName)) {
         const timeLeft = cooldowns.getRemaining('Command', user.id, commandName);
+        const locale = interaction.locale;
 
-        client.utils.Embed(interaction, 'Red', `Command Cooldown`, `\`${commandName}\` ${client.utils.Timestamp(timeLeft)}`, { ephemeral: true });
+        const msg = client.utils.Translate('errors.cooldown', locale, { command: commandName, time: client.utils.Timestamp(timeLeft) });
+
+        client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true });
         return false;
     }
 
