@@ -24,7 +24,7 @@ export async function execute(channel) {
     };
 
     const botPermissions = [ PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks ];
-    const [ hasPermissions, missingPermissions ] = client.utils.PermissionCheck(logChannel, botPermissions, guild.members.me, client);
+    const [ hasPermissions, missingPermissions ] = client.utils.PermissionCheck(logChannel, botPermissions, guild.members.me);
     if(!hasPermissions) {
         await Logs_Cache.setType(guild.id, 'channel', { enabled: false, channelId: null });
         return client.utils.LogData('Channel Deleted', `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`, 'error');

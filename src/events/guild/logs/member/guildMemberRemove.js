@@ -24,7 +24,7 @@ export async function execute(member) {
     };
 
     const botPermissions = [ PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks ];
-    const [ hasPermissions, missingPermissions ] = client.utils.PermissionCheck(logChannel, botPermissions, guild.members.me, client);
+    const [ hasPermissions, missingPermissions ] = client.utils.PermissionCheck(logChannel, botPermissions, guild.members.me);
     if(!hasPermissions) {
         await Logs_Cache.setType(guild.id, 'member', { enabled: false, channelId: null });
         return client.utils.LogData('Member Left', `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`, 'error');
@@ -42,6 +42,7 @@ export async function execute(member) {
     const footerText = `UID: ${member.id}`;
 
     const embed = await client.utils.Embed(logChannel, 'Red', title, description, { timestamp: true, footer: { text: footerText }, author: member.user }).catch((err) => {
+        client.utils.LogData('Member Left', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');
         return null;
     });
 

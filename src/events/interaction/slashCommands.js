@@ -40,7 +40,7 @@ export async function execute(interaction, client) {
         if(!commandCooldown(interaction, command, client)) return;
 
         // Bot Permissions
-        if(guild && command.botPermissions?.length > 0) {
+        if(guild && command.commandData.botPermissions?.length > 0) {
             const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.botPermissions, guild.members.me);
             if (!hasPerms) {
                 const msg = client.utils.Translate('errors.missingBotPerms', interaction.locale, { perms: missingPerms.flat().join(', ') });

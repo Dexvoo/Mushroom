@@ -1,4 +1,5 @@
 import { ChatInputCommandInteraction, GuildMember, GuildChannel, ThreadChannel, PermissionsBitField } from 'discord.js';
+import Client from '../core/client.js'
 import { LogData } from './logger.js';
 import { ENV } from '../core/env.js';
 /**
@@ -11,8 +12,8 @@ import { ENV } from '../core/env.js';
  * @throws {Error} If invalid parameters are provided
  */
 
-function PermissionCheck(interaction, permissions, member, client) {
-    if (!interaction || !permissions || !client) {
+function PermissionCheck(interaction, permissions, member) {
+    if (!interaction || !permissions) {
         throw new Error('Invalid parameters provided to PermissionCheck');
     }
 
