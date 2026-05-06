@@ -4,6 +4,7 @@ import Client from '../../../../core/client.js';
 
 export const name = Events.MessageDelete;
 export const once = false;
+export const description = 'Guild Message Delete Logs';
 
 /**
  * @param {Message & { client: Client }} message
@@ -70,12 +71,7 @@ export async function execute(message) {
     
     const embed = await client.utils.Embed(logChannel, 'Red', title, description, { timestamp: true, footer: { text: footerText }, author, files }).catch((err) => {
         client.utils.LogData('Message Deleted', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');
+        // TODO: Add error logging for failed embed creation
         return null;
     });
-
-    if(!embed) {
-
-        // TODO: Add error logging for failed embed creation
-        client.utils.LogData('Message Deleted', `Guild: ${guild.name} | Failed to create embed`, 'error');
-    }
 };

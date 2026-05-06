@@ -19,9 +19,9 @@ export default async function refreshCommands(client) {
         const guildId = ENV.DEV_GUILD_ID;
 
         if(!guildId || guildId === 'none') {
-            await rest.put(Routes.applicationCommands(applicationId), { body: commands })
+            await rest.put(Routes.applicationCommands(applicationId), { body: commands });
         } else {
-            await rest.put(Routes.applicationGuildCommands(applicationId, guildId), { body: commands })
+            await rest.put(Routes.applicationGuildCommands(applicationId, guildId), { body: commands });
         }
 
         client.utils.LogData('Command Refresh', 'Successfully reloaded application (/) commands.', 'success');

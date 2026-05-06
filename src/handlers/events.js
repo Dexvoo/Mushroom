@@ -35,6 +35,6 @@ export default async function loadEvents(client, dir) {
         } else {
             client.on(event.name, (...args) => event.execute(...args, client));
         }
-        client.utils.LogData('Event Loaded', `Loaded event: ${file.name}`, 'success');
+        client.utils.LogData(file.name, `${event.description || 'PLEASE ADD A DESCRIPTION FOR THE EVENT | PLEASE ADD A DESCRIPTION FOR THE EVENT | PLEASE ADD A DESCRIPTION FOR THE EVENT | PLEASE ADD A DESCRIPTION FOR THE EVENT | '}`, 'success');
     }
 }

@@ -5,6 +5,7 @@ const cooldowns = new CooldownManager();
 
 export const name = Events.InteractionCreate;
 export const once = false;
+export const description = 'Registering Slash Commands / Autocomplete';
 
 /**
  * @param { ChatInputCommandInteraction } interaction

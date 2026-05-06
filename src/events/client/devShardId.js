@@ -5,6 +5,7 @@ import { ENV } from '../../core/env.js';
 
 export const name = Events.ClientReady;
 export const once = true;
+export const description = 'Storing Shard ID for Dev Server';
 
 /**
  * @param { Client } client

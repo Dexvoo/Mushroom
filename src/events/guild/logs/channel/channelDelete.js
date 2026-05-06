@@ -4,6 +4,7 @@ import Client from '../../../../core/client.js';
 
 export const name = Events.ChannelDelete;
 export const once = false;
+export const description = 'Guild Channel Delete Logs';
 
 /**
  * @param {GuildChannel & { client: Client }} channel
@@ -55,12 +56,7 @@ export async function execute(channel) {
 
     const embed = await client.utils.Embed(logChannel, 'Red', title, `#${channel.name} | ${executor ? executor : 'Unknown User'}`, { timestamp: true, footer: { text: footerText } }).catch((err) => {
         client.utils.LogData('Channel Deleted', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');
-        return null;
-    });
-
-    if(!embed) {
-
         // TODO: Add error logging for failed embed creation
-        client.utils.LogData('Channel Deleted', `Guild: ${guild.name} | Failed to create embed`, 'error');
-    }
+        return;
+    });
 };

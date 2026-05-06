@@ -4,6 +4,7 @@ import Client from '../../../../core/client.js';
 
 export const name = Events.GuildMemberAdd;
 export const once = false;
+export const description = 'Guild Member Add Logs';
 
 /**
  * @param {GuildMember & { client: Client }} member
@@ -41,12 +42,7 @@ export async function execute(member) {
 
     const embed = await client.utils.Embed(logChannel, 'Green', title, description, { timestamp: true, footer: { text: footerText }, author: member.user }).catch((err) => {
         client.utils.LogData('Member Joined', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');
-        return null;
-    });
-
-    if(!embed) {
-
         // TODO: Add error logging for failed embed creation
-        client.utils.LogData('Member Joined', `Guild: ${guild.name} | Failed to create embed`, 'error');
-    }
+        return;
+    });
 };

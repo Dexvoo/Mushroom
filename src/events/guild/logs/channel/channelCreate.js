@@ -4,6 +4,7 @@ import Client from '../../../../core/client.js';
 
 export const name = Events.ChannelCreate;
 export const once = false;
+export const description = 'Guild Channel Create Logs';
 
 /**
  * @param {GuildChannel & { client: Client }} channel
@@ -56,12 +57,7 @@ export async function execute(channel) {
 
     const embed = await client.utils.Embed(logChannel, 'Green', title, `${channel} | ${executor ? executor : 'Unknown Tag'}`, { timestamp: true, footer: { text: footerText } }).catch((err) => {
         client.utils.LogData('Channel Created', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');
-        return null;
-    });
-
-    if(!embed) {
-
         // TODO: Add error logging for failed embed creation
-        client.utils.LogData('Channel Created', `Guild: ${guild.name} | Failed to create embed`, 'error');
-    }
+        return;
+    });
 };
