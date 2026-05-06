@@ -31,24 +31,28 @@ export async function execute(channel) {
     }
 
 
-    let executor = 'Unknown Tag'
-    let username = 'Unknown Username'
+    let executor = null;
+    let username = 'Unknown';
     if(guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
+        
+        // Waiting for discord push to audit logs
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
         const fetchedLogs = await guild.fetchAuditLogs({
             limit: 1,
             type: AuditLogEvent.ChannelCreate
         });
 
-        const channelLog = fetchedLogs.entries.first();
+        const channelLog = fetchedLogs.entries.find(entry => entry.targetId === channel.id);
 
-        if(channelLog && channelLog.targetId === channel.id) {
-            executor = channelLog.executor
-            username = channelLog.executor.username
+        if(channelLog) {
+            executor = channelLog.executor;
+            username = channelLog.executor.username;
         }
     }
 
     const title = client.utils.Translate('logs.channelCreate', guild.preferredLocale, { username });
-    const footerText = `${username !== 'Unknown Username' ? `UID: ${executor.id} | ` : ''}CID: ${channel.id}`
+    const footerText = `CID: ${channel.id} | ${username !== 'Unknown' ? `UID: ${executor.id}` : ''}`;
 
     const embed = await client.utils.Embed(logChannel, 'Green', title, `${channel} | ${executor ? executor : 'Unknown Tag'}`, { timestamp: true, footer: { text: footerText } }).catch((err) => {
         client.utils.LogData('Channel Created', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');

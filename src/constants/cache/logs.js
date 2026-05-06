@@ -2,7 +2,9 @@ import { LogsConfig } from '../../models/guild/logs.js';
 import NodeCache from 'node-cache';
 import { LogData } from '../../utils/logger.js';
 
-const logsConfigType = LogsConfig.schema.obj;
+/**
+ * @typedef {import('../../models/guild/logs.js').LogsConfigType} LogsConfigType
+ */
 class LogsCache {
     /**
      * @private
@@ -18,7 +20,7 @@ class LogsCache {
     /**
      * Fetches the log configuration for a guild, using the cache if available.
      * @param {string} guildId - The ID of the guild.
-     * @return {Promise<import('../../models/guild/logs.js').LogsConfigType>} The log configuration.
+     * @return {Promise<LogsConfigType>} The log configuration.
      */
     async get(guildId) {
         try {
@@ -44,8 +46,8 @@ class LogsCache {
     /**
      * Updates the main logs config and instantly updates the cache.
      * @param {string} guildId - The ID of the guild.
-     * @param {Object} updates - The fields to update.
-     * @return {Promise<LogsConfig>} The updated log configuration.
+     * @param {Partial<LogsConfigType>} updates - The fields to update.
+     * @return {Promise<void>} The updated log configuration.
      */
     async set(guildId, updates) {
         try {
@@ -67,10 +69,10 @@ class LogsCache {
 
     /**
      * Updates a specific sub-category (like 'message', 'join', 'leave') and updates cache.
-     * @param {string} guildId - The ID of the guild.
-     * @param {string} type - The category to update (e.g., 'message', 'channel').
-     * @param {Object} newData - The new data for this category.
-     * @return {Promise<import('../../models/guild/logs.js').LogsConfigType>}
+     * @param {string} guildId
+     * @param {keyof LogsConfigType} type
+     * @param {Partial<LogsConfigType[keyof LogsConfigType]>} newData - The new data for this category.
+     * @return {Promise<LogsConfigType>}
      */
     async setType(guildId, type, newData) {
         try {
@@ -93,8 +95,8 @@ class LogsCache {
     /**
      * Deletes/unsets a specific log category from the DB and updates the cache.
      * @param {string} guildId 
-     * @param {string} type 
-     * @returns {Promise<import('../../models/guild/logs.js').LogsConfigType>}
+     * @param {keyof LogsConfigType} type
+     * @returns {Promise<LogsConfigType>}
      */
     async deleteType(guildId, type) {
         try {

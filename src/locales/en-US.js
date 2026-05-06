@@ -6,6 +6,10 @@ export default {
     logs: {
         channelCreate: 'Channel Created by @{username}',
         channelDelete: 'Channel Deleted by @{username}',
+        guildMemberAdd: 'Member Joined',
+        guildMemberAddDescription: '{member} | #{position} \nCreated: {longTimestamp} ({shortTimestamp})',
+        guildMemberRemove: 'Member Joined',
+        guildMemberRemoveDescription: '{member}\nJoined: {longTimestamp} ({shortTimestamp})\nRoles: {roles}'
     },
     errors: {
         title: `⚠️ Error`,

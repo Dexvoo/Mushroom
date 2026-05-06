@@ -4,7 +4,8 @@ import * as Embeds from '../utils/embed.js';
 import * as ConsoleLogs from '../utils/logger.js'; 
 import * as Timestamps from '../utils/timestamps.js';
 import * as Permissions from '../utils/permissions.js';
-import * as I18n from '../utils/i18n.js'; 
+import * as I18n from '../utils/i18n.js';
+import * as math from '../utils/math.js';
 
 class MushroomClient extends Client {
     constructor(options) {
@@ -19,7 +20,8 @@ class MushroomClient extends Client {
          *  ShortTimestamp: typeof Timestamps.ShortTimestamp,
          *  PermissionCheck: typeof Permissions.PermissionCheck,
          *  DevPermissionCheck: typeof Permissions.DevPermissionCheck,
-         *  Translate: typeof I18n.Translate
+         *  Translate: typeof I18n.Translate,
+         *  getOrdinalSuffix: typeof math.getOrdinalSuffix
          * }}
          */
 
@@ -28,7 +30,8 @@ class MushroomClient extends Client {
             ...Embeds,
             ...Timestamps,
             ...Permissions,
-            ...I18n
+            ...I18n,
+            ...math
         };
 
         this.customEmojis = emojis;

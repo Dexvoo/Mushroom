@@ -7,17 +7,18 @@ import { BaseInteraction, EmbedBuilder, GuildMember, TextChannel, User, Colors, 
  * @param { string } title - The title of the embed.
  * @param { string } description - The description of the embed.
  * @param { object } [options={}] Optional parameters.
- * @param { import('discord.js').APIEmbedField[] [ options.fields=[] ] } fields - The fields of the embed.
- * @param { boolean [ options.ephemeral=true ] } ephemeral - Whether the message should be ephemeral (only for interactions).
- * @param { ActionRowBuilder[] [ options.components=[] ] } components - The components (buttons, select menus) to include in the message.
- * @param { AttachmentBuilder[] [ options.files=[] ] } files - The files to attach to the message.
- * @param { import('discord.js'.EmbedFooterOptions) } [ options.footer ] - The footer of the embed.
- * @param { Boolean } [ options.timestamp ] timestamp
+ * @param { import('discord.js').APIEmbedField[] } [options.fields=[]] - The fields of the embed.
+ * @param { boolean } [options.ephemeral=true] - Whether the message should be ephemeral (only for interactions).
+ * @param { ActionRowBuilder[] } [options.components=[]] - The components (buttons, select menus) to include in the message.
+ * @param { AttachmentBuilder[] }[options.files=[]] - The files to attach to the message.
+ * @param { import('discord.js').EmbedFooterOptions } [options.footer] - The footer of the embed.
+ * @param { boolean }[options.timestamp] - timestamp
+ * @param { GuildMember } [options.author] - author
  * @returns { Promise<Message | void> } The sent message, or void if the target is not an interaction.
  */
 async function Embed(target, colour, title, description, options = {}) {
 	const { client } = target
-	const { fields = [], ephemeral = true, components = [], files =[], footer = null, timestamp = false } = options;
+	const { fields = [], ephemeral = true, components = [], files =[], footer = null, timestamp = false, author = false } = options;
 
 	if(!target) {
         client.utils.LogData('Embed Utility', 'No target provided for embed.', 'error');
@@ -42,6 +43,9 @@ async function Embed(target, colour, title, description, options = {}) {
 	if(timestamp) {
 		embed.setTimestamp();
 	}
+	if(author) {
+		embed.setAuthor({ name: author.user.username, iconURL: author.user.displayAvatarURL({ size: 512, extension: 'png' }), })
+	}
 
 
 	try {
@@ -61,7 +65,7 @@ async function Embed(target, colour, title, description, options = {}) {
 		if(error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.CannotSendMessagesToThisUser) {
 			console.warn(`Could not send embed to ${target.tag || target.id} - DMs are closed.`);
 		} else {
-			console.error(`Failed to send embed to ${target.tag || target.id}:`, error);
+			console.error(error);
 		}
 	}
 };
