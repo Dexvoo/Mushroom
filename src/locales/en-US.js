@@ -3,6 +3,10 @@ export default {
         title: '🏓 Pong!',
         description: 'Latency: {ms}ms\nAPI Latency: {api}ms'
     },
+    logs: {
+        channelCreate: 'Channel Created by @{username}',
+        channelDelete: 'Channel Deleted by @{username}',
+    },
     errors: {
         title: `⚠️ Error`,
         noCommand: 'Command not found!',

@@ -1,7 +1,8 @@
-import { LogsConfig } from '../../models/guild/logs.js'; // Adjust path if you split the files!
+import { LogsConfig } from '../../models/guild/logs.js';
 import NodeCache from 'node-cache';
 import { LogData } from '../../utils/logger.js';
 
+const logsConfigType = LogsConfig.schema.obj;
 class LogsCache {
     /**
      * @private
@@ -17,7 +18,7 @@ class LogsCache {
     /**
      * Fetches the log configuration for a guild, using the cache if available.
      * @param {string} guildId - The ID of the guild.
-     * @return {Promise<Object>} The log configuration.
+     * @return {Promise<import('../../models/guild/logs.js').LogsConfigType>} The log configuration.
      */
     async get(guildId) {
         try {
@@ -44,7 +45,7 @@ class LogsCache {
      * Updates the main logs config and instantly updates the cache.
      * @param {string} guildId - The ID of the guild.
      * @param {Object} updates - The fields to update.
-     * @return {Promise<Object>} The updated log configuration.
+     * @return {Promise<LogsConfig>} The updated log configuration.
      */
     async set(guildId, updates) {
         try {
@@ -69,7 +70,7 @@ class LogsCache {
      * @param {string} guildId - The ID of the guild.
      * @param {string} type - The category to update (e.g., 'message', 'channel').
      * @param {Object} newData - The new data for this category.
-     * @return {Promise<Object>}
+     * @return {Promise<import('../../models/guild/logs.js').LogsConfigType>}
      */
     async setType(guildId, type, newData) {
         try {
@@ -93,7 +94,7 @@ class LogsCache {
      * Deletes/unsets a specific log category from the DB and updates the cache.
      * @param {string} guildId 
      * @param {string} type 
-     * @returns {Promise<Object>}
+     * @returns {Promise<import('../../models/guild/logs.js').LogsConfigType>}
      */
     async deleteType(guildId, type) {
         try {

@@ -1,21 +1,23 @@
-import { BaseInteraction, EmbedBuilder, GuildMember, TextChannel, User, Colors, DiscordAPIError, RESTJSONErrorCodes, MessageFlags, ActionRowBuilder, AttachmentBuilder } from 'discord.js';
+import { BaseInteraction, EmbedBuilder, GuildMember, TextChannel, User, Colors, DiscordAPIError, RESTJSONErrorCodes, MessageFlags, ActionRowBuilder, AttachmentBuilder, Message } from 'discord.js';
 
 /**
  * Create and send an embed message.
  * @param { BaseInteraction | TextChannel | User | GuildMember } target - The target to send the embed to.
- * @param { Colors } colour - The colour of the embed.
+ * @param { keyof typeof Colors } colour - The colour of the embed.
  * @param { string } title - The title of the embed.
- * @param { string } description - The description of the embed.\
+ * @param { string } description - The description of the embed.
  * @param { object } [options={}] Optional parameters.
- * @param { import('discord.js').APIEmbedField[] [ Options.fields=[] ] } fields - The fields of the embed.
- * @param { boolean [ Options.ephemeral=true ] } ephemeral - Whether the message should be ephemeral (only for interactions).
- * @param { ActionRowBuilder[] [ Options.components=[] ] } components - The components (buttons, select menus) to include in the message.
- * @param { AttachmentBuilder[] [ Options.files=[] ] } files - The files to attach to the message.
+ * @param { import('discord.js').APIEmbedField[] [ options.fields=[] ] } fields - The fields of the embed.
+ * @param { boolean [ options.ephemeral=true ] } ephemeral - Whether the message should be ephemeral (only for interactions).
+ * @param { ActionRowBuilder[] [ options.components=[] ] } components - The components (buttons, select menus) to include in the message.
+ * @param { AttachmentBuilder[] [ options.files=[] ] } files - The files to attach to the message.
+ * @param { import('discord.js'.EmbedFooterOptions) } [ options.footer ] - The footer of the embed.
+ * @param { Boolean } [ options.timestamp ] timestamp
  * @returns { Promise<Message | void> } The sent message, or void if the target is not an interaction.
  */
 async function Embed(target, colour, title, description, options = {}) {
 	const { client } = target
-	const { fields = [], ephemeral = true, components = [], files =[] } = options;
+	const { fields = [], ephemeral = true, components = [], files =[], footer = null, timestamp = false } = options;
 
 	if(!target) {
         client.utils.LogData('Embed Utility', 'No target provided for embed.', 'error');
@@ -32,6 +34,15 @@ async function Embed(target, colour, title, description, options = {}) {
 		.setTitle(title)
 		.setDescription(description)
 		.addFields(fields);
+
+	if(footer) {
+		embed.setFooter(footer);
+	}
+
+	if(timestamp) {
+		embed.setTimestamp();
+	}
+
 
 	try {
 		if(target instanceof BaseInteraction) {
