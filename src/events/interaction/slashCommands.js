@@ -29,12 +29,12 @@ export async function execute(interaction, client) {
         const command = client.commands.get(interaction.commandName);
         if (!command) {
             const msg = client.utils.Translate('errors.noCommand', interaction.locale);
-            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true });
+            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
         }
 
         if(command.commandData.developerOnly && !client.utils.DevPermissionCheck(interaction.user.id)) {
             const msg = client.utils.Translate('errors.developerOnly', interaction.locale);
-            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true });
+            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
         }
 
         if(!commandCooldown(interaction, command, client)) return;
@@ -44,7 +44,7 @@ export async function execute(interaction, client) {
             const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.botPermissions, guild.members.me);
             if (!hasPerms) {
                 const msg = client.utils.Translate('errors.missingBotPerms', interaction.locale, { perms: missingPerms.flat().join(', ') });
-                return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true }); 
+                return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] }); 
             }
         }
 
@@ -53,7 +53,7 @@ export async function execute(interaction, client) {
             const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.userPermissions, interaction.member);
             if (!hasPerms) {
                 const msg = client.utils.Translate('errors.missingUserPerms', interaction.locale, { perms: missingPerms.flat().join(', ') });
-                return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true });
+                return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
             }
         }
 
@@ -73,8 +73,8 @@ export async function execute(interaction, client) {
             }
         }
 
-        if(interaction.isMessageComponent()) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `This component is not functional yet.`, { ephemeral: true });
-        if(interaction.isModalSubmit()) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `This modal is not functional yet.`, { ephemeral: true });
+        if(interaction.isMessageComponent()) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `This component is not functional yet.`, { flags: [ MessageFlags.Ephemeral ] });
+        if(interaction.isModalSubmit()) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `This modal is not functional yet.`, { flags: [ MessageFlags.Ephemeral ] });
 
     }
 };
@@ -94,7 +94,7 @@ function commandCooldown(interaction, command, client) {
 
         const msg = client.utils.Translate('errors.cooldown', locale, { command: commandName, time: client.utils.Timestamp(timeLeft) });
 
-        client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { ephemeral: true });
+        client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
         return false;
     }
 

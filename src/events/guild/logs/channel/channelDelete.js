@@ -38,7 +38,7 @@ export async function execute(channel) {
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         const fetchedLogs = await guild.fetchAuditLogs({
-            limit: 1,
+            limit: 5,
             type: AuditLogEvent.ChannelDelete
         });
 

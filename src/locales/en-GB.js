@@ -8,8 +8,12 @@ export default {
         channelDelete: 'Channel Deleted by @{username}',
         guildMemberAdd: 'Member Joined',
         guildMemberAddDescription: '{member} | #{position} \nCreated: {longTimestamp} ({shortTimestamp})',
-        guildMemberRemove: 'Member Joined',
-        guildMemberRemoveDescription: '{member}\nJoined: {longTimestamp} ({shortTimestamp})\nRoles: {roles}'
+        guildMemberRemove: 'Member Left',
+        guildMemberRemoveDescription: '{member}\nJoined: {longTimestamp} ({shortTimestamp})\nRoles: {roles}',
+        messageDelete: {
+            title: 'Messaged Deleted in #{channel}',
+            noContent: `No text content`
+        },
     },
     errors: {
         title: `⚠️ Error`,

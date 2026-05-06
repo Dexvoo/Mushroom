@@ -39,7 +39,8 @@ export async function execute(member) {
 
     const footerText = `UID: ${member.id}`;
 
-    const embed = await client.utils.Embed(logChannel, 'Green', title, description, { timestamp: true, footer: { text: footerText }, author: member }).catch((err) => {
+    const embed = await client.utils.Embed(logChannel, 'Green', title, description, { timestamp: true, footer: { text: footerText }, author: member.user }).catch((err) => {
+        console.log(err)
         return null;
     });
 
