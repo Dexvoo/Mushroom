@@ -22,6 +22,12 @@ const requiredEnvVariables =[
     'BOT_APPLICATION_ID_DEV',
 
     'DEVELOPER_IDS',
+
+    'COMMAND_CID',
+    'JOIN_GUID_CID',
+    'LEAVE_GUILD_CID',
+    'USER_LEVEL_CID',
+    'VOTE_CID',
 ];
 
 const missingEnvVariables = requiredEnvVariables.filter((envVar) => !process.env[envVar]);
@@ -45,4 +51,10 @@ export const ENV = {
     BOT_APPLICATION_ID_DEV: process.env.BOT_APPLICATION_ID_DEV,
     
     DEVELOPER_IDS: process.env.DEVELOPER_IDS ? process.env.DEVELOPER_IDS.split(',').map(id => id.trim()) : [],
+
+    COMMAND_CID: process.env.COMMAND_CID,
+    JOIN_GUID_CID: process.env.JOIN_GUID_CID,
+    LEAVE_GUILD_CID: process.env.LEAVE_GUILD_CID,
+    USER_LEVEL_CID: process.env.USER_LEVEL_CID,
+    VOTE_CID: process.env.VOTE_CID,
 };

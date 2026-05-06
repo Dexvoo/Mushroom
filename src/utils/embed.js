@@ -1,5 +1,7 @@
 import { BaseInteraction, EmbedBuilder, GuildMember, TextChannel, User, Colors, DiscordAPIError, RESTJSONErrorCodes, MessageFlags, ActionRowBuilder, AttachmentBuilder, Message, Collection, Attachment } from 'discord.js';
-
+import Client from '../core/client.js';
+import { ENV } from '../core/env.js';
+import Global_Cache from '../constants/global.js';
 
 /**
  * Create and send an embed message.
@@ -69,4 +71,49 @@ async function Embed(target, colour, title, description, options = {}) {
 	}
 };
 
-export { Embed };
+
+/**
+ * Sends an embed log to the specified log channel based on the type of log.
+ * @param {'command' | 'joinGuild' | 'leaveGuild' | 'userLevel' | 'vote' } type - types of logs
+ * @param {Client} client - discord client
+ * @param {EmbedBuilder} embed - The embed to send
+ */
+async function DevEmbed(type, client, embed) {
+	if(!type) throw new Error('No type provided.');
+	if (!client) throw new Error('No interaction provided.');
+  	if (!embed) throw new Error('No embed provided.');
+
+	const typesOfLogs = {
+    	command: ENV.COMMAND_CID,
+    	joinGuild: ENV.JOIN_GUID_CID,
+    	leaveGuild: ENV.LEAVE_GUILD_CID,
+    	userLevel: ENV.USER_LEVEL_CID,
+    	vote: ENV.VOTE_CID,
+  	};
+
+	const currentLogChannelId = typesOfLogs[type];
+	if(!currentLogChannelId) throw new Error(`No log channel found for ${type}`);
+
+	try {
+		await client.shard.broadcastEval(async (ShardClient, { embed, channelId, guildId }) => {
+			const guild = ShardClient.guilds.cache.get(guildId);
+			if (!guild) return console.error(`Guild with ID ${guildId} not found.`);
+
+			const channel = guild.channels.cache.get(channelId);
+			if(!channel) return;
+
+			await channel.send({ embeds: [embed] });
+		}, { context: {
+				embed: embed, 
+				channelId: currentLogChannelId,
+				guildId: ENV.DEV_GUILD_ID
+			},
+			shard: Global_Cache.DevSID,
+		});
+	} catch (error) {
+		console.error(error);
+		
+	}
+};
+
+export { Embed, DevEmbed };

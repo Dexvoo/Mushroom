@@ -34,7 +34,7 @@ const LogChannelSchema = new Schema(
  */
 const LogsConfigSchema = new Schema(
   {
-    guildId: { type: String, required: true, unique: true },
+    guildId: { type: String, required: true, unique: true, index: true },
     message: LogChannelSchema,
     channel: LogChannelSchema,
     join: LogChannelSchema,

@@ -1,9 +1,9 @@
-import { ChatInputCommandInteraction, ApplicationCommand, Embed, EmbedBuilder, MessageFlags } from 'discord.js';
+import { ChatInputCommandInteraction, ApplicationCommand, Embed, EmbedBuilder, MessageFlags, Events } from 'discord.js';
 import Client from '../../core/client.js';
 import { CooldownManager, CooldownType } from '../../constants/cooldowns.js';
 const cooldowns = new CooldownManager();
 
-export const name = 'interactionCreate';
+export const name = Events.InteractionCreate;
 export const once = false;
 
 /**

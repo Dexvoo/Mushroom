@@ -30,7 +30,7 @@ const { Schema, model } = mongoose;
  */
 
 const LevelConfigSchema = new Schema({
-  guildId: { type: String, required: true },
+  guildId: { type: String, required: true, index: true },
   enabled: { type: Boolean, default: false },
   channelId: { type: String, default: null },
   blacklisted: {

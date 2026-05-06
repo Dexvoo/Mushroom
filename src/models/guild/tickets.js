@@ -14,7 +14,7 @@ const { Schema, model } = mongoose;
  * @property {number} lastTicketId
  */
 const TicketConfigSchema = new Schema({
-  guildId: { type: String, required: true },
+  guildId: { type: String, required: true, index: true },
   enabled: { type: Boolean, default: true },
   setupChannelId: { type: String, required: true },
   ticketCategoryId: { type: String, required: true },
@@ -26,7 +26,7 @@ const TicketConfigSchema = new Schema({
 });
 
 const TicketInstanceSchema = new Schema({
-  guildId: { type: String, required: true },
+  guildId: { type: String, required: true, index: true },
   memberId: { type: String, required: true },
   ticketId: { type: String, required: true },
   channelId: { type: String, required: true },

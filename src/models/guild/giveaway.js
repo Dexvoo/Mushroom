@@ -18,7 +18,7 @@ const { Schema, model } = mongoose;
 
 const GiveawaySchema = new Schema(
   {
-    guildId: { type: String, required: true },
+    guildId: { type: String, required: true, index: true },
     messageId: { type: String, required: true, unique: true },
     channelId: { type: String, required: true },
     prize: { type: String, required: true },

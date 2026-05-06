@@ -5,7 +5,7 @@ import refreshCommands from './handlers/refresh.js';
 import Client from './core/client.js';
 import mongoose from 'mongoose';
 import { ENV } from './core/env.js';
-import { checkVersion } from './Utils/versionCheck.js';
+import { checkVersion } from './utils/versionCheck.js';
 
 const client = new Client({
     intents: [

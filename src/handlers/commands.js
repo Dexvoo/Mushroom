@@ -18,15 +18,19 @@ export default async function loadCommands(client, dir) {
         if (file.isDirectory()) {
             await loadCommands(client, fullPath);
         } else if (file.name.endsWith('.js')) {
-            const command = await import(pathToFileURL(fullPath).href);
+            try {
+                const command = await import(pathToFileURL(fullPath).href);
 
-            if(!command.execute) {
-                client.utils.LogData('Command Load Error', `Failed to load command at ${fullPath}: Missing execute function`, 'error');
-                continue;
+                if(!command.execute) {
+                    client.utils.LogData('Command Load Error', `Failed to load command at ${fullPath}: Missing execute function`, 'error');
+                    continue;
+                }
+
+                client.commands.set(command.commandData.name, command);
+                client.utils.LogData(command.commandData.name, command.commandData.description, 'success');
+            } catch (error) {
+                client.utils.LogData(`Command Handler`,`Error has been found ${error}`, 'error');
             }
-
-            client.commands.set(command.commandData.name, command);
-            client.utils.LogData(command.commandData.name, command.commandData.description, 'success');
         }
     }
 }
