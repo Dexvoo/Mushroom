@@ -1,7 +1,7 @@
 /**
  * @param {Number} n - Number
  */
-function getOrdinalSuffix(n) {
+function GetOrdinalSuffix(n) {
   const lastDigit = n % 10;
   const lastTwoDigits = n % 100;
   if (lastDigit === 1 && lastTwoDigits !== 11) return 'st';
@@ -10,4 +10,4 @@ function getOrdinalSuffix(n) {
   return 'th';
 }
 
-export { getOrdinalSuffix };
+export { GetOrdinalSuffix };

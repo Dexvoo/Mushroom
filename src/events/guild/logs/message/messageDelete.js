@@ -59,18 +59,19 @@ export async function execute(message) {
 
 
     const attachments = message.attachments.map((attachment) => attachment.proxyURL).join('\n');
-    const deletedText = `-# ${content ? content.substring(0, 2000) : client.utils.Translate('logs.messageDelete.noContent', guild.preferredLocale)}`
+    const deletedText = `-# ${content ? client.utils.Truncate(content, 3900) : client.utils.Translate('logs.messageDelete.noContent', guild.preferredLocale)}`
 
     const title = client.utils.Translate('logs.messageDelete.title', guild.preferredLocale, { channel: channel.name });
-    const description = `${channel} | ${executor ? executor : 'Unknown Tag'}\n${deletedText}${attachments ? `\n### Attachments:\n` : ``}`;
+    const description = `${channel} | ${executor ? executor : 'Unknown Tag'}\n${deletedText}`;
     const footerText = `MID: ${message.id} | ${username !== 'Unknown' ? `UID: ${author.id}` : ''}`;
 
     const files = message.attachments.map(attachment => {
-            return new AttachmentBuilder(attachment.url, { name: attachment.name });
-        });
+        return new AttachmentBuilder(attachment.url, { name: attachment.name });
+    });
     
     const embed = await client.utils.Embed(logChannel, 'Red', title, description, { timestamp: true, footer: { text: footerText }, author, files }).catch((err) => {
-        client.utils.LogData('Message Deleted', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');
+        console.error(err)
+        // client.utils.LogData('Message Deleted', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');
         // TODO: Add error logging for failed embed creation
         return null;
     });

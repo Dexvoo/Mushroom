@@ -31,7 +31,7 @@ export async function execute(member) {
         return client.utils.LogData('Member Joined', `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`, 'error');
     }
 
-    const position = `${guild.memberCount}${client.utils.getOrdinalSuffix(guild.memberCount)}`;
+    const position = `${guild.memberCount}${client.utils.GetOrdinalSuffix(guild.memberCount)}`;
     const longTimestamp = `${client.utils.Timestamp(member.user.createdAt, 'F')}`;
     const shortTimestamp = `${client.utils.Timestamp(member.user.createdAt, 'R')}`;
     
