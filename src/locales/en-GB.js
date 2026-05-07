@@ -14,6 +14,8 @@ export default {
             title: 'Messaged Deleted in #{channel}',
             noContent: `No text content`
         },
+        roleCreate: 'Role Created by @{username}',
+        roleDelete: 'Role Deleted by @{username}',
         voice: {
             joined: 'Member Joined Voice Channel',
             left: `Member Left Voice Channel`,
