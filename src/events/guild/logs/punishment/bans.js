@@ -34,13 +34,36 @@ export async function execute(ban) {
         await Logs_Cache.setType(guild.id, 'punishment', { enabled: false, channelId: null });
         return client.utils.LogData('Member Banned', `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`, 'error');
     }
+
+    let executor = null;
+    let username = 'Unknown';
+    if(guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
+        
+        // Waiting for discord push to audit logs
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const fetchedLogs = await guild.fetchAuditLogs({
+            limit: 5,
+            type: AuditLogEvent.MemberBanAdd
+        });
+
+        const deletionLog = fetchedLogs.entries.find(entry => entry.target?.id === user.id && Date.now() - entry.createdTimestamp < 5000);
+
+        if(deletionLog) {
+            executor = deletionLog.executor;
+            username = deletionLog.executor.username;
+        } else {
+            executor = user;
+            username = user.username;
+        }
+    }
     
     const title = client.utils.Translate('logs.punishment.banTitle', guild.preferredLocale);
-    const description = client.utils.Translate('logs.punishment.banDescription', guild.preferredLocale, { user, reason });
+    const description = client.utils.Translate('logs.punishment.banDescription', guild.preferredLocale, { user, reason, moderator: executor });
 
     const footerText = `UID: ${user.id}`;
 
-    const embed = await client.utils.Embed(logChannel, 'Red', title, description, { timestamp: true, footer: { text: footerText }, author: user }).catch((err) => {
+    const embed = await client.utils.Embed(logChannel, 'Red', title, description, { timestamp: true, footer: { text: footerText } }).catch((err) => {
         client.utils.LogData('Member Banned', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');
         // TODO: Add error logging for failed embed creation
         return;

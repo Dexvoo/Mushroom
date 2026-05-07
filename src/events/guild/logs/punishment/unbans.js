@@ -31,8 +31,32 @@ export async function execute(ban) {
         return client.utils.LogData('Member Banned', `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`, 'error');
     }
     
+
+    let executor = null;
+    let username = 'Unknown';
+    if(guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
+        
+        // Waiting for discord push to audit logs
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const fetchedLogs = await guild.fetchAuditLogs({
+            limit: 5,
+            type: AuditLogEvent.MemberBanRemove
+        });
+
+        const deletionLog = fetchedLogs.entries.find(entry => entry.target?.id === user.id && Date.now() - entry.createdTimestamp < 5000);
+
+        if(deletionLog) {
+            executor = deletionLog.executor;
+            username = deletionLog.executor.username;
+        } else {
+            executor = user;
+            username = user.username;
+        }
+    }
+
     const title = client.utils.Translate('logs.punishment.unbanTitle', guild.preferredLocale);
-    const description = client.utils.Translate('logs.punishment.unbanDescription', guild.preferredLocale, { user, reason });
+    const description = client.utils.Translate('logs.punishment.unbanDescription', guild.preferredLocale, { user, reason, moderator: executor });
 
     const footerText = `UID: ${user.id}`;
 

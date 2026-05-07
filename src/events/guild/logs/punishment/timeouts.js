@@ -60,10 +60,9 @@ export async function execute(oldMember, newMember) {
 
     const footerText = `UID: ${user.id}`;
     if(newMember.communicationDisabledUntilTimestamp === null) {
-        // removed
         const title = client.utils.Translate('logs.punishment.RemovedTimeoutTitle', guild.preferredLocale);
-        const description = client.utils.Translate('logs.punishment.RemovedTimeoutDescription', guild.preferredLocale, { user });
-        return client.utils.Embed(logChannel, 'DarkerGrey', title, description, { timestamp: true, footer: { text: footerText }, author: user, moderator: executor }).catch((err) => {
+        const description = client.utils.Translate('logs.punishment.RemovedTimeoutDescription', guild.preferredLocale, { user, moderator: executor });
+        return client.utils.Embed(logChannel, 'DarkerGrey', title, description, { timestamp: true, footer: { text: footerText }, author: user }).catch((err) => {
             client.utils.LogData('Member Timeout Removed', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');
             // TODO: Add error logging for failed embed creation
             return;
