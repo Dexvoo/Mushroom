@@ -57,21 +57,27 @@ export async function execute(message) {
         }
     }
 
+    const uploadLimits = {
+        0: 10_000_000,
+        1: 10_000_000,
+        2: 50_000_000,
+        3: 100_000_000,
+    };
 
-    const attachments = message.attachments.map((attachment) => attachment.proxyURL).join('\n');
-    const deletedText = `-# ${content ? client.utils.Truncate(content, 3900) : client.utils.Translate('logs.messageDelete.noContent', guild.preferredLocale)}`
+    const uploadLimit = uploadLimits[guild.premiumTier] ?? 10_000_000;
+    const files = message.attachments.filter(attachment => attachment.size < uploadLimit).map(attachment => new AttachmentBuilder(attachment.url, { name: attachment.name }));
+    const filesToLarge = message.attachments.size - files.length;
 
+    let deletedText = `-# ${content ? client.utils.Truncate(content, 3900) : client.utils.Translate('logs.messageDelete.noContent', guild.preferredLocale)}`
+    filesToLarge !== 0 ? deletedText += `\n### Removed Attachments\n${filesToLarge}` : deletedText;
+    
     const title = client.utils.Translate('logs.messageDelete.title', guild.preferredLocale, { channel: channel.name });
     const description = `${channel} | ${executor ? executor : 'Unknown Tag'}\n${deletedText}`;
     const footerText = `MID: ${message.id} | ${username !== 'Unknown' ? `UID: ${author.id}` : ''}`;
 
-    const files = message.attachments.map(attachment => {
-        return new AttachmentBuilder(attachment.url, { name: attachment.name });
-    });
     
     const embed = await client.utils.Embed(logChannel, 'Red', title, description, { timestamp: true, footer: { text: footerText }, author, files }).catch((err) => {
-        console.error(err)
-        // client.utils.LogData('Message Deleted', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');
+        client.utils.LogData('Message Deleted', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');
         // TODO: Add error logging for failed embed creation
         return null;
     });

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
-import Client from '../core/client.js';
+import Client from '../../core/client.js';
 
 /**
  * @param { Client } client

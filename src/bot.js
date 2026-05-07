@@ -1,7 +1,7 @@
 import { GatewayIntentBits, Collection } from 'discord.js';
-import loadCommands from './handlers/commands.js';
-import loadEvents from './handlers/events.js';
-import refreshCommands from './handlers/refresh.js';
+import loadCommands from './handlers/loading/commands.js';
+import loadEvents from './handlers/loading/events.js';
+import refreshCommands from './handlers/loading/refresh.js';
 import Client from './core/client.js';
 import mongoose from 'mongoose';
 import { ENV } from './core/env.js';
@@ -38,6 +38,7 @@ process.on('unhandledRejection', (reason, promise) => {
     client.utils.LogData('Unhandled Rejection', String(reason), 'error');
 });
 process.on('uncaughtException', (err) => {
+    console.log(err)
     client.utils.LogData('Uncaught Exception', err.message, 'error');
 });
 

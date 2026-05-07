@@ -14,6 +14,17 @@ export default {
             title: 'Messaged Deleted in #{channel}',
             noContent: `No text content`
         },
+        voice: {
+            joined: 'Member Joined Voice Channel',
+            left: `Member Left Voice Channel`,
+            switched: `Member Switched Voice Channel`,
+            serverUndeafened: `Member Server Undeafened`,
+            serverDeafened: `Member Server Deafened`,
+            serverUnmuted: `Member Server Unmuted`,
+            serverMuted: `Member Server Muted`,
+            videoDisabled: `Member Disabled Video`,
+            videoEnabled: `Member Enabled Video`,
+        },
     },
     errors: {
         title: `⚠️ Error`,

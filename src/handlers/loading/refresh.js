@@ -1,6 +1,6 @@
 import { REST, Routes } from 'discord.js';
-import Client from '../core/client.js';
-import { ENV } from '../core/env.js';
+import Client from '../../core/client.js';
+import { ENV } from '../../core/env.js';
 
 /**
  * @param { Client } client
