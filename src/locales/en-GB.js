@@ -14,6 +14,20 @@ export default {
             title: 'Messaged Deleted in #{channel}',
             noContent: `No text content`
         },
+        messageBulkDelete: {
+            title: 'Message Bulk Deleted in #{channel}',
+            description: '{count} messages | {user}',
+        },
+        punishment:{
+            banTitle: 'Member Banned',
+            banDescription: 'User: {user}\nReason: `{reason}`',
+            unbanTitle: 'Member Unbanned',
+            unbanDescription: 'User: {user}\nBanned Reason: `{reason}\nModerator: {moderator}`',
+            timeoutTitle: 'Member Timeout Added',
+            timeoutDescription: 'User: {user}\nTimeout Until: {time}\nModerator: {moderator}',
+            RemovedTimeoutTitle: 'Member Timeout Removed',
+            RemovedTimeoutDescription: 'User: {user}',
+        },
         roleCreate: 'Role Created by @{username}',
         roleDelete: 'Role Deleted by @{username}',
         voice: {
