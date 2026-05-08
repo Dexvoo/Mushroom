@@ -16,7 +16,7 @@ export async function execute(oldMember, newMember) {
 
     if (!guild) return;
 
-    if(oldMember.communicationDisabledUntilTimestamp === newMember.communicationDisabledUntilTimestamp) return console.log(oldMember.communicationDisabledUntilTimestamp, newMember.communicationDisabledUntilTimestamp)
+    if(oldMember.communicationDisabledUntilTimestamp === newMember.communicationDisabledUntilTimestamp) return;
     
     const logsData = await Logs_Cache.get(guild.id);
     if(!logsData?.punishment?.enabled || !logsData?.punishment?.channelId) return client.utils.LogData('Member Timeout Removed', `Guild: ${guild.name} | Disabled`, 'warning');
@@ -62,7 +62,7 @@ export async function execute(oldMember, newMember) {
     if(newMember.communicationDisabledUntilTimestamp === null) {
         const title = client.utils.Translate('logs.punishment.RemovedTimeoutTitle', guild.preferredLocale);
         const description = client.utils.Translate('logs.punishment.RemovedTimeoutDescription', guild.preferredLocale, { user, moderator: executor });
-        return client.utils.Embed(logChannel, 'DarkerGrey', title, description, { timestamp: true, footer: { text: footerText }, author: user }).catch((err) => {
+        return client.utils.Embed(logChannel, 'DarkerGrey', title, description, { timestamp: true, footer: { text: footerText }, author: user, moderator: executor }).catch((err) => {
             client.utils.LogData('Member Timeout Removed', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');
             // TODO: Add error logging for failed embed creation
             return;

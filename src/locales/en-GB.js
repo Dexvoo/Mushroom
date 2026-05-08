@@ -6,10 +6,13 @@ export default {
     logs: {
         channelCreate: 'Channel Created by @{username}',
         channelDelete: 'Channel Deleted by @{username}',
+        channelUpdate: 'Channel Updated',
         guildMemberAdd: 'Member Joined',
         guildMemberAddDescription: '{member} | #{position} \nCreated: {longTimestamp} ({shortTimestamp})',
         guildMemberRemove: 'Member Left',
         guildMemberRemoveDescription: '{member}\nJoined: {longTimestamp} ({shortTimestamp})\nRoles: {roles}',
+        guildMemberUpdate: 'Member Updated',
+        userUpdate: 'User Updated',
         messageDelete: {
             title: 'Messaged Deleted in #{channel}',
             noContent: `No text content`

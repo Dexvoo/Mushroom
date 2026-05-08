@@ -1,4 +1,4 @@
-import { BaseInteraction, EmbedBuilder, GuildMember, TextChannel, User, Colors, DiscordAPIError, RESTJSONErrorCodes, MessageFlags, ActionRowBuilder, AttachmentBuilder, Message, Collection, Attachment } from 'discord.js';
+import { BaseInteraction, EmbedBuilder, GuildMember, TextChannel, User, Colors, DiscordAPIError, RESTJSONErrorCodes, MessageFlags, ActionRowBuilder, AttachmentBuilder, Message, Collection, Attachment, ThumbnailBuilder } from 'discord.js';
 import Client from '../core/client.js';
 import { ENV } from '../core/env.js';
 import Global_Cache from '../constants/global.js';
@@ -17,31 +17,40 @@ import Global_Cache from '../constants/global.js';
  * @param { import('discord.js').EmbedFooterOptions } [options.footer] - The footer of the embed.
  * @param { boolean }[options.timestamp] - timestamp
  * @param { User } [options.author] - author
+ * @param { string } [options.thumbnail] - image url
+ * @param { string } [options.url] - url for title
  * @returns { Promise<Message | void> } The sent message, or void if the target is not an interaction.
  */
 
 async function Embed(target, colour, title, description, options = {}) {
 	const { client } = target
-	const { fields = [], flags = [], components = [], files =[], footer = null, timestamp = false, author = false} = options;
+	const { fields = [], flags = [], components = [], files =[], footer = null, timestamp = false, author = false, thumbnail = false, url = false } = options;
 
 	if(!target) {
         client.utils.LogData('Embed Utility', 'No target provided for embed.', 'error');
         return null;
     }
 
-	if(!colour || !title || !description) {
-        client.utils.LogData('Embed Utility', `Missing required parameters. Colour: ${!!colour}, Title: ${!!title}, Desc: ${!!description}`, 'error');
+	if(!colour || !title) {
+        client.utils.LogData('Embed Utility', `Missing required parameters. Colour: ${!!colour}, Title: ${!!title}`, 'error');
         return null;
     }
 
 	const embed = new EmbedBuilder()
 		.setColor(colour)
 		.setTitle(title)
-		.setDescription(description)
 		.addFields(fields);
 
 	if(footer) {
 		embed.setFooter(footer);
+	}
+
+	if(thumbnail !== false) {
+		embed.setThumbnail(thumbnail);
+	}
+	
+	if(description !== undefined && description !== '') {
+		embed.setDescription(description);
 	}
 
 	if(timestamp) {
@@ -49,6 +58,9 @@ async function Embed(target, colour, title, description, options = {}) {
 	}
 	if(author) {
 		embed.setAuthor({ name: author.username, iconURL: author.displayAvatarURL({ size: 512, extension: 'png' }), })
+	}
+	if(url) {
+		embed.setURL(url)
 	}
 
 	try {
@@ -60,7 +72,7 @@ async function Embed(target, colour, title, description, options = {}) {
 			}
 			
 		} else if(target instanceof User || target instanceof GuildMember || target instanceof TextChannel) {
-			return await target.send({ embeds:[embed], components, files });
+			return await target.send({ embeds:[embed], components, files, flags });
 		}
 	} catch (error) {
 		if(error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.CannotSendMessagesToThisUser) {
