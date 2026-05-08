@@ -84,7 +84,7 @@ export async function execute(oldUser, newUser) {
                 continue;
             }
 
-            const title = client.utils.Translate('logs.userUpdate', guild.preferredLocale);
+            const title = client.utils.Translate('logs.member.user_update_title', guild.preferredLocale);
             const footerText = `UID: ${newUser.id}`;
 
             await client.utils.Embed(logChannel, 'Aqua', title, '', { 

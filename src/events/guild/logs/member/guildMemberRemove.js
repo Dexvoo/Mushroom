@@ -37,8 +37,8 @@ export async function execute(member) {
     const roles = rolesList && rolesList.length > 0 ? rolesList.substring(0, 1024) : 'None';
 
     
-    const title = client.utils.Translate('logs.guildMemberRemove', guild.preferredLocale);
-    const description = client.utils.Translate('logs.guildMemberRemoveDescription', guild.preferredLocale, { member, longTimestamp, shortTimestamp, roles});
+    const title = client.utils.Translate('logs.member.remove_title', guild.preferredLocale);
+    const description = client.utils.Translate('logs.member.remove_description', guild.preferredLocale, { member, longTimestamp, shortTimestamp, roles});
 
     const footerText = `UID: ${member.id}`;
 

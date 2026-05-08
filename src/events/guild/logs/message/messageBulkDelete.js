@@ -57,8 +57,8 @@ export async function execute(messages, channel) {
         }
     }
     
-    const title = client.utils.Translate('logs.messageBulkDelete.title', guild.preferredLocale, { channel: channel.name });
-    const description = client.utils.Translate('logs.messageBulkDelete.description', guild.preferredLocale, { count: messages.size, user: executor ? executor : 'Unknown Tag' });
+    const title = client.utils.Translate('logs.message.bulkDelete_title', guild.preferredLocale, { channel: channel.name });
+    const description = client.utils.Translate('logs.message.bulkDelete_description', guild.preferredLocale, { count: messages.size, user: executor ? executor : 'Unknown Tag' });
     const footerText = `${username !== 'Unknown' ? `UID: ${executor.id} | ` : ''}CID: ${channel.id}`;
 
     

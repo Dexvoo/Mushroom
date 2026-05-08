@@ -68,10 +68,10 @@ export async function execute(message) {
     const files = message.attachments.filter(attachment => attachment.size < uploadLimit).map(attachment => new AttachmentBuilder(attachment.url, { name: attachment.name }));
     const filesToLarge = message.attachments.size - files.length;
 
-    let deletedText = `-# ${content ? client.utils.Truncate(content, 3900) : client.utils.Translate('logs.messageDelete.noContent', guild.preferredLocale)}`
+    let deletedText = `-# ${content ? client.utils.Truncate(content, 3900) : client.utils.Translate('logs.message.delete_noContent', guild.preferredLocale)}`
     filesToLarge !== 0 ? deletedText += `\n### Removed Attachments\n${filesToLarge}` : deletedText;
     
-    const title = client.utils.Translate('logs.messageDelete.title', guild.preferredLocale, { channel: channel.name });
+    const title = client.utils.Translate('logs.message.delete_title', guild.preferredLocale, { channel: channel.name });
     const description = `${channel} | ${executor ? executor : 'Unknown Tag'}\n${deletedText}`;
     const footerText = `MID: ${message.id} | ${username !== 'Unknown' ? `UID: ${author.id}` : ''}`;
 

@@ -60,8 +60,8 @@ export async function execute(oldMember, newMember) {
 
     const footerText = `UID: ${user.id}`;
     if(newMember.communicationDisabledUntilTimestamp === null) {
-        const title = client.utils.Translate('logs.punishment.RemovedTimeoutTitle', guild.preferredLocale);
-        const description = client.utils.Translate('logs.punishment.RemovedTimeoutDescription', guild.preferredLocale, { user, moderator: executor });
+        const title = client.utils.Translate('logs.punishment.untimeout_title', guild.preferredLocale);
+        const description = client.utils.Translate('logs.punishment.untimeout_description', guild.preferredLocale, { user, moderator: executor });
         return client.utils.Embed(logChannel, 'DarkerGrey', title, description, { timestamp: true, footer: { text: footerText }, author: user, moderator: executor }).catch((err) => {
             client.utils.LogData('Member Timeout Removed', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');
             // TODO: Add error logging for failed embed creation
@@ -69,8 +69,8 @@ export async function execute(oldMember, newMember) {
         });
     } 
 
-    const title = client.utils.Translate('logs.punishment.timeoutTitle', guild.preferredLocale);
-    const description = client.utils.Translate('logs.punishment.timeoutDescription', guild.preferredLocale, { user, time: client.utils.Timestamp(newMember.communicationDisabledUntil), moderator: executor });
+    const title = client.utils.Translate('logs.punishment.timeout_title', guild.preferredLocale);
+    const description = client.utils.Translate('logs.punishment.timeout_description', guild.preferredLocale, { user, time: client.utils.Timestamp(newMember.communicationDisabledUntil), moderator: executor });
     return client.utils.Embed(logChannel, 'White', title, description, { timestamp: true, footer: { text: footerText }, author: user }).catch((err) => {
         client.utils.LogData('Member Timeout Removed', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');
         // TODO: Add error logging for failed embed creation

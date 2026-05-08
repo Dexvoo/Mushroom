@@ -42,12 +42,12 @@ export async function execute(oldState, newState) {
 
     if(oldState.channel && newState.channel && oldState.channel.id !== newState.channel.id) return client.utils.Embed(logChannel, 'Green', client.utils.Translate('logs.voice.switched', guild.preferredLocale), `${oldState.channel} => ${newState.channel}`, { author: member.user, footer, timestamp: Date.now() });
 
-    if(oldState.serverDeaf && !newState.serverDeaf) return client.utils.Embed(logChannel, 'Green', client.utils.Translate('logs.voice.serverUndeafened', guild.preferredLocale), `${oldState.channel}`, { author: member.user, footer, timestamp: Date.now() });
-    if(!oldState.serverDeaf && newState.serverDeaf) return client.utils.Embed(logChannel, 'Red', client.utils.Translate('logs.voice.serverDeafened', guild.preferredLocale), `${newState.channel}`, { author: member.user, footer, timestamp: Date.now() });
+    if(oldState.serverDeaf && !newState.serverDeaf) return client.utils.Embed(logChannel, 'Green', client.utils.Translate('logs.voice.server_undeafened', guild.preferredLocale), `${oldState.channel}`, { author: member.user, footer, timestamp: Date.now() });
+    if(!oldState.serverDeaf && newState.serverDeaf) return client.utils.Embed(logChannel, 'Red', client.utils.Translate('logs.voice.server_deafened', guild.preferredLocale), `${newState.channel}`, { author: member.user, footer, timestamp: Date.now() });
 
-    if(oldState.serverMute && !newState.serverMute) return client.utils.Embed(logChannel, 'Green', client.utils.Translate('logs.voice.serverUnmuted', guild.preferredLocale), `${oldState.channel}`, { author: member.user, footer, timestamp: Date.now() });
-    if(!oldState.serverMute && newState.serverMute) return client.utils.Embed(logChannel, 'Red', client.utils.Translate('logs.voice.serverMuted', guild.preferredLocale), `${newState.channel}`, { author: member.user, footer, timestamp: Date.now() });
+    if(oldState.serverMute && !newState.serverMute) return client.utils.Embed(logChannel, 'Green', client.utils.Translate('logs.voice.server_unmuted', guild.preferredLocale), `${oldState.channel}`, { author: member.user, footer, timestamp: Date.now() });
+    if(!oldState.serverMute && newState.serverMute) return client.utils.Embed(logChannel, 'Red', client.utils.Translate('logs.voice.server_muted', guild.preferredLocale), `${newState.channel}`, { author: member.user, footer, timestamp: Date.now() });
 
-    if(oldState.selfVideo && !newState.selfVideo) return client.utils.Embed(logChannel, 'Red', client.utils.Translate('logs.voice.videoDisabled', guild.preferredLocale), `${oldState.channel}`, { author: member.user, footer, timestamp: Date.now() });
-    if(!oldState.selfVideo && newState.selfVideo) return client.utils.Embed(logChannel, 'Green', client.utils.Translate('logs.voice.videoEnabled', guild.preferredLocale), `${newState.channel}`, { author: member.user, footer, timestamp: Date.now() });
+    if(oldState.selfVideo && !newState.selfVideo) return client.utils.Embed(logChannel, 'Red', client.utils.Translate('logs.voice.video_disabled', guild.preferredLocale), `${oldState.channel}`, { author: member.user, footer, timestamp: Date.now() });
+    if(!oldState.selfVideo && newState.selfVideo) return client.utils.Embed(logChannel, 'Green', client.utils.Translate('logs.voice.video_enabled', guild.preferredLocale), `${newState.channel}`, { author: member.user, footer, timestamp: Date.now() });
 };

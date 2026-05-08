@@ -29,12 +29,12 @@ export async function execute(interaction, client) {
     if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
         if (!command) {
-            const msg = client.utils.Translate('errors.noCommand', interaction.locale);
+            const msg = client.utils.Translate('errors.no_command', interaction.locale);
             return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
         }
 
         if(command.commandData.developerOnly && !client.utils.DevPermissionCheck(interaction.user.id)) {
-            const msg = client.utils.Translate('errors.developerOnly', interaction.locale);
+            const msg = client.utils.Translate('errors.developer_only', interaction.locale);
             return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
         }
 
@@ -44,7 +44,7 @@ export async function execute(interaction, client) {
         if(guild && command.commandData.botPermissions?.length > 0) {
             const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.botPermissions, guild.members.me);
             if (!hasPerms) {
-                const msg = client.utils.Translate('errors.missingBotPerms', interaction.locale, { perms: missingPerms.flat().join(', ') });
+                const msg = client.utils.Translate('errors.bot_missing_perms', interaction.locale, { perms: missingPerms.flat().join(', ') });
                 return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] }); 
             }
         }
@@ -53,7 +53,7 @@ export async function execute(interaction, client) {
         if (guild && command.commandData.userPermissions?.length > 0) {
             const[hasPerms, missingPerms] = client.utils.PermissionCheck(interaction, command.commandData.userPermissions, interaction.member);
             if (!hasPerms) {
-                const msg = client.utils.Translate('errors.missingUserPerms', interaction.locale, { perms: missingPerms.flat().join(', ') });
+                const msg = client.utils.Translate('errors.user_missing_perms', interaction.locale, { perms: missingPerms.flat().join(', ') });
                 return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
             }
         }

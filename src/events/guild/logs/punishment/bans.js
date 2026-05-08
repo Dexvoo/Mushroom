@@ -58,8 +58,8 @@ export async function execute(ban) {
         }
     }
     
-    const title = client.utils.Translate('logs.punishment.banTitle', guild.preferredLocale);
-    const description = client.utils.Translate('logs.punishment.banDescription', guild.preferredLocale, { user, reason, moderator: executor });
+    const title = client.utils.Translate('logs.punishment.ban_title', guild.preferredLocale);
+    const description = client.utils.Translate('logs.punishment.ban_description', guild.preferredLocale, { user, reason, moderator: executor });
 
     const footerText = `UID: ${user.id}`;
 

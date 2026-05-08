@@ -51,7 +51,7 @@ export async function execute(channel) {
         }
     }
 
-    const title = client.utils.Translate('logs.channelDelete', guild.preferredLocale, { username });
+    const title = client.utils.Translate('logs.channel.delete', guild.preferredLocale, { username });
     const footerText = `CID: ${channel.id} | ${username !== 'Unknown' ? `UID: ${executor.id}` : ''}`;
 
     const embed = await client.utils.Embed(logChannel, 'Red', title, `#${channel.name} | ${executor ? executor : 'Unknown User'}`, { timestamp: true, footer: { text: footerText } }).catch((err) => {

@@ -128,7 +128,7 @@ export async function execute(oldChannel, newChannel) {
     if (description === '') return;
 
     const footerText = `CID: ${newChannel.id}`;
-    const title = client.utils.Translate('logs.channelUpdate', guild.preferredLocale);
+    const title = client.utils.Translate('logs.channel.update', guild.preferredLocale);
     
     return client.utils.Embed(logChannel, 'White', title, description, { timestamp: true, footer: { text: footerText }, author: executor }).catch((err) => {
         client.utils.LogData('Channel Update', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');

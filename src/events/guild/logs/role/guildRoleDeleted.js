@@ -52,7 +52,7 @@ export async function execute(role) {
         }
     }
 
-    const title = client.utils.Translate('logs.roleDelete', guild.preferredLocale, { username });
+    const title = client.utils.Translate('logs.role.delete', guild.preferredLocale, { username });
     const footerText = `RID: ${role.id} | ${username !== 'Unknown' ? `UID: ${executor.id}` : ''}`;
 
     const embed = await client.utils.Embed(logChannel, 'Red', title, `@${role.name} | ${executor ? executor : 'Unknown Tag'}`, { timestamp: true, footer: { text: footerText } }).catch((err) => {

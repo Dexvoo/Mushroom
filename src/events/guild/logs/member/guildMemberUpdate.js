@@ -99,7 +99,7 @@ export async function execute(oldMember, newMember) {
 
 
     
-    const title = client.utils.Translate('logs.guildMemberUpdate', guild.preferredLocale);
+    const title = client.utils.Translate('logs.member.update_title', guild.preferredLocale);
     const footerText = `UID: ${newMember.id}`;
 
     const embed = await client.utils.Embed(logChannel, 'Orange', title, '', { timestamp: true, footer: { text: footerText }, author: newMember.user, fields, thumbnail }).catch((err) => {

@@ -35,8 +35,8 @@ export async function execute(member) {
     const longTimestamp = `${client.utils.Timestamp(member.user.createdAt, 'F')}`;
     const shortTimestamp = `${client.utils.Timestamp(member.user.createdAt, 'R')}`;
     
-    const title = client.utils.Translate('logs.guildMemberAdd', guild.preferredLocale);
-    const description = client.utils.Translate('logs.guildMemberAddDescription', guild.preferredLocale, { member, position, longTimestamp, shortTimestamp});
+    const title = client.utils.Translate('logs.member.add_title', guild.preferredLocale);
+    const description = client.utils.Translate('logs.member.add_description', guild.preferredLocale, { member, position, longTimestamp, shortTimestamp});
 
     const footerText = `UID: ${member.id}`;
 

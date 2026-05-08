@@ -52,7 +52,7 @@ export async function execute(channel) {
         }
     }
 
-    const title = client.utils.Translate('logs.channelCreate', guild.preferredLocale, { username });
+    const title = client.utils.Translate('logs.channel.create', guild.preferredLocale, { username });
     const footerText = `CID: ${channel.id} | ${username !== 'Unknown' ? `UID: ${executor.id}` : ''}`;
 
     const embed = await client.utils.Embed(logChannel, 'Green', title, `${channel} | ${executor ? executor : 'Unknown Tag'}`, { timestamp: true, footer: { text: footerText } }).catch((err) => {
