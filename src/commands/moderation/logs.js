@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, Colors, InteractionContextType, ApplicationIntegrationType, PermissionFlagsBits, ChannelType, ChatInputCommandInteraction } from 'discord.js';
+import { SlashCommandBuilder, Colors, InteractionContextType, ApplicationIntegrationType, PermissionFlagsBits, ChannelType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
 import Client from '../../core/client.js';
 
 const logChoices = [
@@ -19,7 +19,7 @@ const handlers = {
     'logs-view': () => import('../../handlers/commands/logs/view.js'),
     'logs-test': () => import('../../handlers/commands/logs/test.js'),
     'logs-ignore': () => import('../../handlers/commands/logs/ignore.js'),
-    'logs-view-ignored': () => import('../../handlers/commands/logs/ignoreView.js'),
+    'logs-ignore-view': () => import('../../handlers/commands/logs/ignoreView.js'),
 };
 
 export const commandData = new SlashCommandBuilder();
@@ -80,6 +80,7 @@ commandData.addSubcommand((s) => s
     .addChannelOption((o) => o
         .setName('channel')
         .setDescription('The channel to ignore.')
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
         .setRequired(false)
     )
 );
@@ -90,7 +91,7 @@ commandData.addSubcommand((s) => s
 commandData.cooldown = 5;
 commandData.userPermissions = [];
 commandData.botPermissions = [];
-commandData.developerOnly = true;
+commandData.developerOnly = false;
 
 /**
  * @param { ChatInputCommandInteraction & { client: Client }} interaction
@@ -98,7 +99,7 @@ commandData.developerOnly = true;
 export async function execute(interaction) {
     const subcommand =  interaction.options.getSubcommand();
     const handlerPromise = handlers[`logs-${subcommand}`];
-    if(!handlerPromise) return interaction.client.utils.Embed(interaction, 'Red', interaction.client.utils.Translate('errors.title', interaction.locale), interaction.client.utils.Translate('errors.no_subcommand', interaction.locale, { subcommand }));
+    if(!handlerPromise) return interaction.client.utils.Embed(interaction, 'Red', interaction.client.utils.Translate('errors.title', interaction.locale), interaction.client.utils.Translate('errors.no_subcommand', interaction.locale, { subcommand }), { flags: [ MessageFlags.Ephemeral ]});
 
     try {
         const handlerModule = await handlerPromise();

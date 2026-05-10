@@ -17,12 +17,12 @@ export async function execute(interaction) {
     // TODO: server logs
     if(type === 'server') {
         const msg = client.utils.Translate('commands.log_setup.server_logs_soon', interaction.locale);
-        return interaction.client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg);
+        return interaction.client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
     }
 
     if(!channel && enabled) {
         const msg = client.utils.Translate('commands.log_setup.provide_channel', interaction.locale);
-        return interaction.client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg);
+        return interaction.client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
     }
 
     if(enabled) {

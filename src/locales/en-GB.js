@@ -38,9 +38,8 @@ export default {
             not_ignored: '{channel} is not on the log ignore list.'
         },
         log_ignore_view: {
-            title: 'Ignored Channels',
+            title: 'Current Ignored Channels',
             no_channels: 'There are no channels on the log ignore list.',
-            ignored_channels: `The following channels are being ignored by the logging system:\n\n{channels}`,
             no_log_config: 'No current config found for `{type}`',
         },
         ping: {

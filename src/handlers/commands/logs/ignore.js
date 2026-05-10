@@ -16,19 +16,19 @@ export async function execute(interaction) {
 
     console.log(ignoredChannels)
     if (enabled) {
-        if (ignoredChannels.includes(channel.id)) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', locale), client.utils.Translate('commands.log_ignore.already_ignored', locale, { channel: channel.toString() }));
+        if (ignoredChannels.includes(channel.id)) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', locale), client.utils.Translate('commands.log_ignore.already_ignored', locale, { channel: channel.toString() }), { flags: [ MessageFlags.Ephemeral ]});
         
         ignoredChannels.push(channel.id);
         console.log('pushing channel id to ', ignoredChannels)
         await Logs_Cache.setType(guild.id, 'ignoredChannels', ignoredChannels);
 
-        return client.utils.Embed( interaction, 'Green',  client.utils.Translate('commands.log_ignore.ignored_title', locale),  client.utils.Translate('commands.log_ignore.ignored_desc', locale, { channel: channel.toString() }));
+        return client.utils.Embed( interaction, 'Green',  client.utils.Translate('commands.log_ignore.title', locale),  client.utils.Translate('commands.log_ignore.ignored_desc', locale, { channel: channel.toString() }), { flags: [ MessageFlags.Ephemeral ]});
     }
 
-    if (!ignoredChannels.includes(channel.id)) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', locale), client.utils.Translate('commands.log_ignore.not_ignored', locale, { channel: channel.toString() }));
+    if (!ignoredChannels.includes(channel.id)) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', locale), client.utils.Translate('commands.log_ignore.not_ignored', locale, { channel: channel.toString() }), { flags: [ MessageFlags.Ephemeral ]});
 
     ignoredChannels = ignoredChannels.filter((ic) => ic !== channel.id);
     await Logs_Cache.setType(guild.id, 'ignoredChannels', ignoredChannels);
 
-    return client.utils.Embed(interaction, Colors.Green, client.utils.Translate('commands.log_ignore.resumed_title', locale), client.utils.Translate('commands.log_ignore.resumed_desc', locale, { channel: channel.toString() }));
+    return client.utils.Embed(interaction, Colors.Green, client.utils.Translate('commands.log_ignore.resumed_title', locale), client.utils.Translate('commands.log_ignore.resumed_desc', locale, { channel: channel.toString() }), { flags: [ MessageFlags.Ephemeral ]});
 }
