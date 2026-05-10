@@ -54,7 +54,7 @@ class LogsCache {
             const updatedConfig = await LogsConfig.findOneAndUpdate(
                 { guildId },
                 { $set: updates },
-                { new: true, upsert: true, lean: true }
+                { returnDocument: 'after', upsert: true, lean: true }
             );
 
             this.cache.set(guildId, updatedConfig);
@@ -79,7 +79,7 @@ class LogsCache {
             const updatedConfig = await LogsConfig.findOneAndUpdate(
                 { guildId },
                 { $set: { [type]: newData } },
-                { new: true, upsert: true, lean: true }
+                { returnDocument: 'after', upsert: true, lean: true }
             );
 
             this.cache.set(guildId, updatedConfig);
@@ -103,7 +103,7 @@ class LogsCache {
             const updatedConfig = await LogsConfig.findOneAndUpdate(
                 { guildId },
                 { $unset: { [type]: "" } },
-                { new: true, lean: true }
+                { returnDocument: 'after', lean: true }
             );
 
             if (updatedConfig) {

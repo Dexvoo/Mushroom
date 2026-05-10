@@ -20,10 +20,10 @@
     "VerifiedBotDeveloper": "<:A:1115593838648639539>"
   },
   "reactions": {
-    "QuestionMark": "<:A:1389680870310543371>",
+    "QuestionMark": "❓",
     "Warning": "⚠️",
-    "Yes": "<:A:1115593935746781185>",
-    "No": "<:A:1115593604073791488>"
+    "Yes": "✅",
+    "No": "⛔"
   },
   "basic": {
     "Ping": ":ping_pong:"

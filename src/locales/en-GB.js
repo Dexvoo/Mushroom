@@ -1,7 +1,52 @@
 export default {
-    ping: {
-        title: '🏓 Pong!',
-        description: 'Latency: {ms}ms\nAPI Latency: {api}ms'
+
+    commands: {
+        log_test: {
+            in_progress_title: 'Testing in progress',
+            in_progress_desc: 'User: {user}',
+            test_embed_title: 'Test Log',
+            test_embed_description: 'This is a test log for `{type}` logs',
+            test_embed_footer: 'Tested by @{user}',
+            success_field: 'Successful',
+            failed_field: 'Failed',
+            none: 'None',
+            complete_title: 'Test Complete',
+            log_send_fail: 'Failed to send test log to <#{channelId}>',
+        },
+        log_setup: {
+            server_logs_soon: 'Server Logs coming soon',
+            provide_channel: 'Please provide a channel to send the logs to',
+            setup_success_title: 'Logs Setup Successful',
+            setup_success_desc: 'Successfully {status} `{type}` logs.',
+            enabled: 'enabled',
+            disabled: 'disabled'
+        },
+        log_view: {
+            all_title: 'Current Logs Configurations',
+            requested_by: 'Requested by {user}',
+            single_title: 'Current Configuration for {type} Logs',
+            field_enabled: 'Enabled',
+            field_channel: 'Channel',
+            not_set: 'Not set'
+        },
+        log_ignore: {
+            title: 'Channel Ignored',
+            ignored_desc: 'Logs will now ignore events from {channel}.',
+            resumed_title: 'Channel Resumed',
+            resumed_desc: 'Logs will now resume for events from {channel}.',
+            already_ignored: '{channel} is already on the ignored list.',
+            not_ignored: '{channel} is not on the log ignore list.'
+        },
+        log_ignore_view: {
+            title: 'Ignored Channels',
+            no_channels: 'There are no channels on the log ignore list.',
+            ignored_channels: `The following channels are being ignored by the logging system:\n\n{channels}`,
+            no_log_config: 'No current config found for `{type}`',
+        },
+        ping: {
+            title: '🏓 Pong!',
+            description: 'Latency: {ms}ms\nAPI Latency: {api}ms'
+        },
     },
     logs: {
         channel: {
@@ -24,7 +69,6 @@ export default {
             bulkDelete_title: 'Message Bulk Deleted in #{channel}',
             bulkDelete_description: '{count} messages | {user}',
         },
-
         punishment:{
             ban_title: 'Member Banned',
             ban_description: 'User: {user}\nReason: `{reason}\nModerator: {moderator}`',
@@ -58,5 +102,8 @@ export default {
         bot_missing_perms: 'I need the following permissions to execute this command:\n`{perms}`',
         user_missing_perms: 'You need the following permissions to use this command:\n`{perms}`',
         cooldown: 'Please wait {time} before using the `{command}` command again.',
+        no_subcommand: 'The subcommand `{subcommand}` does not exist.',
+        save_settings_fail: 'An error occurred while saving the settings.',
+        no_config_found_generic: 'No configuration found for this server.',
     }
 };
