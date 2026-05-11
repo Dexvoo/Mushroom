@@ -26,6 +26,8 @@ export default async function loadCommands(client, dir) {
                     continue;
                 }
 
+                command.commandData.filePath = pathToFileURL(fullPath).href
+
                 client.commands.set(command.commandData.name, command);
                 client.utils.LogData(command.commandData.name, command.commandData.description, 'success');
             } catch (error) {

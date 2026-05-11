@@ -43,8 +43,7 @@ export async function autocomplete(interaction) {
 }
 
 /**
- * @param { ChatInputCommandInteraction } interaction
- * @param { Client } client
+ * @param { ChatInputCommandInteraction & { client: Client }} interaction
  */
 export async function execute(interaction, client) {
     const { options } = interaction;

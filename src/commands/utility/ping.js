@@ -14,10 +14,9 @@ commandData.botPermissions = [];
 commandData.developerOnly = false;
 
 /**
- * @param { ChatInputCommandInteraction } interaction
- * @param { Client } client
+ * @param { ChatInputCommandInteraction & { client: Client }} interaction
  */
-export async function execute(interaction, client) {
+export async function execute(interaction) {
     const { locale, createdTimestamp} = interaction
     const ms = Date.now() - createdTimestamp;
     const api = Math.round(client.ws.ping);
