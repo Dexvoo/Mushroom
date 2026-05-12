@@ -1,0 +1,358 @@
+import { UserLevels } from '../../../features/levels/models/userLevels.js';
+import NodeCache from 'node-cache';
+import { LogData } from '../../../shared/utils/logger.js';
+
+/**
+ * @typedef {import('../../models/levels/userLevels.js').UserLevelsType} UserLevelsType
+ */
+
+class User_Levels_Cache {
+    /**
+     * @private
+     * @type {NodeCache}
+     */
+    cache;
+    dirty;
+
+    constructor() {
+        // 1 hour cache TTL
+        this.cache = new NodeCache({
+            stdTTL: 3600,
+            checkperiod: 120
+        });
+        this.dirty = new Set();
+        setInterval(() => {
+            this.flush();
+        }, 30000);
+    }
+
+    async flush() {
+        try {
+
+            for (const key of this.dirty) {
+
+                const data = this.cache.get(key);
+
+                if (!data) continue;
+
+                const { guildId, userId } = data;
+
+                await UserLevels.findOneAndUpdate(
+                    { guildId, userId },
+                    { $set: data },
+                    {
+                        upsert: true,
+                        setDefaultsOnInsert: true
+                    }
+                );
+
+                this.dirty.delete(key);
+            }
+
+            LogData('User Levels Cache', 'Flushed dirty users to database', 'debug');
+
+        } catch (error) {
+            LogData('User Levels Cache', `Failed to flush cache: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Creates a default user level object.
+     * @param {string} guildId
+     * @param {string} userId
+     * @returns {UserLevelsType}
+     */
+    createDefault(guildId, userId) {
+        return {
+            guildId,
+            userId,
+
+            xp: 0,
+            level: 0,
+
+            totalMessages: 0,
+            totalVoice: 0,
+            totalCommands: 0,
+
+            messageXP: 0,
+            voiceXP: 0,
+            dropsXP: 0,
+
+            lastMessageAt: null,
+            lastVoiceAt: null,
+            lastLevelUpAt: null,
+
+            dailyStreak: 0,
+        };
+    }
+
+    /**
+     * Gets user data from cache or database.
+     * @param {string} guildId
+     * @param {string} userId
+     * @returns {Promise<UserLevelsType>}
+     */
+    async get(guildId, userId) {
+        try {
+            const key = `${guildId}:${userId}`;
+
+            const cached = this.cache.get(key);
+            if (cached) return cached;
+
+            let userData = await UserLevels.findOne({ guildId, userId }).lean();
+
+            if (!userData) {
+                userData = this.createDefault(guildId, userId);
+            }
+
+            this.cache.set(key, userData);
+            this.dirty.add(key);
+
+            return userData;
+        } catch (error) {
+            LogData( 'User Levels Cache', `Failed to get user data for ${guildId}:${userId}: ${error.message}`, 'error');
+            return this.createDefault(guildId, userId);
+        }
+    }
+
+    /**
+     * Saves cached user data to the database.
+     * @param {string} guildId
+     * @param {string} userId
+     * @returns {Promise<UserLevelsType>}
+     */
+    async save(guildId, userId) {
+        try {
+            const key = `${guildId}:${userId}`;
+
+            const data = this.cache.get(key);
+            if (!data) return null;
+
+            const updated = await UserLevels.findOneAndUpdate(
+                { guildId, userId },
+                { $set: data },
+                {
+                    upsert: true,
+                    new: true,
+                    lean: true,
+                    setDefaultsOnInsert: true
+                }
+            );
+
+            this.cache.set(key, updated);
+
+            return updated;
+        } catch (error) {
+            LogData('User Levels Cache', `Failed to save user data for ${guildId}:${userId}: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
+    /**
+     * Calculates level based on XP.
+     * @param {number} xp
+     * @returns {number}
+     */
+    calculateLevel(xp) {
+        return Math.floor(0.1 * Math.sqrt(xp));
+    }
+
+    /**
+     * Adds message XP to a user.
+     * @param {string} guildId
+     * @param {string} userId
+     * @param {number} amount
+     * @returns {Promise<{
+     *  leveledUp: boolean,
+     *  oldLevel: number,
+     *  newLevel: number,
+     *  userData: UserLevelsType
+     * }>}
+     */
+    async addMessageXP(guildId, userId, amount) {
+        const key = `${guildId}:${userId}`;
+
+        const userData = await this.get(guildId, userId);
+
+        const oldLevel = userData.level;
+
+        userData.xp += amount;
+        userData.messageXP += amount;
+
+        userData.totalMessages += 1;
+        userData.lastMessageAt = new Date();
+
+        const newLevel = this.calculateLevel(userData.xp);
+
+        let leveledUp = false;
+
+        if (newLevel > oldLevel) {
+            leveledUp = true;
+
+            userData.level = newLevel;
+            userData.lastLevelUpAt = new Date();
+        }
+
+        this.cache.set(key, userData);
+        this.dirty.add(key);
+        return {
+            leveledUp,
+            oldLevel,
+            newLevel,
+            userData
+        };
+    }
+
+    /**
+     * Adds voice XP to a user.
+     * @param {string} guildId
+     * @param {string} userId
+     * @param {number} amount
+     * @returns {Promise<UserLevelsType>}
+     */
+    async addVoiceXP(guildId, userId, amount) {
+        const key = `${guildId}:${userId}`;
+
+        const userData = await this.get(guildId, userId);
+
+        const oldLevel = userData.level;
+
+        userData.xp += amount;
+        userData.voiceXP += amount;
+
+        userData.totalVoice += 1;
+        userData.lastVoiceAt = new Date();
+
+        const newLevel = this.calculateLevel(userData.xp);
+
+        if (newLevel > oldLevel) {
+            userData.level = newLevel;
+            userData.lastLevelUpAt = new Date();
+        }
+
+        this.cache.set(key, userData);
+        this.dirty.add(key);
+
+        return userData;
+    }
+
+    /**
+     * Adds XP from drops/rewards.
+     * @param {string} guildId
+     * @param {string} userId
+     * @param {number} amount
+     * @returns {Promise<UserLevelsType>}
+     */
+    async addDropXP(guildId, userId, amount) {
+        const key = `${guildId}:${userId}`;
+
+        const userData = await this.get(guildId, userId);
+
+        const oldLevel = userData.level;
+
+        userData.xp += amount;
+        userData.dropsXP += amount;
+
+        const newLevel = this.calculateLevel(userData.xp);
+
+        if (newLevel > oldLevel) {
+            userData.level = newLevel;
+            userData.lastLevelUpAt = new Date();
+        }
+
+        this.cache.set(key, userData);
+        this.dirty.add(key);
+
+        return userData;
+    }
+
+    /**
+     * Increments command usage count.
+     * @param {string} guildId
+     * @param {string} userId
+     * @returns {Promise<UserLevelsType>}
+     */
+    async incrementCommands(guildId, userId) {
+        const key = `${guildId}:${userId}`;
+
+        const userData = await this.get(guildId, userId);
+        userData.totalCommands += 1;
+
+        this.cache.set(key, userData);
+        this.dirty.add(key);
+        return userData;
+    }
+
+    /**
+     * Removes a user from cache.
+     * @param {string} guildId
+     * @param {string} userId
+     */
+    invalidate(guildId, userId) {
+        const key = `${guildId}:${userId}`;
+
+        this.cache.del(key);
+        LogData('User Levels Cache', `Cache invalidated for ${guildId}:${userId}`, 'debug');
+    }
+
+
+    /**
+ * Gets top users for a guild.
+ * Ensures cache is flushed before querying.
+ *
+ * @param {string} guildId
+ * @param {'totalMessages' | 'totalVoice' | 'level' | 'xp'} type
+ * @returns {Promise<UserLevelsType[]>}
+ */
+async getTopUsers(guildId, type) {
+
+    const limit = 15;
+
+    try {
+
+        // Ensure DB is up to date first
+        await this.flush();
+
+        const sortQuery =
+            type === 'level'
+                ? { level: -1, xp: -1 }
+                : { [type]: -1 };
+
+        const topUsers = await UserLevels.find({
+            guildId,
+            [type]: { $gt: 0 }
+        })
+            .sort(sortQuery)
+            .limit(limit)
+            .lean();
+
+        // Refresh cache with latest DB state
+        for (const user of topUsers) {
+
+            const key = `${guildId}:${user.userId}`;
+
+            this.cache.set(key, user);
+        }
+
+        LogData(
+            'User Levels Cache',
+            `Leaderboard refreshed for ${guildId} (${type})`,
+            'debug'
+        );
+
+        return topUsers;
+
+    } catch (error) {
+
+        LogData(
+            'User Levels Cache',
+            `Failed leaderboard fetch for ${guildId}: ${error.message}`,
+            'error'
+        );
+
+        return [];
+    }
+}
+}
+
+export default new User_Levels_Cache();

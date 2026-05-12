@@ -1,0 +1,110 @@
+import { SlashCommandBuilder, Colors, InteractionContextType, ApplicationIntegrationType, PermissionFlagsBits, ChannelType, ChatInputCommandInteraction, MessageFlags } from 'discord.js';
+import Client from '../../../structures/extendedClient.js';
+
+const logChoices = [
+    { name: 'Message', value: 'message' },
+    { name: 'Channel', value: 'channel' },
+    { name: 'Member', value: 'member' },
+    { name: 'Member Join', value: 'join' },
+    { name: 'Member Leave', value: 'leave' },
+    { name: 'Voice', value: 'voice' },
+    { name: 'Role', value: 'role' },
+    { name: 'Server', value: 'server' },
+    { name: 'Punishment', value: 'punishment' },
+    { name: 'ALL Logs', value: 'all' },
+];
+
+const handlers = {
+    'logs-setup': () => import('../subcommands/setup.js'),
+    'logs-view': () => import('../subcommands/view.js'),
+    'logs-test': () => import('../subcommands/test.js'),
+    'logs-ignore': () => import('../subcommands/ignore.js'),
+    'logs-ignore-view': () => import('../subcommands/ignoreView.js'),
+};
+
+export const commandData = new SlashCommandBuilder();
+commandData.setName('logs');
+commandData.setDescription('Manage guild logs')
+commandData.setIntegrationTypes([ ApplicationIntegrationType.GuildInstall ]);
+commandData.setContexts([ InteractionContextType.Guild ]);
+commandData.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
+commandData.addSubcommand((s) => s
+    .setName('setup')
+    .setDescription('Setup logging for your server.')
+    .addStringOption((o) => o
+        .setName('log-type')
+        .setDescription('Type of log to setup')
+        .setRequired(true)
+        .addChoices(logChoices)
+    )
+    .addBooleanOption((o) => o
+        .setName('enabled')
+        .setDescription('Enable or disable the log type')
+        .setRequired(true)
+    )
+    .addChannelOption((o) => o
+        .setName('channel')
+        .setDescription('The channel to send the logs to')
+        .addChannelTypes(ChannelType.GuildText)
+        .setRequired(false)
+    )
+);
+commandData.addSubcommand((s) => s
+    .setName('view')
+    .setDescription('View the current logging setup for your server.')
+    .addStringOption((o) => o
+        .setName('log-type')
+        .setDescription('Type of log to view')
+        .setRequired(true)
+        .addChoices(logChoices)
+    )
+);
+commandData.addSubcommand((s) => s
+    .setName('test')
+    .setDescription('View the current logging setup for your server.')
+    .addStringOption((o) => o
+        .setName('log-type')
+        .setDescription('Type of log to test')
+        .setRequired(true)
+        .addChoices(logChoices)
+    )
+);
+commandData.addSubcommand((s) => s
+    .setName('ignore')
+    .setDescription('Add/remove a channel to the log ignore list.')
+    .addBooleanOption((o) => o
+        .setName('enable')
+        .setDescription('Set to true to enable, false to disable.')
+        .setRequired(true)
+    )
+    .addChannelOption((o) => o
+        .setName('channel')
+        .setDescription('The channel to ignore.')
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
+        .setRequired(false)
+    )
+);
+commandData.addSubcommand((s) => s
+    .setName('ignore-view')
+    .setDescription('View all channels on the log ignore list.')
+);
+commandData.cooldown = 5;
+commandData.userPermissions = [];
+commandData.botPermissions = [];
+commandData.developerOnly = false;
+
+/**
+ * @param { ChatInputCommandInteraction & { client: Client }} interaction
+ */
+export async function execute(interaction) {
+    const subcommand =  interaction.options.getSubcommand();
+    const handlerPromise = handlers[`logs-${subcommand}`];
+    if(!handlerPromise) return interaction.client.utils.Embed(interaction, 'Red', interaction.client.utils.Translate('errors.title', interaction.locale), interaction.client.utils.Translate('errors.no_subcommand', interaction.locale, { subcommand }), { flags: [ MessageFlags.Ephemeral ]});
+
+    try {
+        const handlerModule = await handlerPromise();
+        await handlerModule.execute(interaction);
+    } catch (error) {
+        console.error(error)
+    }
+}
