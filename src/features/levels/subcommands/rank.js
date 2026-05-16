@@ -4,9 +4,9 @@ import User_Level_Cache from '../cache/userLevels.cache.js';
 import { ExpForLevel, progressBar } from '../utils/levels.js';
 
 /**
- * @typedef {import('../models/guildLevels.js').LevelConfigType} LevelConfigType
+ * @typedef {import('../models/guildLevels.js').GuildLevelsType} GuildLevelsType
  * @param { ChatInputCommandInteraction & { client: Client }} interaction
- * @param { LevelConfigType } guildConfig
+ * @param { GuildLevelsType } guildConfig
  */
 
 export async function execute(interaction, guildConfig) {

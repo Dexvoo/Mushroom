@@ -2,11 +2,12 @@ import { UserLevels } from '../../../features/levels/models/userLevels.js';
 import Client from '../../../structures/extendedClient.js';
 import NodeCache from 'node-cache';
 import { LogData } from '../../../shared/utils/logger.js';
-import { GuildMember, Message } from 'discord.js';
+import { EmbedBuilder, GuildMember, Message } from 'discord.js';
 import { LevelForExp, MessageXP, VoiceXP } from '../utils/levels.js';
 
 /**
  * @typedef {import('../models/userLevels.js').UserLevelsType} UserLevelsType
+ * @typedef {import('../models/guildLevels.js').GuildLevelsType} GuildLevelsType
  */
 
 class User_Levels_Cache {
@@ -154,7 +155,7 @@ class User_Levels_Cache {
     /**
      * Adds message XP to a user.
      * @param {GuildMember & { client: Client }} member
-     * @param {import('../models/guildLevels.js').LevelConfigType} guildData
+     * @param {GuildLevelsType} guildData
      * @returns {Promise<boolean>}
      */
     async addMessageXP(member, guildData) {
@@ -184,6 +185,8 @@ class User_Levels_Cache {
             userData.level = newLevel;
             userData.lastLevelUpAt = new Date();
 
+            this.send(member, guildData, userData);
+
             console.log(`${member.user.username} levelled up from ${oldLevel} to ${newLevel}`);
         }
 
@@ -196,7 +199,7 @@ class User_Levels_Cache {
     /**
      * Adds Voice XP to a user.
      * @param {GuildMember & { client: Client }} member
-     * @param {import('../models/guildLevels.js').LevelConfigType} guildData
+     * @param {GuildLevelsType} guildData
      * @param {number} minutes
      * @returns {Promise<boolean>}
      */
@@ -227,6 +230,8 @@ class User_Levels_Cache {
             userData.level = newLevel;
             userData.lastLevelUpAt = new Date();
 
+            this.send(member, guildData, userData);
+            
             console.log(`${member.user.username} levelled up from ${oldLevel} to ${newLevel}`);
         }
 
@@ -234,6 +239,38 @@ class User_Levels_Cache {
         this.dirty.add(key);
 
         return true;
+    }
+
+    /**
+     * Adds Voice XP to a user.
+     * @param {GuildMember & { client: Client }} member
+     * @param {GuildLevelsType} guildData
+     * @param {UserLevelsType} userData
+     * @returns {Promise<boolean>}
+     */
+    async send(member, guildData, userData) {
+        const { guild, client } = member;
+
+        const channelId = guildData.channelId
+        const channel = guild.channels.cache.get(channelId);
+
+        
+        const levelUpMessageTemplate = guildData.levelUpMessage || '{user} leveled up to **{level}**!';
+        const levelUpMessage = levelUpMessageTemplate
+        .replace('{user}', member.toString())
+        .replace('{level}', userData.level.toString());
+        
+        const embed = new EmbedBuilder()
+            .setDescription(levelUpMessage);
+    
+        await channel.send({ embeds:[ embed ]});
+        
+        
+        const devEmbed = new EmbedBuilder()
+            .setDescription(`User: ${member} | Guild: ${guild.name} | Level: \`${userData.level}\``);
+        
+        await client.utils.DevEmbed('userLevel', client, devEmbed);
+
     }
 
     /**
@@ -256,7 +293,7 @@ class User_Levels_Cache {
     /**
      * Calculates the combined role multiplier for a member.
      * @param {GuildMember & { client: Client }} member
-     * @param {import('../models/guildLevels.js').LevelConfigType} levelConfig
+     * @param {GuildLevelsType} levelConfig
      * @returns {number} Combined multiplier
      */
     async getCombinedRoleMultiplier(member, levelConfig) {

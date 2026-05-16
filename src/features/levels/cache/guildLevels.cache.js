@@ -3,7 +3,7 @@ import NodeCache from 'node-cache';
 import { LogData } from '../../../shared/utils/logger.js';
 
 /**
- * @typedef {import('../models/guildLevels.js').LevelConfigType} LevelConfigType
+ * @typedef {import('../models/guildLevels.js').GuildLevelsType} GuildLevelsType
  */
 class Guild_Level_Cache {
     /**
@@ -20,7 +20,7 @@ class Guild_Level_Cache {
     /**
      * Fetches the log configuration for a guild, using the cache if available.
      * @param {string} guildId - The ID of the guild.
-     * @return {Promise<LevelConfigType>} The log configuration.
+     * @return {Promise<GuildLevelsType>} The log configuration.
      */
     async get(guildId) {
         try {
@@ -45,9 +45,9 @@ class Guild_Level_Cache {
     /**
      * Updates a specific sub-category (like 'message', 'join', 'leave') and updates cache.
      * @param {string} guildId
-     * @param {keyof LevelConfigType} type
-     * @param {Partial<LevelConfigType[keyof LevelConfigType]>} newData - The new data for this category.
-     * @return {Promise<LevelConfigType>}
+     * @param {keyof GuildLevelsType} type
+     * @param {Partial<GuildLevelsType[keyof GuildLevelsType]>} newData - The new data for this category.
+     * @return {Promise<GuildLevelsType>}
      */
     async setType(guildId, type, newData) {
     try {

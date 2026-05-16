@@ -15,7 +15,7 @@ const { Schema, model } = mongoose;
  */
 
 /**
- * @typedef {Object} LevelConfigType
+ * @typedef {Object} GuildLevelsType
  * @property {string} guildId - The ID of the guild this configuration applies to.
  * @property {boolean} enabled - Whether the leveling system is enabled.
  * @property {string} channelId - The ID of the channel where level-up messages are sent.
