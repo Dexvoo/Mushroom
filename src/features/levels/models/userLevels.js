@@ -10,7 +10,7 @@ const { Schema, model } = mongoose;
  * @property {number} [level] - Current level
  *
  * @property {number} [totalMessages] - Total messages sent by user
- * @property {number} [totalVoice] - Total voice time in seconds (or other unit)
+ * @property {number} [totalVoice] - Total voice time in seconds
  * @property {number} [totalDrops] - Total drops claimed
  *
  * @property {number} [messageXP] - XP gained specifically from messages
@@ -20,8 +20,6 @@ const { Schema, model } = mongoose;
  * @property {Date} [lastMessageAt] - Last message time that awarded XP
  * @property {Date} [lastVoiceAt] - Last voice session that awarded XP
  * @property {Date} [lastLevelUpAt] - Timestamp of last level-up
- *
- * @property {number} [dailyStreak] - Current daily XP claim or message streak
  */
 
 const UserLevelsSchema = new Schema({
@@ -42,8 +40,6 @@ const UserLevelsSchema = new Schema({
     lastMessageAt: { type: Date, default: null },
     lastVoiceAt: { type: Date, default: null },
     lastLevelUpAt: { type: Date, default: null },
-
-    dailyStreak: { type: Number, default: 0 },
 });
 
 // Compound index

@@ -7,6 +7,7 @@ import * as Permissions from '../shared/utils/permissions.js';
 import * as I18n from '../shared/utils/i18n.js';
 import * as Math from '../shared/utils/math.js';
 import * as String from '../shared/utils/string.js';
+import { CooldownManager } from '../shared/cache/cooldowns.js';
 
 class MushroomClient extends Client {
     constructor(options) {
@@ -41,11 +42,11 @@ class MushroomClient extends Client {
         this.customEmojis = emojis;
 
         /**
-        * Global tracker for Voice XP.
-        * Key: Member ID, Value: { time: Number, guildId: String, levelConfig: Object, levelUpChannel: Channel }
-        * @type {Map<string, object>}
-        */
-        this.voiceTracker = new Map();
+         * Global cooldown manager.
+         * Used for commands, message XP, reactions, dailies, etc.
+         * @type {CooldownManager}
+         */
+        this.cooldowns = new CooldownManager();
     }
 };
 

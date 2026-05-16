@@ -1,9 +1,12 @@
 import { UserLevels } from '../../../features/levels/models/userLevels.js';
+import Client from '../../../structures/extendedClient.js';
 import NodeCache from 'node-cache';
 import { LogData } from '../../../shared/utils/logger.js';
+import { GuildMember, Message } from 'discord.js';
+import { LevelForExp, MessageXP } from '../utils/levels.js';
 
 /**
- * @typedef {import('../../models/levels/userLevels.js').UserLevelsType} UserLevelsType
+ * @typedef {import('../models/userLevels.js').UserLevelsType} UserLevelsType
  */
 
 class User_Levels_Cache {
@@ -149,58 +152,45 @@ class User_Levels_Cache {
     }
 
     /**
-     * Calculates level based on XP.
-     * @param {number} xp
-     * @returns {number}
-     */
-    calculateLevel(xp) {
-        return Math.floor(0.1 * Math.sqrt(xp));
-    }
-
-    /**
      * Adds message XP to a user.
-     * @param {string} guildId
-     * @param {string} userId
-     * @param {number} amount
-     * @returns {Promise<{
-     *  leveledUp: boolean,
-     *  oldLevel: number,
-     *  newLevel: number,
-     *  userData: UserLevelsType
-     * }>}
+     * @param {GuildMember & { client: Client }} member
+     * @param {import('../models/guildLevels.js').LevelConfigType} guildData
+     * @returns {Promise<boolean>}
      */
-    async addMessageXP(guildId, userId, amount) {
-        const key = `${guildId}:${userId}`;
+    async addMessageXP(member, guildData) {
+        const { guild } = member;
 
-        const userData = await this.get(guildId, userId);
+        const key = `${guild.id}:${member.id}`;
+        const userData = await this.get(guild.id, member.id);
+        if (!userData) return false;
+
+        let userXP = MessageXP();
+        const roleMulti = await this.getCombinedRoleMultiplier(member, guildData);
+
+        userXP *= roleMulti;
+        userXP *= guildData.xpMultiplier;
+        userXP = Math.floor(userXP);
 
         const oldLevel = userData.level;
 
-        userData.xp += amount;
-        userData.messageXP += amount;
-
+        userData.xp += userXP;
+        userData.messageXP += userXP;
         userData.totalMessages += 1;
         userData.lastMessageAt = new Date();
 
-        const newLevel = this.calculateLevel(userData.xp);
-
-        let leveledUp = false;
+        const [ newLevel ] = LevelForExp(userData.xp);
 
         if (newLevel > oldLevel) {
-            leveledUp = true;
-
             userData.level = newLevel;
             userData.lastLevelUpAt = new Date();
+
+            console.log(`${member.user.username} levelled up from ${oldLevel} to ${newLevel}`);
         }
 
         this.cache.set(key, userData);
         this.dirty.add(key);
-        return {
-            leveledUp,
-            oldLevel,
-            newLevel,
-            userData
-        };
+
+        return true;
     }
 
     /**
@@ -284,6 +274,24 @@ class User_Levels_Cache {
     }
 
     /**
+     * Calculates the combined role multiplier for a member.
+     * @param {GuildMember & { client: Client }} member
+     * @param {import('../models/guildLevels.js').LevelConfigType} levelConfig
+     * @returns {number} Combined multiplier
+     */
+    async getCombinedRoleMultiplier(member, levelConfig) {
+        if (!levelConfig.roleMultipliers?.length) {
+            return 1;
+        }
+
+        const totalBonus = levelConfig.roleMultipliers
+            .filter((rm) => member.roles.cache.has(rm.roleId))
+            .reduce((total, rm) => total + rm.multiplier, 0);
+
+        return 1 + totalBonus;
+    }
+
+    /**
      * Removes a user from cache.
      * @param {string} guildId
      * @param {string} userId
@@ -313,43 +321,25 @@ async getTopUsers(guildId, type) {
         // Ensure DB is up to date first
         await this.flush();
 
-        const sortQuery =
-            type === 'level'
-                ? { level: -1, xp: -1 }
-                : { [type]: -1 };
+        const sortQuery = type === 'level' ? { level: -1, xp: -1 } : { [type]: -1 };
 
-        const topUsers = await UserLevels.find({
-            guildId,
-            [type]: { $gt: 0 }
-        })
+        const topUsers = await UserLevels.find({ guildId, [type]: { $gt: 0 } })
             .sort(sortQuery)
             .limit(limit)
             .lean();
 
         // Refresh cache with latest DB state
         for (const user of topUsers) {
-
             const key = `${guildId}:${user.userId}`;
-
             this.cache.set(key, user);
         }
 
-        LogData(
-            'User Levels Cache',
-            `Leaderboard refreshed for ${guildId} (${type})`,
-            'debug'
-        );
+        LogData('User Levels Cache', `Leaderboard refreshed for ${guildId} (${type})`, 'debug');
 
         return topUsers;
 
     } catch (error) {
-
-        LogData(
-            'User Levels Cache',
-            `Failed leaderboard fetch for ${guildId}: ${error.message}`,
-            'error'
-        );
-
+        LogData('User Levels Cache', `Failed leaderboard fetch for ${guildId}: ${error.message}`, 'error');
         return [];
     }
 }

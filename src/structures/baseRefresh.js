@@ -21,7 +21,7 @@ export default async function refreshCommands(client) {
         if(!guildId || guildId === 'none') {
             await rest.put(Routes.applicationCommands(applicationId), { body: commands });
         } else {
-            await rest.put(Routes.applicationGuildCommands(applicationId, '1503593846406123672'), { body: commands });
+            await rest.put(Routes.applicationGuildCommands('1499756177158836225', '1503593846406123672'), { body: commands });
         }
 
         client.utils.LogData('Command Refresh', 'Successfully reloaded application (/) commands.', 'success');

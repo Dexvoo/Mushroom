@@ -42,6 +42,18 @@ export default {
             no_channels: 'There are no channels on the log ignore list.',
             no_log_config: 'No current config found for `{type}`',
         },
+        level_rank: {
+            not_configured_prompt: `This guild hasn't configured levels for this server, advise an admin to use \`/levels setup\``,
+            bot: '`{user}, is a bot they cannot gain XP`',
+            not_levelled_yet: `{user}, doesn't have a level`,
+        },
+        level_setup: {
+            provide_channel: 'Please provide a channel to send the level embed to',
+            test_embed_title: 'Test Levels',
+            test_embed_description: 'This is a test embed for `levels`',
+            test_embed_footer: 'Tested by @{user}',
+            test_send_fail: 'Failed to send test log to <#{channelId}>',
+        },
         ping: {
             title: '🏓 Pong!',
             description: 'Latency: {ms}ms\nAPI Latency: {api}ms'

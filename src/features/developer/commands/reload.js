@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags, ApplicationIntegrationType, InteractionContextType, Events, AutocompleteInteraction } from 'discord.js';
 import Client from '../../../structures/extendedClient.js';
 import { ENV } from '../../../bootstrap/environment.js';
+import refreshCommands from '../../../structures/baseRefresh.js';
 
 
 
@@ -44,6 +45,8 @@ export async function autocomplete(interaction) {
  */
 export async function execute(interaction) {
     const { options, client } = interaction;
+
+    await refreshCommands(client);
 
     const commandName = options.getString('command');
     const global = options.getBoolean('global');

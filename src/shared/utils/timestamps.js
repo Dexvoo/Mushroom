@@ -11,17 +11,16 @@ const ShortTimestamp = (timestamp) => {
 /**
  * Generates a Discord-formatted timestamp.
  *
- * @param {Date} date - Date object
+ * @param {Date | number} date - Date or number
  * @param {'f' | 'F' | 'd' | 'D' | 't' | 'T' | 'R'} [type='R'] - Discord timestamp format
  * @returns {string} Formatted Discord timestamp string
  */
 
 function Timestamp(date, type = 'R') {
-  if (!date) throw new Error('No date provided.');
-  if (!(date instanceof Date)) throw new Error('Provided date is not a valid Date object.');
+    if (!date) throw new Error('No date provided.');
 
-  const timestamp = Math.floor(date.getTime() / 1000);
-  return `<t:${timestamp}:${type}>`;
+    const timestamp = date instanceof Date ? Math.floor(date.getTime() / 1000) : Math.floor(date / 1000);
+    return `<t:${timestamp}:${type}>`;
 }
 
 export { ShortTimestamp, Timestamp };

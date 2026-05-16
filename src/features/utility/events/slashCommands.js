@@ -1,6 +1,6 @@
 import { ChatInputCommandInteraction, ApplicationCommand, Embed, EmbedBuilder, MessageFlags, Events } from 'discord.js';
 import Client from '../../../structures/extendedClient.js';
-import { CooldownManager, CooldownType } from '../cache/cooldowns.js';
+import { CooldownManager } from '../../../shared/cache/cooldowns.js';
 const cooldowns = new CooldownManager();
 
 export const name = Events.InteractionCreate;
@@ -89,17 +89,15 @@ export async function execute(interaction, client) {
  */
 function commandCooldown(interaction, command, client) {
     const { commandName, user } = interaction;
-    if (cooldowns.has('Command', user.id, commandName)) {
-        const timeLeft = cooldowns.getRemaining('Command', user.id, commandName);
-        const locale = interaction.locale;
+    const expiresAt = cooldowns.getRemaining('command', user.id, commandName);
 
-        const msg = client.utils.Translate('errors.cooldown', locale, { command: commandName, time: client.utils.Timestamp(timeLeft) });
-
-        client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
+    if (expiresAt) {
+        const msg = client.utils.Translate('errors.cooldown', interaction.locale, { command: commandName, time: client.utils.Timestamp(expiresAt)});
+        client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [MessageFlags.Ephemeral] });
         return false;
     }
 
-  const cooldownAmount = command.cooldown || 5;
-  cooldowns.add('Command', user.id, cooldownAmount, commandName);
-  return true;
+    const cooldownAmount = command.cooldown || 5;
+    cooldowns.add('command', user.id, cooldownAmount, commandName);
+    return true;
 };

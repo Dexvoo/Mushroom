@@ -1,9 +1,9 @@
-import { LevelConfig } from '../../../models/guild/levels.js';
+import { LevelConfig } from '../models/guildLevels.js';
 import NodeCache from 'node-cache';
-import { LogData } from '../../../shared/utils/embed.js';
+import { LogData } from '../../../shared/utils/logger.js';
 
 /**
- * @typedef {import('../../../models/guild/levels.js').LevelConfigType} LevelConfigType
+ * @typedef {import('../models/guildLevels.js').LevelConfigType} LevelConfigType
  */
 class Guild_Level_Cache {
     /**
@@ -50,23 +50,30 @@ class Guild_Level_Cache {
      * @return {Promise<LevelConfigType>}
      */
     async setType(guildId, type, newData) {
-        try {
+    try {
+        const updateData = typeof newData === 'object' && newData !== null &&
+                !Array.isArray(newData) ? Object.fromEntries(
+                    Object.entries(newData).map(([key, value]) => [
+                        `${type}.${key}`,
+                        value
+                    ])
+                ) : { [type]: newData };
+                
             const updatedConfig = await LevelConfig.findOneAndUpdate(
                 { guildId },
+                { $set: updateData },
                 {
-                    $set: Object.fromEntries(
-                        Object.entries(newData).map(([key, value]) => [
-                            `${type}.${key}`,
-                            value
-                        ])
-                    )
-                },
-                { returnDocument: 'after', upsert: true, lean: true, setDefaultsOnInsert: true }
+                    returnDocument: 'after',
+                    upsert: true,
+                    lean: true,
+                    setDefaultsOnInsert: true
+                }
             );
-
+        
             this.cache.set(guildId, updatedConfig);
+        
             LogData('Guild Level Cache', `Type '${type}' updated for guild ${guildId}`, 'debug');
-
+        
             return updatedConfig;
         } catch (error) {
             LogData('Guild Level Cache', `Failed to set type '${type}' for ${guildId}: ${error.message}`, 'error');
