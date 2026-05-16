@@ -24,15 +24,11 @@ export async function execute(message) {
     if(!validate) return;
 
     const { guildConfig } = validate;
-
     const expiresAt = client.cooldowns.getRemaining('message', author.id, guild.id);
-
     const cooldownEnd = new Date(expiresAt);
-
-
     if(expiresAt) return client.utils.LogData('Message Cooldown', `Guild: ${guild.name} | User: @${member.user.username} | Time: ${(cooldownEnd - new Date())/1000}`, 'debug');
 
-    const addedXP = await User_Level_Cache.addMessageXP(member, guildConfig)
+    const addedXP = await User_Level_Cache.addMessageXP(member, guildConfig);
     if(!addedXP) return;
 
     client.cooldowns.add('message', author.id, guildConfig.messageCooldown ?? 30, guild.id);

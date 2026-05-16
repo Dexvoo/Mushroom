@@ -7,7 +7,7 @@ import Guild_Level_Cache from '../cache/guildLevels.cache.js';
  * Performs all preliminary checks for granting XP.
  * @param { GuildMember & { client: Client }} member
  * @param { GuildChannel & { client: Client }} channelLevel - The channel where the event occurred.
- * @returns {Promise<{guildConfig: import('../models/guildLevels.js').LevelConfigType|null>}
+ * @returns {Promise<{guildConfig: import('../models/guildLevels.js').LevelConfigType|null>}}
  */
 export async function ValidateXP(member, channelLevel) {
     const { guild, client } = member;

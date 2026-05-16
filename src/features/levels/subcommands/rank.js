@@ -52,7 +52,7 @@ export async function execute(interaction, guildConfig) {
         )
         .setImage('https://i.sstatic.net/Fzh0w.png');
 
-    interaction.reply({ embeds: embed })
+    interaction.reply({ embeds: [embed] })
 
 
 

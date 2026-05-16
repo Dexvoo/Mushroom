@@ -3,7 +3,7 @@ import Client from '../../../structures/extendedClient.js';
 import NodeCache from 'node-cache';
 import { LogData } from '../../../shared/utils/logger.js';
 import { GuildMember, Message } from 'discord.js';
-import { LevelForExp, MessageXP } from '../utils/levels.js';
+import { LevelForExp, MessageXP, VoiceXP } from '../utils/levels.js';
 
 /**
  * @typedef {import('../models/userLevels.js').UserLevelsType} UserLevelsType
@@ -194,66 +194,46 @@ class User_Levels_Cache {
     }
 
     /**
-     * Adds voice XP to a user.
-     * @param {string} guildId
-     * @param {string} userId
-     * @param {number} amount
-     * @returns {Promise<UserLevelsType>}
+     * Adds Voice XP to a user.
+     * @param {GuildMember & { client: Client }} member
+     * @param {import('../models/guildLevels.js').LevelConfigType} guildData
+     * @param {number} minutes
+     * @returns {Promise<boolean>}
      */
-    async addVoiceXP(guildId, userId, amount) {
-        const key = `${guildId}:${userId}`;
+    async addVoiceXP(member, guildData, minutes) {
+        const { guild } = member;
 
-        const userData = await this.get(guildId, userId);
+        const key = `${guild.id}:${member.id}`;
+        const userData = await this.get(guild.id, member.id);
+        if (!userData) return false;
+
+        let userXP = VoiceXP(minutes);
+        const roleMulti = await this.getCombinedRoleMultiplier(member, guildData);
+
+        userXP *= roleMulti;
+        userXP *= guildData.xpMultiplier;
+        userXP = Math.floor(userXP);
 
         const oldLevel = userData.level;
 
-        userData.xp += amount;
-        userData.voiceXP += amount;
-
-        userData.totalVoice += 1;
+        userData.xp += userXP;
+        userData.voiceXP += userXP;
+        userData.totalVoice += minutes;
         userData.lastVoiceAt = new Date();
 
-        const newLevel = this.calculateLevel(userData.xp);
+        const [ newLevel ] = LevelForExp(userData.xp);
 
         if (newLevel > oldLevel) {
             userData.level = newLevel;
             userData.lastLevelUpAt = new Date();
+
+            console.log(`${member.user.username} levelled up from ${oldLevel} to ${newLevel}`);
         }
 
         this.cache.set(key, userData);
         this.dirty.add(key);
 
-        return userData;
-    }
-
-    /**
-     * Adds XP from drops/rewards.
-     * @param {string} guildId
-     * @param {string} userId
-     * @param {number} amount
-     * @returns {Promise<UserLevelsType>}
-     */
-    async addDropXP(guildId, userId, amount) {
-        const key = `${guildId}:${userId}`;
-
-        const userData = await this.get(guildId, userId);
-
-        const oldLevel = userData.level;
-
-        userData.xp += amount;
-        userData.dropsXP += amount;
-
-        const newLevel = this.calculateLevel(userData.xp);
-
-        if (newLevel > oldLevel) {
-            userData.level = newLevel;
-            userData.lastLevelUpAt = new Date();
-        }
-
-        this.cache.set(key, userData);
-        this.dirty.add(key);
-
-        return userData;
+        return true;
     }
 
     /**
