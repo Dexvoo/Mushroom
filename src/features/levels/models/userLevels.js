@@ -64,4 +64,9 @@ UserLevelsSchema.index({
     totalVoice: -1
 });
 
+UserLevelsSchema.index({
+    guildId: 1,
+    totalCommands: -1
+});
+
 export const UserLevels = model('User-Levels', UserLevelsSchema);

@@ -1,6 +1,7 @@
 import { ChatInputCommandInteraction, ApplicationCommand, Embed, EmbedBuilder, MessageFlags, Events } from 'discord.js';
 import Client from '../../../structures/extendedClient.js';
 import { CooldownManager } from '../../../shared/cache/cooldowns.js';
+import User_Level_Cache from '../../levels/cache/userLevels.cache.js'
 const cooldowns = new CooldownManager();
 
 export const name = Events.InteractionCreate;
@@ -60,6 +61,7 @@ export async function execute(interaction, client) {
 
         try {
             await command.execute(interaction, client);
+            await User_Level_Cache.incrementCommands(guild.id, interaction.user.id);
         } catch (error) {
 
             // TODO: log errors with webhook to a private channel for better visibility and debugging, instead of just console logging.

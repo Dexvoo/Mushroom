@@ -2,8 +2,15 @@ import { UserLevels } from '../../../features/levels/models/userLevels.js';
 import Client from '../../../structures/extendedClient.js';
 import NodeCache from 'node-cache';
 import { LogData } from '../../../shared/utils/logger.js';
-import { EmbedBuilder, GuildMember, Message } from 'discord.js';
+import { EmbedBuilder, GuildMember } from 'discord.js';
 import { LevelForExp, MessageXP, VoiceXP } from '../utils/levels.js';
+
+
+/**
+ * @typedef {Object} LevelReward
+ * @property {number} level
+ * @property {string} roleId
+ */
 
 /**
  * @typedef {import('../models/userLevels.js').UserLevelsType} UserLevelsType
@@ -185,9 +192,8 @@ class User_Levels_Cache {
             userData.level = newLevel;
             userData.lastLevelUpAt = new Date();
 
-            this.send(member, guildData, userData);
-
-            console.log(`${member.user.username} levelled up from ${oldLevel} to ${newLevel}`);
+            const rewards = await this.rewards(member, guildData, userData);
+            await this.send(member, guildData, userData, rewards);
         }
 
         this.cache.set(key, userData);
@@ -230,9 +236,8 @@ class User_Levels_Cache {
             userData.level = newLevel;
             userData.lastLevelUpAt = new Date();
 
-            this.send(member, guildData, userData);
-            
-            console.log(`${member.user.username} levelled up from ${oldLevel} to ${newLevel}`);
+            const rewards = await this.rewards(member, guildData, userData);
+            await this.send(member, guildData, userData, rewards);
         }
 
         this.cache.set(key, userData);
@@ -242,17 +247,20 @@ class User_Levels_Cache {
     }
 
     /**
-     * Adds Voice XP to a user.
+     * Sends the level-up message.
      * @param {GuildMember & { client: Client }} member
      * @param {GuildLevelsType} guildData
      * @param {UserLevelsType} userData
+     * @param {{ added: LevelReward[], removed: LevelReward[], failed: LevelReward[] }} rewards
      * @returns {Promise<boolean>}
      */
-    async send(member, guildData, userData) {
+    async send(member, guildData, userData, rewards = { added: [], removed: [], failed: [] }) {
         const { guild, client } = member;
 
-        const channelId = guildData.channelId
+        const channelId = guildData.channelId;
         const channel = guild.channels.cache.get(channelId);
+
+        if (!channel?.isTextBased()) return false;
 
         
         const levelUpMessageTemplate = guildData.levelUpMessage || '{user} leveled up to **{level}**!';
@@ -262,7 +270,11 @@ class User_Levels_Cache {
         
         const embed = new EmbedBuilder()
             .setDescription(levelUpMessage);
-    
+            
+        if(rewards.added.length > 0) embed.addFields( { name: 'Added Rewards', value: rewards.added.map((reward) => `<@&${reward.roleId}>`).join(', '), inline: true });
+        if(rewards.removed.length > 0) embed.addFields( { name: 'Removed Rewards', value: rewards.removed.map((reward) => `<@&${reward.roleId}>`).join(', '), inline: true });
+        if(rewards.failed.length > 0) embed.addFields( { name: 'Failed Rewards', value: rewards.failed.map((reward) => `<@&${reward.roleId}>`).join(', '), inline: true });
+
         await channel.send({ embeds:[ embed ]});
         
         
@@ -271,6 +283,75 @@ class User_Levels_Cache {
         
         await client.utils.DevEmbed('userLevel', client, devEmbed);
 
+    }
+
+    /**
+    * Handles level reward roles for a member.
+    *
+    * @param {GuildMember} member
+    * @param {GuildLevelsType} guildData
+    * @param {UserLevelsType} userData
+    * @returns {Promise<{ added: LevelReward[], removed: LevelReward[], failed: LevelReward[] }>}
+    */
+    async rewards(member, guildData, userData) {
+        const { guild } = member;
+
+        const rewards = [...(guildData.rewards ?? [])]
+            .filter((reward) => reward?.level && reward?.roleId)
+            .sort((a, b) => b.level - a.level);
+
+        if (!rewards.length) return { added: [], removed: [], failed: [] };
+
+        const removePastRewards = guildData.removePastRewards === true;
+
+        const added = [];
+        const removed = [];
+        const failed = [];
+
+        const currentReward = rewards.find((reward) => reward.level <= userData.level);
+        if (!currentReward) return { added, removed, failed };
+
+        const currentRole = guild.roles.cache.get(currentReward.roleId);
+
+        if (!currentRole) {
+            failed.push(currentReward);
+            return { added, removed, failed };
+        }
+
+        if (!member.roles.cache.has(currentReward.roleId)) {
+            try {
+                await member.roles.add(currentRole);
+                added.push(currentReward);
+            } catch {
+                failed.push(currentReward);
+            }
+        }
+
+        if(removePastRewards) {
+            const oldRewards = rewards.filter((reward) => {
+                return reward.level < currentReward.level;
+            });
+
+            for(const reward of oldRewards) {
+                if(!member.roles.cache.has(reward.roleId)) continue;
+
+                const role = guild.roles.cache.get(reward.roleId);
+                if(!role) {
+                    failed.push(reward);
+                    continue;
+                }
+
+                try {
+                    await member.roles.remove(role);
+                    removed.push(reward);
+                } catch (error) {
+                    failed.push(reward);
+                }
+            }
+
+        }
+
+        return { added, removed, failed };
     }
 
     /**
@@ -292,7 +373,7 @@ class User_Levels_Cache {
 
     /**
      * Calculates the combined role multiplier for a member.
-     * @param {GuildMember & { client: Client }} member
+     * @param {GuildMember} member
      * @param {GuildLevelsType} levelConfig
      * @returns {number} Combined multiplier
      */
@@ -322,44 +403,44 @@ class User_Levels_Cache {
 
 
     /**
- * Gets top users for a guild.
- * Ensures cache is flushed before querying.
- *
- * @param {string} guildId
- * @param {'totalMessages' | 'totalVoice' | 'level' | 'xp'} type
- * @returns {Promise<UserLevelsType[]>}
- */
-async getTopUsers(guildId, type) {
+     * Gets top users for a guild.
+     * Ensures cache is flushed before querying.
+     *
+     * @param {string} guildId
+     * @param {'totalMessages' | 'totalVoice' | 'level' | 'xp'} type
+     * @returns {Promise<UserLevelsType[]>}
+     */
+    async getTopUsers(guildId, type) {
 
-    const limit = 15;
+        const limit = 15;
 
-    try {
+        try {
 
-        // Ensure DB is up to date first
-        await this.flush();
+            // Ensure DB is up to date first
+            await this.flush();
 
-        const sortQuery = type === 'level' ? { level: -1, xp: -1 } : { [type]: -1 };
+            const sortQuery = type === 'level' ? { level: -1, xp: -1 } : { [type]: -1 };
 
-        const topUsers = await UserLevels.find({ guildId, [type]: { $gt: 0 } })
-            .sort(sortQuery)
-            .limit(limit)
-            .lean();
+            const topUsers = await UserLevels.find({ guildId, [type]: { $gt: 0 } })
+                .sort(sortQuery)
+                .limit(limit)
+                .lean();
 
-        // Refresh cache with latest DB state
-        for (const user of topUsers) {
-            const key = `${guildId}:${user.userId}`;
-            this.cache.set(key, user);
+            // Refresh cache with latest DB state
+            for (const user of topUsers) {
+                const key = `${guildId}:${user.userId}`;
+                this.cache.set(key, user);
+            }
+
+            LogData('User Levels Cache', `Leaderboard refreshed for ${guildId} (${type})`, 'debug');
+
+            return topUsers;
+
+        } catch (error) {
+            LogData('User Levels Cache', `Failed leaderboard fetch for ${guildId}: ${error.message}`, 'error');
+            return [];
         }
-
-        LogData('User Levels Cache', `Leaderboard refreshed for ${guildId} (${type})`, 'debug');
-
-        return topUsers;
-
-    } catch (error) {
-        LogData('User Levels Cache', `Failed leaderboard fetch for ${guildId}: ${error.message}`, 'error');
-        return [];
     }
-}
 }
 
 export default new User_Levels_Cache();

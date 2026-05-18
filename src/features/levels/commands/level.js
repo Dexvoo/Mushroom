@@ -5,7 +5,7 @@ import Guild_Level_Cache from '../cache/guildLevels.cache.js'
 const handlers = {
     'setup': () => import('../subcommands/setup.js'),
     'rank': () => import('../subcommands/rank.js'),
-    // 'leaderboard': () => import('../subcommands/test.js'),
+    'leaderboard': () => import('../subcommands/leaderboard.js'),
     // 'settings':{
     //     'xp-multiplier': () => import('../subcommands/test.js'),
     //     'message-cooldown': () => import('../subcommands/test.js'),
@@ -45,8 +45,9 @@ commandData.addSubcommand((s) => s
     .addStringOption((o) => o.setName('type').setDescription('The type of leaderboard to show.').setRequired(true)
         .addChoices(
             { name: 'Levels', value: 'level' },
-            { name: 'Messages', value: 'messages' },
-            { name: 'Voice', value: 'voice' }
+            { name: 'Messages', value: 'totalMessages' },
+            { name: 'Voice', value: 'totalVoice' },
+            { name: 'Commands', value: 'totalCommands'}
         )
     )
 );
