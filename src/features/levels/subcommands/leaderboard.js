@@ -59,7 +59,6 @@ export async function execute(interaction, guildConfig) {
                 const rank = formatRank(data);
                 const name = formatName(user);
                 const commands = `🤖 \`${data.totalCommands.toLocaleString().padEnd(15)}\``;
-                console.log(`${rank} ${name} | ${commands}`);
                 return `${rank} ${name} | ${commands}`;
             },
         },
@@ -68,8 +67,6 @@ export async function execute(interaction, guildConfig) {
     const config = typeConfig[type];
     if(!config) return client.utils.Embed(interaction, Colors.Red, 'Leaderboard Failed', 'Invalid leaderboard type');
     const topUsers = await User_Level_Cache.getTopUsers(guild.id, type);
-
-    console.log(topUsers)
 
     const userPromises = topUsers.map(async (data, i) => {
         try {
