@@ -9,7 +9,7 @@ import User_Level_Cache from '../cache/userLevels.cache.js';
  */
 
 export async function execute(interaction, guildConfig) {
-    const { client, options, guild, member } = interaction;
+    const { client, options, guild } = interaction;
 
     
     if(!guildConfig) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('errors.no_config_found_generic', interaction.locale), { flags: MessageFlags.Ephemeral });
@@ -47,7 +47,7 @@ export async function execute(interaction, guildConfig) {
             type: 'Voice',
             format: (user, data) => {
                 const rank = formatRank(data);
-                const name = `\`@${user.username.substring(0, 15).padEnd(15)}\``;
+                const name = formatName(user);
                 const voice = `🎙️ \`${(data.totalVoice / 60).toFixed(1).padEnd(15)}h\``;
                 const xp = `${client.customEmojis.levelling.XP} \`${data.voiceXP.toLocaleString().padEnd(10)}\``;
                 return `${rank} ${name} | ${voice} ${xp}`;
@@ -65,7 +65,7 @@ export async function execute(interaction, guildConfig) {
     };
 
     const config = typeConfig[type];
-    if(!config) return client.utils.Embed(interaction, Colors.Red, 'Leaderboard Failed', 'Invalid leaderboard type');
+    if(!config) return client.utils.Embed(interaction, 'Red', 'Leaderboard Failed', 'Invalid leaderboard type');
     const topUsers = await User_Level_Cache.getTopUsers(guild.id, type);
 
     const userPromises = topUsers.map(async (data, i) => {
@@ -75,7 +75,7 @@ export async function execute(interaction, guildConfig) {
             return config.format(user, rankedData);
         } catch (error) {
             console.error(`Could not fetch user ${data.userId} for leaderboard:`, error);
-            return `Unknown User (${data.userId})`;
+            return `${formatRank(rankedData)} \`@Unknown User\``;
         }
     });
 
@@ -89,7 +89,7 @@ export async function execute(interaction, guildConfig) {
     const leaderboard = leaderboardLines.join('\n');
 
     try {
-        const title = `${guild.name} | ${typeConfig[type].type} Leaderboard 🏆`;
+        const title = `${guild.name} | ${config.type} Leaderboard 🏆`;
         const description = leaderboard.length > 4096 ? leaderboard.substring(0, 4093) + '...' : leaderboard;
 
         await client.utils.Embed(interaction, 'DarkPurple', title, description);
