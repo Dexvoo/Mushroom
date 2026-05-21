@@ -65,7 +65,7 @@ export async function execute(interaction, guildConfig) {
     };
 
     const config = typeConfig[type];
-    if(!config) return client.utils.Embed(interaction, 'Red', 'Leaderboard Failed', 'Invalid leaderboard type');
+    if(!config) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('commands.level_leaderboard.invalid_type', interaction.locale));
     const topUsers = await User_Level_Cache.getTopUsers(guild.id, type);
 
     const userPromises = topUsers.map(async (data, i) => {
@@ -84,7 +84,7 @@ export async function execute(interaction, guildConfig) {
         .filter((result) => result.status === 'fulfilled' && result.value !== null)
         .map((result) => result.value);
     
-    if(leaderboardLines.length === 0) return client.utils.Embed(interaction, 'Orange', 'Leaderboard Empty', 'There is no data to display on the leaderboard yet.');
+    if(leaderboardLines.length === 0) return client.utils.Embed(interaction, 'Orange', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('commands.level_leaderboard.empty_description', interaction.locale));
 
     const leaderboard = leaderboardLines.join('\n');
 
