@@ -6,20 +6,20 @@ const handlers = {
     'setup': () => import('../subcommands/setup.js'),
     'rank': () => import('../subcommands/rank.js'),
     'leaderboard': () => import('../subcommands/leaderboard.js'),
-    // 'settings':{
+    'settings':{
     //     'xp-multiplier': () => import('../subcommands/test.js'),
-    //     'message-cooldown': () => import('../subcommands/test.js'),
-    //     'max-level': () => import('../subcommands/test.js'),
-    //     'levelup-message': () => import('../subcommands/test.js'),
+        'message-cooldown': () => import('../subcommands/settings/messageCooldown.js'),
+        'max-level': () => import('../subcommands/settings/maxLevel.js'),
+        'levelup-message': () => import('../subcommands/settings/levelUpMessage.js'),
     //     'remove-past-rewards': () => import('../subcommands/test.js'),
     //     'add-reward': () => import('../subcommands/test.js'),
     //     'remove-reward': () => import('../subcommands/test.js'),
     //     'view-rewards': () => import('../subcommands/test.js'),
-    //     'blacklist': () => import('../subcommands/test.js'),
+        'blacklist': () => import('../subcommands/settings/blacklist.js'),
     //     'add-multiplier': () => import('../subcommands/test.js'),
     //     'remove-multiplier': () => import('../subcommands/test.js'),
     //     'view-multipliers':() => import('../subcommands/test.js'),
-    // },
+    },
     // 'admin':{
     //     'set': () => import('../subcommands/test.js'),
     //     'add': () => import('../subcommands/test.js'),
@@ -134,12 +134,13 @@ commandData.developerOnly = false;
  * @param { ChatInputCommandInteraction & { client: Client }} interaction
  */
 export async function execute(interaction) {
+    if(!interaction.guild) return;
     const subcommandGroup = interaction.options.getSubcommandGroup(false);
     const subcommand = interaction.options.getSubcommand();
     const handler = subcommandGroup
       ? handlers[subcommandGroup]?.[subcommand]
       : handlers[subcommand];
-    if(!handler) return interaction.client.utils.Embed(interaction, 'Red', interaction.client.utils.Translate('errors.title', interaction.locale), interaction.client.utils.Translate('errors.no_subcommand', interaction.locale, { subcommand }), { flags: [ MessageFlags.Ephemeral ]});
+    if(!handler) return interaction.client.utils.Embed(interaction, 'Red', interaction.client.utils.Translate('errors.title', interaction.locale), interaction.client.utils.Translate('errors.no_subcommand', interaction.locale, { subcommand }), { flags: MessageFlags.Ephemeral });
 
     try {
         const guildConfig = await Guild_Level_Cache.get(interaction.guildId);

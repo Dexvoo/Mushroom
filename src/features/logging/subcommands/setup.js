@@ -17,12 +17,12 @@ export async function execute(interaction) {
     // TODO: server logs
     if(type === 'server') {
         const msg = client.utils.Translate('commands.log_setup.server_logs_soon', interaction.locale);
-        return interaction.client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
+        return interaction.client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: MessageFlags.Ephemeral });
     }
 
     if(!channel && enabled) {
         const msg = client.utils.Translate('commands.log_setup.provide_channel', interaction.locale);
-        return interaction.client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] });
+        return interaction.client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: MessageFlags.Ephemeral });
     }
 
     if(enabled) {
@@ -30,7 +30,7 @@ export async function execute(interaction) {
         const [ hasPermissions, missingPermissions ] = client.utils.PermissionCheck(channel, botPermissions, guild.members.me);
         if(!hasPermissions) {
             const msg = client.utils.Translate('errors.bot_missing_perms', interaction.locale, { perms: missingPermissions.flat().join(', ') });
-            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags:[ MessageFlags.Ephemeral ] }); 
+            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags:MessageFlags.Ephemeral }); 
         }
 
         try {
@@ -48,7 +48,7 @@ export async function execute(interaction) {
         } catch (error) {
             console.error(error);
             const msg = client.utils.Translate('errors.test_log_fail_perms', interaction.locale, { channel: channel.toString() });
-            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] }); 
+            return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: MessageFlags.Ephemeral }); 
         }
 
     }
@@ -69,7 +69,7 @@ export async function execute(interaction) {
     } catch (error) {
         console.error('Failed to update log settings:', error);
         const msg = client.utils.Translate('errors.save_settings_fail', interaction.locale);
-        return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: [ MessageFlags.Ephemeral ] }); 
+        return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, { flags: MessageFlags.Ephemeral }); 
     }
 
     const statusKey = enabled ? 'commands.log_setup.enabled' : 'commands.log_setup.disabled';
@@ -78,5 +78,5 @@ export async function execute(interaction) {
     const title = client.utils.Translate('commands.log_setup.setup_success_title', interaction.locale);
     const msg = client.utils.Translate('commands.log_setup.setup_success_desc', interaction.locale, { status: statusString, type });
     
-    client.utils.Embed(interaction, 'Green', title, msg, { flags: [ MessageFlags.Ephemeral ] }); 
+    client.utils.Embed(interaction, 'Green', title, msg, { flags: MessageFlags.Ephemeral }); 
 }

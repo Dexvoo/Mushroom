@@ -91,18 +91,18 @@ export async function execute(interaction, client) {
     };
 
     const payload = eventPayloads[event];
-    if (!payload) return client.utils.Embed(interaction, 'Red', 'Error', `I don't know how to simulate the \`${event}\` event yet. Please configure its arguments in the command file!`, { flags: [ MessageFlags.Ephemeral ] });
+    if (!payload) return client.utils.Embed(interaction, 'Red', 'Error', `I don't know how to simulate the \`${event}\` event yet. Please configure its arguments in the command file!`, { flags: MessageFlags.Ephemeral });
 
     try {
 
         if(Events.MessageDelete === event || Events.MessageCreate === event || Events.MessageUpdate === event) {
-            if(!interaction.channel.messages.cache.last()) return client.utils.Embed(interaction, 'Red', '⚠️ Error', `Make sure to send a message first!`, { flags: [ MessageFlags.Ephemeral ] });
+            if(!interaction.channel.messages.cache.last()) return client.utils.Embed(interaction, 'Red', '⚠️ Error', `Make sure to send a message first!`, { flags: MessageFlags.Ephemeral });
         }
         client.emit(event, ...payload);
 
-        client.utils.Embed(interaction, 'DarkPurple', 'Simulated', `Successfully simulated the \`${event}\` event!`, { flags: [ MessageFlags.Ephemeral ] });
+        client.utils.Embed(interaction, 'DarkPurple', 'Simulated', `Successfully simulated the \`${event}\` event!`, { flags: MessageFlags.Ephemeral });
     } catch (error) {
         console.error(`Failed to simulate event ${event}:`, error);
-        client.utils.Embed(interaction, 'Red', 'Error', `Failed to simulate \`${event}\` due to an error. Check console.`, { flags:[ MessageFlags.Ephemeral ] });
+        client.utils.Embed(interaction, 'Red', 'Error', `Failed to simulate \`${event}\` due to an error. Check console.`, { flags: MessageFlags.Ephemeral });
     }
 }

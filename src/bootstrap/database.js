@@ -10,7 +10,6 @@ export async function Database_Connect() {
         LogData('MongoDB', 'Connected to the database successfully.', 'success');
     } catch (error) {
         LogData('MongoDB', `Failed to connect: ${error.message}`, 'error');
-        // TODO: ADD SHUTDOWN FUNCTION
         await Shutdown('DATABASE FAILURE', Client)
     }
 }

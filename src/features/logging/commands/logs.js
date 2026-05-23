@@ -99,7 +99,7 @@ commandData.developerOnly = false;
 export async function execute(interaction) {
     const subcommand =  interaction.options.getSubcommand();
     const handlerPromise = handlers[`logs-${subcommand}`];
-    if(!handlerPromise) return interaction.client.utils.Embed(interaction, 'Red', interaction.client.utils.Translate('errors.title', interaction.locale), interaction.client.utils.Translate('errors.no_subcommand', interaction.locale, { subcommand }), { flags: [ MessageFlags.Ephemeral ]});
+    if(!handlerPromise) return interaction.client.utils.Embed(interaction, 'Red', interaction.client.utils.Translate('errors.title', interaction.locale), interaction.client.utils.Translate('errors.no_subcommand', interaction.locale, { subcommand }), { flags: MessageFlags.Ephemeral });
 
     try {
         const handlerModule = await handlerPromise();

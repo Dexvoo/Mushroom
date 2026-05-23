@@ -15,6 +15,6 @@ export async function execute(interaction) {
     if (!ignored || ignored.length === 0) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('commands.log_ignore_view.no_channels', interaction.locale), { flags: [MessageFlags.Ephemeral] });
 
     const description = ignored.map((id) => `<#${id}>`).join('\n') || 'None';
-    return client.utils.Embed(interaction, 'DarkPurple', client.utils.Translate('commands.log_ignore_view.title', interaction.locale), description, { flags: [ MessageFlags.Ephemeral ] });
+    return client.utils.Embed(interaction, 'DarkPurple', client.utils.Translate('commands.log_ignore_view.title', interaction.locale), description, { flags: MessageFlags.Ephemeral });
 
 }

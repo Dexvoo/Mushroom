@@ -15,7 +15,7 @@ export async function execute(interaction) {
 
     if(!currentConfig) {
         const errorMsg = client.utils.Translate('commands.log_ignore_view.no_log_config', interaction.locale, { type });
-        return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), errorMsg, { flags: [ MessageFlags.Ephemeral ] });
+        return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), errorMsg, { flags: MessageFlags.Ephemeral });
     }
 
     if(type === 'all') {
@@ -37,13 +37,13 @@ export async function execute(interaction) {
             });
         }
 
-        return interaction.reply({ embeds: [embed], flags: [ MessageFlags.Ephemeral ] });
+        return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
     const config = currentConfig[type];
     if(!config) {
         const errorMsg = client.utils.Translate('commands.log_ignore_view.no_log_config', interaction.locale, { type });
-        return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), errorMsg, { flags: [ MessageFlags.Ephemeral ] });
+        return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), errorMsg, { flags: MessageFlags.Ephemeral });
     }
 
     const enabledName = client.utils.Translate('commands.log_view.field_enabled', interaction.locale);
@@ -61,5 +61,5 @@ export async function execute(interaction) {
     const formattedType = type.charAt(0).toUpperCase() + type.slice(1);
     const title = client.utils.Translate('commands.log_view.single_title', interaction.locale, { type: formattedType });
 
-    client.utils.Embed(interaction, 'DarkPurple', title, '', { fields, footer: { text: footerText, iconURL: footerIconURL }, flags: [ MessageFlags.Ephemeral ], timestamp: true });
+    client.utils.Embed(interaction, 'DarkPurple', title, '', { fields, footer: { text: footerText, iconURL: footerIconURL }, flags: MessageFlags.Ephemeral, timestamp: true });
 }

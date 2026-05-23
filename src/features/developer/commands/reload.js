@@ -51,10 +51,10 @@ export async function execute(interaction) {
     const commandName = options.getString('command');
     const global = options.getBoolean('global');
     const command =  client.commands.get(commandName);
-    if(!command) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `There is no command with the name \`${commandName}\`.`, { flags: [ MessageFlags.Ephemeral ]});
+    if(!command) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `There is no command with the name \`${commandName}\`.`, { flags: MessageFlags.Ephemeral });
     
     const commandPath = command.commandData.filePath;
-    if(!commandPath) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `Could not find the file for command \`${commandName}\`.`, { flags: [ MessageFlags.Ephemeral ]});
+    if(!commandPath) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `Could not find the file for command \`${commandName}\`.`, { flags: MessageFlags.Ephemeral });
 
     const fileUrl = `${command.commandData.filePath}?t=${Date.now()}`;
 
@@ -68,9 +68,9 @@ export async function execute(interaction) {
         } else {
             await client.guilds.cache.get(ENV.DEV_GUILD_ID).commands.create(newCommand.commandData);
         }
-        client.utils.Embed(interaction, 'Green', `${client.customEmojis.reactions.Yes} Command Reloaded`, '', { flags: [ MessageFlags.Ephemeral ]});
+        client.utils.Embed(interaction, 'Green', `${client.customEmojis.reactions.Yes} Command Reloaded`, '', { flags: MessageFlags.Ephemeral });
     } catch (error) {
         console.error(error);
-        client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `There was an error while reloading command \`${commandName}\`:\n\`${error.message}\``, { flags: [ MessageFlags.Ephemeral ]});
+        client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), `There was an error while reloading command \`${commandName}\`:\n\`${error.message}\``, { flags: MessageFlags.Ephemeral });
     }
 }
