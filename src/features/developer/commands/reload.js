@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, MessageFlags, ApplicationIntegrationType, InteractionContextType } from 'discord.js';
 import { ENV } from '../../../bootstrap/environment.js';
-import refreshCommands from '../../../structures/baseRefresh.js';
+import refreshCommands from '../../../core/baseRefresh.js';
 
 export const commandData = new SlashCommandBuilder();
 commandData.setName('reload');

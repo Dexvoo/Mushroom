@@ -1,8 +1,8 @@
 import { GatewayIntentBits, Collection } from 'discord.js';
-import loadCommands from '../structures/baseCommands.js';
-import loadEvents from '../structures/baseEvents.js';
-import refreshCommands from '../structures/baseRefresh.js';
-import Client from '../structures/extendedClient.js';
+import loadCommands from '../core/baseCommands.js';
+import loadEvents from '../core/baseEvents.js';
+import refreshCommands from '../core/baseRefresh.js';
+import Client from '../core/extendedClient.js';
 import { ENV } from './environment.js';
 import { checkVersion } from '../shared/utils/versionCheck.js';
 import { Database_Connect } from './database.js';

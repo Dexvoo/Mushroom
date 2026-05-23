@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { ENV } from '../bootstrap/environment.js';
 import { LogData } from '../shared/utils/logger.js';
 import { Shutdown } from './shutdown.js';
-import Client from '../structures/extendedClient.js';
+import Client from '../core/extendedClient.js';
 
 export async function Database_Connect() {
     try {
