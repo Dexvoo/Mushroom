@@ -1,4 +1,4 @@
-import { Client, Embed } from 'discord.js';
+import { Client } from 'discord.js';
 import emojis from '../shared/constants/emojis.json' with { type: 'json' };
 import * as Embeds from '../shared/utils/embed.js';
 import * as ConsoleLogs from '../shared/utils/logger.js';

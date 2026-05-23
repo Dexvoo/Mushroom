@@ -1,5 +1,4 @@
-import { Events, PermissionFlagsBits, AuditLogEvent, User, AttachmentBuilder, VoiceState } from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
+import { Events } from 'discord.js';
 import User_Level_Cache from '../cache/userLevels.cache.js';
 import { ValidateXP } from '../utils/validation.js';
 
@@ -10,8 +9,9 @@ export const once = false;
 export const description = 'User Voice XP';
 
 /**
- * @param {VoiceState & { client: Client }} oldState
- * @param {VoiceState & { client: Client }} newState
+ * @typedef {import('../../../core/extendedClient.js').default} Client
+ * @param {import('discord.js').VoiceState & { client: Client }} oldState
+ * @param {import('discord.js').VoiceState & { client: Client }} newState
  */
 
 export async function execute(oldState, newState) {

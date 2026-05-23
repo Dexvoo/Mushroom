@@ -4,11 +4,10 @@ const XP_MAXIMUM_TEXT_CHAT = 100;
 const XP_MINIMUM_VOICE_CHAT = 15;
 const XP_MAXIMUM_VOICE_CHAT = 40;
 
-const COOLDOWN_TEXT_CHAT = 0.5; // Minutes
 const COOLDOWN_VOICE_CHAT = 3; // Minutes
 
 /**
- * @returns {Number} - A random amount of experience points for sending a message
+ * @return {number} - A random amount of experience points for sending a message
  */
 
 function MessageXP() {
@@ -19,7 +18,7 @@ function MessageXP() {
 
 /**
  * @param {Number} minutes - The amount of minutes the user has been in the voice channel
- * @returns {Number} - A random amount of experience points for being in a voice channel
+ * @return {number} - A random amount of experience points for being in a voice channel
  */
 
 function VoiceXP(minutes) {
@@ -30,7 +29,7 @@ function VoiceXP(minutes) {
 
 /**
  * @param {Number} level - The level
- * @returns {Number} - The amount of experience points required to reach the level
+ * @return {number} - The amount of experience points required to reach the level
  */
 
 function ExpForLevel(level) {

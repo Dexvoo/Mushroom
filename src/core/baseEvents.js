@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-import Client from './extendedClient.js';
+import { pathToFileURL } from 'url';
 
 /**
+ * @typedef {import('../core/extendedClient.js').default} Client
  * @param { Client } client
  * @param { string } dir
  * @returns { Promise<void> }
@@ -38,11 +38,9 @@ export default async function loadEvents(client, dir) {
                 client.on(event.name, listener);
             }
 
-            client.utils.LogData(
-                'Event',
-                `${event.name} | ${event.description}` || 'No description provided.',
-                'success'
-            );
+            const description = event.description ?? 'No description provided.';
+
+            client.utils.LogData('Event', `${description}`, 'success');
         } catch (error) {
             console.log(error);
             client.utils.LogData('Event Loader', `Failed loading ${fullPath}: ${error.message}`, 'error');

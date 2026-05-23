@@ -1,13 +1,13 @@
-import { Events, GuildChannel, PermissionFlagsBits, AuditLogEvent, User } from 'discord.js';
+import { Events, PermissionFlagsBits, AuditLogEvent } from 'discord.js';
 import Logs_Cache from '../../cache/logs.cache.js';
-import Client from '../../../../structures/extendedClient.js';
 
 export const name = Events.ChannelCreate;
 export const once = false;
 export const description = 'Guild Channel Create Logs';
 
 /**
- * @param {GuildChannel & { client: Client }} channel
+ * @typedef {import('../../../../core/extendedClient.js').default} Client
+ * @param {import('discord.js').GuildChannel & { client: Client }} channel
  */
 
 export async function execute(channel) {
@@ -70,7 +70,7 @@ export async function execute(channel) {
     const title = client.utils.Translate('logs.channel.create', guild.preferredLocale, { username });
     const footerText = `CID: ${channel.id} | ${username !== 'Unknown' ? `UID: ${executor.id}` : ''}`;
 
-    const embed = await client.utils
+    await client.utils
         .Embed(logChannel, 'Green', title, `${channel} | ${executor ? executor : 'Unknown Tag'}`, {
             timestamp: true,
             footer: { text: footerText },

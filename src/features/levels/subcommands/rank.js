@@ -1,20 +1,16 @@
-import { Events, ChatInputCommandInteraction, PermissionFlagsBits, MessageFlags, EmbedBuilder } from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
+import { MessageFlags, EmbedBuilder } from 'discord.js';
 import User_Level_Cache from '../cache/userLevels.cache.js';
 import { ExpForLevel, progressBar } from '../utils/levels.js';
 
 /**
+ * @typedef {import('../../../core/extendedClient.js').default} Client
  * @typedef {import('../models/guildLevels.js').GuildLevelsType} GuildLevelsType
- * @param { ChatInputCommandInteraction & { client: Client }} interaction
+ * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
  * @param { GuildLevelsType } guildConfig
  */
 
 export async function execute(interaction, guildConfig) {
-    const { client, options, guild, member } = interaction;
-
-    // const type = options.getString('log-type');
-    // const enabled = options.getBoolean('enabled');
-    // const channel = options.getChannel('channel') || null;
+    const { client, options, guild } = interaction;
 
     if (!guildConfig)
         return client.utils.Embed(
@@ -61,18 +57,7 @@ export async function execute(interaction, guildConfig) {
         );
 
     const xpNextLevel = ExpForLevel(userConfig.level + 1) - ExpForLevel(userConfig.level);
-
     const title = `@${user.username}'s Rank`;
-    const fields = [
-        { name: 'Level', value: `**${userConfig.level}**`, inline: true },
-        { name: 'XP', value: `**${progressBar(userConfig.xp, xpNextLevel)}**`, inline: true },
-        { name: 'Messages', value: `**${userConfig.totalMessages.toLocaleString()}**`, inline: true },
-        {
-            name: 'Voice',
-            value: `**${Math.floor(userConfig.totalVoice / 60)}h ${userConfig.totalVoice % 60}m**`,
-            inline: true,
-        },
-    ];
 
     const embed = new EmbedBuilder()
         .setColor('DarkPurple')

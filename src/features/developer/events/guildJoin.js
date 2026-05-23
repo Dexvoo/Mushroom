@@ -1,13 +1,12 @@
-import { EmbedBuilder, Events, Colors, Guild } from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
-import { ENV } from '../../../bootstrap/environment.js';
+import { EmbedBuilder, Events, Colors } from 'discord.js';
 
 export const name = Events.GuildCreate;
 export const once = false;
 export const description = 'Developer Guild Join Logs';
 
 /**
- * @param { Guild & { client: Client }} guild
+ * @typedef {import('../../../core/extendedClient.js').default} Client
+ * @param {import('discord.js').Guild & { client: Client }} guild
  */
 
 export async function execute(guild) {

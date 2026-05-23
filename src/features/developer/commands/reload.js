@@ -1,13 +1,4 @@
-import {
-    SlashCommandBuilder,
-    ChatInputCommandInteraction,
-    MessageFlags,
-    ApplicationIntegrationType,
-    InteractionContextType,
-    Events,
-    AutocompleteInteraction,
-} from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
+import { SlashCommandBuilder, MessageFlags, ApplicationIntegrationType, InteractionContextType } from 'discord.js';
 import { ENV } from '../../../bootstrap/environment.js';
 import refreshCommands from '../../../structures/baseRefresh.js';
 
@@ -28,7 +19,7 @@ commandData.botPermissions = [];
 commandData.developerOnly = true;
 
 /**
- * @param { AutocompleteInteraction } interaction
+ * @param { import('discord.js').AutocompleteInteraction } interaction
  */
 export async function autocomplete(interaction) {
     const focusedValue = interaction.options.getFocused();
@@ -40,7 +31,8 @@ export async function autocomplete(interaction) {
 }
 
 /**
- * @param { ChatInputCommandInteraction & { client: Client }} interaction
+ * @typedef {import('../../../core/extendedClient.js').default} Client
+ * @param {import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
  */
 export async function execute(interaction) {
     const { options, client } = interaction;

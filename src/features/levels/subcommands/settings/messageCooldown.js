@@ -1,10 +1,10 @@
-import { ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
-import Client from '../../../../structures/extendedClient.js';
+import { MessageFlags, PermissionFlagsBits } from 'discord.js';
 import Guild_Level_Cache from '../../cache/guildLevels.cache.js';
 
 /**
  * @typedef {import('../../models/guildLevels.js').GuildLevelsType} GuildLevelsType
- * @param { ChatInputCommandInteraction & { client: Client }} interaction
+ * @typedef {import('../../../../core/extendedClient.js').default} Client
+ * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
  * @param { GuildLevelsType } guildConfig
  */
 

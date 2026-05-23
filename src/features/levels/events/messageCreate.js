@@ -1,5 +1,4 @@
-import { Events, PermissionFlagsBits, AuditLogEvent, User, Message, AttachmentBuilder } from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
+import { Events } from 'discord.js';
 import User_Level_Cache from '../cache/userLevels.cache.js';
 import { ValidateXP } from '../utils/validation.js';
 
@@ -8,7 +7,8 @@ export const once = false;
 export const description = 'User Message XP';
 
 /**
- * @param {Message & { client: Client }} message
+ * @typedef {import('../../../core/extendedClient.js').default} Client
+ * @param {import('discord.js').Message & { client: Client }} message
  */
 
 export async function execute(message) {

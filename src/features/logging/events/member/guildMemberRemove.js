@@ -1,13 +1,13 @@
-import { Events, PermissionFlagsBits, AuditLogEvent, User, GuildMember } from 'discord.js';
+import { Events, PermissionFlagsBits } from 'discord.js';
 import Logs_Cache from '../../cache/logs.cache.js';
-import Client from '../../../../structures/extendedClient.js';
 
 export const name = Events.GuildMemberRemove;
 export const once = false;
 export const description = 'Guild Member Remove Logs';
 
 /**
- * @param {GuildMember & { client: Client }} member
+ * @typedef {import('../../../../core/extendedClient.js').default} Client
+ * @param {import('discord.js').GuildMember & { client: Client }} member
  */
 
 export async function execute(member) {
@@ -66,7 +66,7 @@ export async function execute(member) {
 
     const footerText = `UID: ${member.id}`;
 
-    const embed = await client.utils
+    await client.utils
         .Embed(logChannel, 'Red', title, description, {
             timestamp: true,
             footer: { text: footerText },

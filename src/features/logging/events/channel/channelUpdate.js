@@ -1,26 +1,18 @@
-import {
-    Events,
-    PermissionFlagsBits,
-    AuditLogEvent,
-    GuildChannel,
-    ChannelType,
-    PermissionsBitField,
-    PermissionOverwrites,
-} from 'discord.js';
+import { Events, PermissionFlagsBits, AuditLogEvent, ChannelType, PermissionsBitField } from 'discord.js';
 import Logs_Cache from '../../cache/logs.cache.js';
-import Client from '../../../../structures/extendedClient.js';
 
 export const name = Events.ChannelUpdate;
 export const once = false;
 export const description = 'Guild Channel Update Logs';
 
 /**
- * @param {GuildChannel & { client: Client }} oldChannel
- * @param {GuildChannel & { client: Client }} newChannel
+ * @typedef {import('../../../../core/extendedClient.js').default} Client
+ * @param {import('discord.js').GuildChannel & { client: Client }} oldChannel
+ * @param {import('discord.js').GuildChannel & { client: Client }} newChannel
  */
 
 export async function execute(oldChannel, newChannel) {
-    const { client, guild, user } = newChannel;
+    const { client, guild } = newChannel;
 
     if (!guild) return;
 
@@ -60,7 +52,6 @@ export async function execute(oldChannel, newChannel) {
     }
 
     let executor = null;
-    let username = 'Unknown';
     if (guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
         // Waiting for discord push to audit logs
         await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -76,7 +67,6 @@ export async function execute(oldChannel, newChannel) {
 
         if (deletionLog) {
             executor = deletionLog.executor;
-            username = deletionLog.executor.username;
         }
     }
 
@@ -174,7 +164,7 @@ export async function execute(oldChannel, newChannel) {
 
 /**
  * Formats permission allow/deny fields into readable text.
- * @param {PermissionOverwrites} overwrite
+ * @param {import('discord.js').PermissionOverwrites} overwrite
  */
 function formatPermissions(overwrite) {
     const allowed = new PermissionsBitField(overwrite.allow.bitfield).toArray();
@@ -189,8 +179,8 @@ function formatPermissions(overwrite) {
 
 /**
  * Compares permission overwrites and returns a string of differences.
- * @param {PermissionOverwrites} oldPerm
- * @param {PermissionOverwrites} newPerm
+ * @param {import('discord.js').PermissionOverwrites} oldPerm
+ * @param {import('discord.js').PermissionOverwrites} newPerm
  */
 function comparePermissionDiff(oldPerm, newPerm) {
     const changes = [];

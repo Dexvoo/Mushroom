@@ -1,16 +1,12 @@
-import { Events, ChatInputCommandInteraction, PermissionFlagsBits, MessageFlags, EmbedBuilder } from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
-import User_Level_Cache from '../cache/userLevels.cache.js';
+import { PermissionFlagsBits, MessageFlags, EmbedBuilder } from 'discord.js';
 import Guild_Level_Cache from '../cache/guildLevels.cache.js';
-import { ExpForLevel, progressBar } from '../utils/levels.js';
 
 /**
- * @typedef {import('../models/guildLevels.js').GuildLevelsType} GuildLevelsType
- * @param { ChatInputCommandInteraction & { client: Client }} interaction
- * @param { GuildLevelsType } guildConfig
+ * @typedef {import('../../../core/extendedClient.js').default} Client
+ * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
  */
 
-export async function execute(interaction, guildConfig) {
+export async function execute(interaction) {
     const { client, options, guild, member } = interaction;
 
     const enabled = options.getBoolean('enabled');

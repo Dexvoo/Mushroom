@@ -1,8 +1,7 @@
 import { UserLevels } from '../../../features/levels/models/userLevels.js';
-import Client from '../../../structures/extendedClient.js';
 import NodeCache from 'node-cache';
 import { LogData } from '../../../shared/utils/logger.js';
-import { EmbedBuilder, GuildMember } from 'discord.js';
+import { EmbedBuilder } from 'discord.js';
 import { LevelForExp, MessageXP, VoiceXP } from '../utils/levels.js';
 
 /**
@@ -12,6 +11,7 @@ import { LevelForExp, MessageXP, VoiceXP } from '../utils/levels.js';
  */
 
 /**
+ * @typedef {import('../../../core/extendedClient.js').default} Client
  * @typedef {import('../models/userLevels.js').UserLevelsType} UserLevelsType
  * @typedef {import('../models/guildLevels.js').GuildLevelsType} GuildLevelsType
  */
@@ -161,7 +161,7 @@ class User_Levels_Cache {
 
     /**
      * Adds message XP to a user.
-     * @param {GuildMember & { client: Client }} member
+     * @param {import('discord.js').GuildMember & { client: Client }} member
      * @param {GuildLevelsType} guildData
      * @returns {Promise<boolean>}
      */
@@ -204,7 +204,7 @@ class User_Levels_Cache {
 
     /**
      * Adds Voice XP to a user.
-     * @param {GuildMember & { client: Client }} member
+     * @param {import('discord.js').GuildMember & { client: Client }} member
      * @param {GuildLevelsType} guildData
      * @param {number} minutes
      * @returns {Promise<boolean>}
@@ -248,7 +248,7 @@ class User_Levels_Cache {
 
     /**
      * Sends the level-up message.
-     * @param {GuildMember & { client: Client }} member
+     * @param {import('discord.js').GuildMember & { client: Client }} member
      * @param {GuildLevelsType} guildData
      * @param {UserLevelsType} userData
      * @param {{ added: LevelReward[], removed: LevelReward[], failed: LevelReward[] }} rewards
@@ -300,7 +300,7 @@ class User_Levels_Cache {
     /**
      * Handles level reward roles for a member.
      *
-     * @param {GuildMember} member
+     * @param {import('discord.js').GuildMember} member
      * @param {GuildLevelsType} guildData
      * @param {UserLevelsType} userData
      * @returns {Promise<{ added: LevelReward[], removed: LevelReward[], failed: LevelReward[] }>}
@@ -356,7 +356,7 @@ class User_Levels_Cache {
                 try {
                     await member.roles.remove(role);
                     removed.push(reward);
-                } catch (error) {
+                } catch {
                     failed.push(reward);
                 }
             }
@@ -384,7 +384,7 @@ class User_Levels_Cache {
 
     /**
      * Calculates the combined role multiplier for a member.
-     * @param {GuildMember} member
+     * @param {import('discord.js').GuildMember} member
      * @param {GuildLevelsType} levelConfig
      * @returns {number} Combined multiplier
      */

@@ -1,10 +1,10 @@
-import { ChatInputCommandInteraction, MessageFlags } from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
+import { MessageFlags } from 'discord.js';
 import User_Level_Cache from '../cache/userLevels.cache.js';
 
 /**
+ * @typedef {import('../../../core/extendedClient.js').default} Client
  * @typedef {import('../models/guildLevels.js').GuildLevelsType} GuildLevelsType
- * @param { ChatInputCommandInteraction & { client: Client }} interaction
+ * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
  * @param { GuildLevelsType } guildConfig
  */
 
@@ -93,7 +93,7 @@ export async function execute(interaction, guildConfig) {
             return config.format(user, rankedData);
         } catch (error) {
             console.error(`Could not fetch user ${data.userId} for leaderboard:`, error);
-            return `${formatRank(rankedData)} \`@Unknown User\``;
+            return `???? \`@Unknown User\``;
         }
     });
 

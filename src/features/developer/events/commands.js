@@ -1,22 +1,12 @@
-import {
-    ChatInputCommandInteraction,
-    ApplicationCommand,
-    Embed,
-    EmbedBuilder,
-    MessageFlags,
-    Events,
-    Colors,
-    ApplicationCommandOptionType,
-} from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
-import { ENV } from '../../../bootstrap/environment.js';
+import { EmbedBuilder, Events, Colors, ApplicationCommandOptionType } from 'discord.js';
 
 export const name = Events.InteractionCreate;
 export const once = false;
 export const description = 'Developer Command Logs';
 
 /**
- * @param { ChatInputCommandInteraction & { client: Client }} interaction
+ * @typedef {import('../../../core/extendedClient.js').default} Client
+ * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
  */
 
 export async function execute(interaction) {
@@ -46,7 +36,9 @@ export async function execute(interaction) {
             .setTimestamp();
 
         await client.utils.DevEmbed('command', client, LogEmbed);
-    } catch (err) {}
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 /**

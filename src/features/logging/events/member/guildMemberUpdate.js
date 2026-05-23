@@ -1,14 +1,14 @@
-import { Events, PermissionFlagsBits, AuditLogEvent, User, GuildMember } from 'discord.js';
+import { Events, PermissionFlagsBits } from 'discord.js';
 import Logs_Cache from '../../cache/logs.cache.js';
-import Client from '../../../../structures/extendedClient.js';
 
 export const name = Events.GuildMemberUpdate;
 export const once = false;
 export const description = 'Guild Member Update Logs';
 
 /**
- * @param {GuildMember & { client: Client }} oldMember
- * @param {GuildMember & { client: Client }} newMember
+ * @typedef {import('../../../../core/extendedClient.js').default} Client
+ * @param {import('discord.js').GuildMember & { client: Client }} oldMember
+ * @param {import('discord.js').GuildMember & { client: Client }} newMember
  */
 
 export async function execute(oldMember, newMember) {
@@ -120,7 +120,7 @@ export async function execute(oldMember, newMember) {
     const title = client.utils.Translate('logs.member.update_title', guild.preferredLocale);
     const footerText = `UID: ${newMember.id}`;
 
-    const embed = await client.utils
+    await client.utils
         .Embed(logChannel, 'Orange', title, '', {
             timestamp: true,
             footer: { text: footerText },

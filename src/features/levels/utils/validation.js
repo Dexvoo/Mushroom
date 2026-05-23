@@ -1,12 +1,12 @@
-import { GuildChannel, GuildMember, PermissionFlagsBits } from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
-import User_Level_Cache from '../cache/userLevels.cache.js';
+import { PermissionFlagsBits } from 'discord.js';
 import Guild_Level_Cache from '../cache/guildLevels.cache.js';
 
 /**
+ * @typedef {import('../../../core/extendedClient.js').default} Client
+ *
  * Performs all preliminary checks for granting XP.
- * @param { GuildMember & { client: Client }} member
- * @param { GuildChannel & { client: Client }} channelLevel - The channel where the event occurred.
+ * @param { import('discord.js').GuildMember & { client: Client }} member
+ * @param { import('discord.js').GuildChannel & { client: Client }} channelLevel - The channel where the event occurred.
  * @returns {Promise<{guildConfig: import('../models/guildLevels.js').GuildLevelsType|null>}}
  */
 export async function ValidateXP(member, channelLevel) {

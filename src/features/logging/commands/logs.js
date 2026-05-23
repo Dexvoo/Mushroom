@@ -1,14 +1,11 @@
 import {
     SlashCommandBuilder,
-    Colors,
     InteractionContextType,
     ApplicationIntegrationType,
     PermissionFlagsBits,
     ChannelType,
-    ChatInputCommandInteraction,
     MessageFlags,
 } from 'discord.js';
-import Client from '../../../structures/extendedClient.js';
 
 const logChoices = [
     { name: 'Message', value: 'message' },
@@ -93,7 +90,8 @@ commandData.botPermissions = [];
 commandData.developerOnly = false;
 
 /**
- * @param { ChatInputCommandInteraction & { client: Client }} interaction
+ * @typedef {import('../../../core/extendedClient.js').default} Client
+ * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
  */
 export async function execute(interaction) {
     const subcommand = interaction.options.getSubcommand();
