@@ -5,7 +5,7 @@ import refreshCommands from '../structures/baseRefresh.js';
 import Client from '../structures/extendedClient.js';
 import { ENV } from './environment.js';
 import { checkVersion } from '../shared/utils/versionCheck.js';
-import { Database_Connect, Database_Disconnect } from './database.js';
+import { Database_Connect } from './database.js';
 import { Shutdown } from './shutdown.js';
 import fs from 'fs';
 import path from 'path';
@@ -46,22 +46,22 @@ if (!client.shard || client.shard.ids[0] === 0) {
 const token = ENV.DEVELOPER_MODE ? ENV.BOT_TOKEN_DEV : ENV.BOT_TOKEN;
 
 try {
-    await Database_Connect()
+    await Database_Connect();
     await checkVersion(client.utils.LogData);
 
-    client.login(token); 
+    client.login(token);
 } catch (error) {
-    console.error(error)
-    process.exit(1); 
+    console.error(error);
+    process.exit(1);
 }
 
-process.on('SIGINT', () => Shutdown('SIGINT', client));   // CTRL+C in terminal
+process.on('SIGINT', () => Shutdown('SIGINT', client)); // CTRL+C in terminal
 process.on('SIGTERM', () => Shutdown('SIGTERM', client)); // Docker/PM2 stop commands
-process.on('unhandledRejection', (reason, promise) => {
-    console.log(reason)
+process.on('unhandledRejection', (reason) => {
+    console.log(reason);
     client.utils.LogData('Unhandled Rejection', String(reason), 'error');
 });
 process.on('uncaughtException', (err) => {
-    console.log(err)
+    console.log(err);
     client.utils.LogData('Uncaught Exception', err.message, 'error');
 });

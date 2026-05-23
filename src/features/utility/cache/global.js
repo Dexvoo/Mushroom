@@ -3,5 +3,5 @@
  * @type {{ DevSID: Number | null }}
  */
 export default {
-    DevSID: null
+    DevSID: null,
 };

@@ -7,8 +7,8 @@ const { Schema, model } = mongoose;
  * @property {boolean} enabled - Whether the leveling system is enabled.
  */
 const InviteDetectionSchema = new Schema({
-  guildId: { type: String, required: true, index: true },
-  enabled: { type: Boolean, default: false },
+    guildId: { type: String, required: true, index: true },
+    enabled: { type: Boolean, default: false },
 });
 
 export const InviteDetectionConfig = model('Guild-InviteDetection-Config', InviteDetectionSchema);

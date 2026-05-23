@@ -1,5 +1,5 @@
 import { ChatInputCommandInteraction, GuildMember, GuildChannel, ThreadChannel, PermissionsBitField } from 'discord.js';
-import Client from '../../structures/extendedClient.js'
+import Client from '../../core/extendedClient.js';
 import { LogData } from './logger.js';
 import { ENV } from '../../bootstrap/environment.js';
 /**
@@ -17,8 +17,8 @@ function PermissionCheck(interaction, permissions, member) {
         throw new Error('Invalid parameters provided to PermissionCheck');
     }
 
-    let channel, guild
-    if(interaction instanceof ChatInputCommandInteraction) {
+    let channel, guild;
+    if (interaction instanceof ChatInputCommandInteraction) {
         channel = interaction.channel;
         guild = interaction.guild;
     } else if (interaction instanceof GuildChannel || interaction instanceof ThreadChannel) {
@@ -28,11 +28,11 @@ function PermissionCheck(interaction, permissions, member) {
         throw new Error('Invalid interaction/channel provided to PermissionCheck');
     }
 
-    let userPermissions
+    let userPermissions;
     if (member instanceof GuildMember) {
         userPermissions = member.permissionsIn(channel);
     } else if (member instanceof Client) {
-        if(!guild) throw new Error('Guild context is required to check client permissions');
+        if (!guild) throw new Error('Guild context is required to check client permissions');
         userPermissions = guild.members.me.permissionsIn(channel);
     } else {
         throw new Error('Invalid member/client provided to PermissionCheck');
@@ -42,7 +42,7 @@ function PermissionCheck(interaction, permissions, member) {
         .filter((permission) => !userPermissions.has(permission))
         .map((permission) => new PermissionsBitField(permission).toArray());
     return missingPermissions.length > 0 ? [false, missingPermissions] : [true];
-};
+}
 
 /**
  * Checks if a user ID belongs to a bot developer

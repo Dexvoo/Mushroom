@@ -1,4 +1,12 @@
-import { Events, PermissionFlagsBits, AuditLogEvent, GuildChannel, ChannelType, PermissionsBitField, PermissionOverwrites } from 'discord.js';
+import {
+    Events,
+    PermissionFlagsBits,
+    AuditLogEvent,
+    GuildChannel,
+    ChannelType,
+    PermissionsBitField,
+    PermissionOverwrites,
+} from 'discord.js';
 import Logs_Cache from '../../cache/logs.cache.js';
 import Client from '../../../../structures/extendedClient.js';
 
@@ -15,44 +23,61 @@ export async function execute(oldChannel, newChannel) {
     const { client, guild, user } = newChannel;
 
     if (!guild) return;
-    
+
     const logsData = await Logs_Cache.get(guild.id);
-    if(!logsData?.channel?.enabled || !logsData?.channel?.channelId) return client.utils.LogData('Channel Update', `Guild: ${guild.name} | Disabled`, 'warning');
+    if (!logsData?.channel?.enabled || !logsData?.channel?.channelId)
+        return client.utils.LogData('Channel Update', `Guild: ${guild.name} | Disabled`, 'warning');
 
     if (logsData.ignoredChannels?.includes(newChannel.id)) return;
-    
-    const logChannel = guild.channels.cache.get(logsData.member.channelId);
-    if(!logChannel) {
-        await Logs_Cache.setType(guild.id, 'channel', { enabled: false, channelId: null });
-        return client.utils.LogData('Channel Update', `Guild: ${guild.name} | Log channel not found, disabling logs`, 'error');
-    };
 
-    const botPermissions = [ PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks ];
-    const [ hasPermissions, missingPermissions ] = client.utils.PermissionCheck(logChannel, botPermissions, guild.members.me);
-    if(!hasPermissions) {
+    const logChannel = guild.channels.cache.get(logsData.member.channelId);
+    if (!logChannel) {
         await Logs_Cache.setType(guild.id, 'channel', { enabled: false, channelId: null });
-        return client.utils.LogData('Channel Update', `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`, 'error');
+        return client.utils.LogData(
+            'Channel Update',
+            `Guild: ${guild.name} | Log channel not found, disabling logs`,
+            'error'
+        );
     }
 
+    const botPermissions = [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.EmbedLinks,
+    ];
+    const [hasPermissions, missingPermissions] = client.utils.PermissionCheck(
+        logChannel,
+        botPermissions,
+        guild.members.me
+    );
+    if (!hasPermissions) {
+        await Logs_Cache.setType(guild.id, 'channel', { enabled: false, channelId: null });
+        return client.utils.LogData(
+            'Channel Update',
+            `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`,
+            'error'
+        );
+    }
 
     let executor = null;
     let username = 'Unknown';
-    if(guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
-        
+    if (guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
         // Waiting for discord push to audit logs
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
 
         const fetchedLogs = await guild.fetchAuditLogs({
             limit: 5,
-            type: AuditLogEvent.ChannelUpdate
+            type: AuditLogEvent.ChannelUpdate,
         });
 
-        const deletionLog = fetchedLogs.entries.find(entry => entry.target?.id === newChannel.id && Date.now() - entry.createdTimestamp < 5000);
+        const deletionLog = fetchedLogs.entries.find(
+            (entry) => entry.target?.id === newChannel.id && Date.now() - entry.createdTimestamp < 5000
+        );
 
-        if(deletionLog) {
+        if (deletionLog) {
             executor = deletionLog.executor;
             username = deletionLog.executor.username;
-        } 
+        }
     }
 
     let description = '';
@@ -129,15 +154,23 @@ export async function execute(oldChannel, newChannel) {
 
     const footerText = `CID: ${newChannel.id}`;
     const title = client.utils.Translate('logs.channel.update', guild.preferredLocale);
-    
-    return client.utils.Embed(logChannel, 'White', title, description, { timestamp: true, footer: { text: footerText }, author: executor }).catch((err) => {
-        client.utils.LogData('Channel Update', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');
-        // TODO: Add error logging for failed embed creation
-        return;
-    });
-};
 
-
+    return client.utils
+        .Embed(logChannel, 'White', title, description, {
+            timestamp: true,
+            footer: { text: footerText },
+            author: executor,
+        })
+        .catch((err) => {
+            client.utils.LogData(
+                'Channel Update',
+                `Guild: ${guild.name} | Error creating embed: ${err.message}`,
+                'error'
+            );
+            // TODO: Add error logging for failed embed creation
+            return;
+        });
+}
 
 /**
  * Formats permission allow/deny fields into readable text.
@@ -146,29 +179,29 @@ export async function execute(oldChannel, newChannel) {
 function formatPermissions(overwrite) {
     const allowed = new PermissionsBitField(overwrite.allow.bitfield).toArray();
     const denied = new PermissionsBitField(overwrite.deny.bitfield).toArray();
-    const parts =[];
-  
+    const parts = [];
+
     if (allowed.length > 0) parts.push(`✅ **Allowed:** \`${allowed.join(', ')}\``);
     if (denied.length > 0) parts.push(`❌ **Denied:** \`${denied.join(', ')}\``);
-  
+
     return parts.join('\n');
 }
-  
+
 /**
  * Compares permission overwrites and returns a string of differences.
  * @param {PermissionOverwrites} oldPerm
  * @param {PermissionOverwrites} newPerm
  */
 function comparePermissionDiff(oldPerm, newPerm) {
-    const changes =[];
+    const changes = [];
     const allPerms = Object.keys(PermissionsBitField.Flags);
-  
+
     for (const perm of allPerms) {
         const oldAllowed = oldPerm.allow.has(perm);
         const oldDenied = oldPerm.deny.has(perm);
         const newAllowed = newPerm.allow.has(perm);
         const newDenied = newPerm.deny.has(perm);
-  
+
         if (oldAllowed !== newAllowed || oldDenied !== newDenied) {
             if (newAllowed) {
                 changes.push(`✅ \`${perm}\``);
@@ -179,6 +212,6 @@ function comparePermissionDiff(oldPerm, newPerm) {
             }
         }
     }
-  
+
     return changes.length ? changes.join('\n') : null;
 }

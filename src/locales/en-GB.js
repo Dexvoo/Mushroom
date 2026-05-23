@@ -1,5 +1,4 @@
 export default {
-
     commands: {
         log_test: {
             in_progress_title: 'Testing in progress',
@@ -20,7 +19,7 @@ export default {
             setup_success_title: 'Logs Setup Successful',
             setup_success_desc: 'Successfully {status} `{type}` logs.',
             enabled: 'enabled',
-            disabled: 'disabled'
+            disabled: 'disabled',
         },
 
         log_view: {
@@ -29,7 +28,7 @@ export default {
             single_title: 'Current Configuration for {type} Logs',
             field_enabled: 'Enabled',
             field_channel: 'Channel',
-            not_set: 'Not set'
+            not_set: 'Not set',
         },
 
         log_ignore: {
@@ -38,7 +37,7 @@ export default {
             resumed_title: 'Channel Resumed',
             resumed_desc: 'Logs will now resume for events from {channel}.',
             already_ignored: '{channel} is already on the ignored list.',
-            not_ignored: '{channel} is not on the log ignore list.'
+            not_ignored: '{channel} is not on the log ignore list.',
         },
 
         log_ignore_view: {
@@ -75,7 +74,7 @@ export default {
 
         ping: {
             title: '🏓 Pong!',
-            description: 'Latency: {ms}ms\nAPI Latency: {api}ms'
+            description: 'Latency: {ms}ms\nAPI Latency: {api}ms',
         },
     },
 
@@ -163,5 +162,5 @@ export default {
         invalid_role: 'That role is invalid.',
 
         unexpected: 'An unexpected error occurred.',
-    }
+    },
 };

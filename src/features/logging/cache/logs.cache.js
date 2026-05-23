@@ -94,7 +94,7 @@ class LogsCache {
 
     /**
      * Deletes/unsets a specific log category from the DB and updates the cache.
-     * @param {string} guildId 
+     * @param {string} guildId
      * @param {keyof LogsConfigType} type
      * @returns {Promise<LogsConfigType>}
      */
@@ -102,7 +102,7 @@ class LogsCache {
         try {
             const updatedConfig = await LogsConfig.findOneAndUpdate(
                 { guildId },
-                { $unset: { [type]: "" } },
+                { $unset: { [type]: '' } },
                 { returnDocument: 'after', lean: true }
             );
 
@@ -111,7 +111,7 @@ class LogsCache {
             } else {
                 this.cache.del(guildId);
             }
-            
+
             LogData('LogsCache', `Type '${type}' deleted for guild ${guildId}`, 'debug');
             return updatedConfig;
         } catch (error) {
@@ -128,6 +128,6 @@ class LogsCache {
         this.cache.del(guildId);
         LogData('LogsCache', `Cache invalidated for guild ${guildId}`, 'debug');
     }
-};
+}
 
 export default new LogsCache();

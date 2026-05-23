@@ -1,18 +1,20 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-import Client from './extendedClient.js';
+import { pathToFileURL } from 'url';
+
+/**
+ * @typedef {import('./extendedClient.js').default} Client
+ */
 
 /**
  * @param { Client } client
  * @param { string } dir
  * @returns { Promise<void> }
-*/
+ */
 
 export default async function loadCommands(client, dir) {
-
     const files = fs.readdirSync(dir, {
-        withFileTypes: true
+        withFileTypes: true,
     });
 
     for (const file of files) {
@@ -30,7 +32,6 @@ export default async function loadCommands(client, dir) {
         }
 
         try {
-
             const command = await import(pathToFileURL(fullPath).href);
             if (!command.execute) {
                 client.utils.LogData('Command Init Load Error', `Missing execute function at ${fullPath}`, 'error');
@@ -40,10 +41,12 @@ export default async function loadCommands(client, dir) {
             command.commandData.filePath = pathToFileURL(fullPath).href;
 
             client.commands.set(command.commandData.name, command);
-            client.utils.LogData('Command', `${command.commandData.name} | ${command.commandData.description}`, 'success');
-
+            client.utils.LogData(
+                'Command',
+                `${command.commandData.name} | ${command.commandData.description}`,
+                'success'
+            );
         } catch (error) {
-
             client.utils.LogData('Command Init', `Error loading ${fullPath}: ${error.message}`, 'error');
         }
     }

@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 
-
 /**
  * @typedef {Object} LevelReward
  * @property {number} level - The level at which the reward is granted.
@@ -34,8 +33,8 @@ const LevelConfigSchema = new Schema({
     enabled: { type: Boolean, default: false },
     channelId: { type: String, default: null },
     blacklisted: {
-      roleIds: { type: [String], default: [] },
-      channelIds: { type: [String], default: [] },
+        roleIds: { type: [String], default: [] },
+        channelIds: { type: [String], default: [] },
     },
     rewards: { type: Array, default: [] },
     removePastRewards: { type: Boolean, default: false },
@@ -43,15 +42,12 @@ const LevelConfigSchema = new Schema({
     messageCooldown: { type: Number, default: 60 },
     maxLevel: { type: Number, default: 100 },
     levelUpMessage: {
-      type: String,
-      default: '{user}, you just gained a level! Current Level: **{level}**!',
+        type: String,
+        default: '{user}, you just gained a level! Current Level: **{level}**!',
     },
     roleMultipliers: [{ roleId: String, multiplier: Number }],
 });
 
-LevelConfigSchema.index(
-    { guildId: 1 },
-    { unique: true }
-);
+LevelConfigSchema.index({ guildId: 1 }, { unique: true });
 
 export const LevelConfig = model('Guild-Level-Config', LevelConfigSchema);

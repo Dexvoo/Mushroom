@@ -25,10 +25,9 @@ export async function execute(oldState, newState) {
 
     if (oldState.channelId === newState.channelId) return;
 
-
-    if(!oldState.channel && newState.channel) {
+    if (!oldState.channel && newState.channel) {
         const validate = await ValidateXP(member, newState.channel);
-        if(!validate) return;
+        if (!validate) return;
 
         voiceSessions.set(key, {
             joinedAt: Date.now(),
@@ -38,23 +37,22 @@ export async function execute(oldState, newState) {
         client.utils.LogData('Voice XP', `Tracking started for @${member.user.username}`, 'debug');
     }
 
-
-    if(oldState.channel && !newState.channel) {
+    if (oldState.channel && !newState.channel) {
         const session = voiceSessions.get(key);
-        if(!session) return;
+        if (!session) return;
 
         voiceSessions.delete(key);
 
         const minutes = Math.floor((Date.now() - session.joinedAt) / 1000 / 60);
-        if(minutes <= 0) return;
+        if (minutes <= 0) return;
 
         const validate = await ValidateXP(member, oldState.channel);
-        if(!validate) return;
+        if (!validate) return;
 
         const { guildConfig } = validate;
 
         const addedXP = await User_Level_Cache.addVoiceXP(member, guildConfig, minutes);
-        if(!addedXP) return;
+        if (!addedXP) return;
 
         client.utils.LogData('Voice XP', `Added voice XP to @${member.user.username} for ${minutes} minutes`, 'debug');
 
@@ -90,5 +88,4 @@ export async function execute(oldState, newState) {
 
         return;
     }
-    
-};
+}

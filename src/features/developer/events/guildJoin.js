@@ -13,17 +13,16 @@ export const description = 'Developer Guild Join Logs';
 export async function execute(guild) {
     const { client, name, id, ownerId } = guild;
 
-    try{
-
-        if(!name) return;
+    try {
+        if (!name) return;
 
         const Embed = new EmbedBuilder()
             .setTitle('Guild Joined')
             .setColor(Colors.Green)
             .setThumbnail(guild.iconURL({ dynamic: true }))
             .addFields(
-                {   name: 'Guild', value: `${name} (\`${id}\`)`, inline: false },
-                {   name: 'Owner', value: `<@${ownerId}>`, inline: true },
+                { name: 'Guild', value: `${name} (\`${id}\`)`, inline: false },
+                { name: 'Owner', value: `<@${ownerId}>`, inline: true },
                 {
                     name: 'Members',
                     value: guild.memberCount.toLocaleString() || 'Unknown',
@@ -33,9 +32,7 @@ export async function execute(guild) {
             .setTimestamp();
 
         await client.utils.DevEmbed('joinGuild', client, Embed);
-
     } catch (err) {
         client.utils.LogData('Guild Join Logs', `Failed to process event: ${err.message}`, 'error');
     }
-    
-};
+}

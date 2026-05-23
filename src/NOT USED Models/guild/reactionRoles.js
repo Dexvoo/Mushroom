@@ -33,7 +33,7 @@ const ReactionRolesSchema = new Schema(
                     roleEmoji: { type: String },
                 },
             ],
-          default: [],
+            default: [],
         },
     },
     { timestamps: true }

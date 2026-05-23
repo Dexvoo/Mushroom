@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 
-
 /**
  * @typedef {Object} LogsType
  * @property {Boolean} enabled
@@ -9,11 +8,11 @@ const { Schema, model } = mongoose;
  */
 
 const LogChannelSchema = new Schema(
-  {
-    enabled: { type: Boolean, default: false },
-    channelId: { type: String, default: null },
-  },
-  { _id: false }
+    {
+        enabled: { type: Boolean, default: false },
+        channelId: { type: String, default: null },
+    },
+    { _id: false }
 );
 
 /**
@@ -33,21 +32,21 @@ const LogChannelSchema = new Schema(
  *
  */
 const LogsConfigSchema = new Schema(
-  {
-    guildId: { type: String, required: true, unique: true, index: true },
-    message: LogChannelSchema,
-    channel: LogChannelSchema,
-    join: LogChannelSchema,
-    leave: LogChannelSchema,
-    voice: LogChannelSchema,
-    role: LogChannelSchema,
-    server: LogChannelSchema,
-    member: LogChannelSchema,
-    punishment: LogChannelSchema,
+    {
+        guildId: { type: String, required: true, unique: true, index: true },
+        message: LogChannelSchema,
+        channel: LogChannelSchema,
+        join: LogChannelSchema,
+        leave: LogChannelSchema,
+        voice: LogChannelSchema,
+        role: LogChannelSchema,
+        server: LogChannelSchema,
+        member: LogChannelSchema,
+        punishment: LogChannelSchema,
 
-    ignoredChannels: { type: [String], default: [] }, // Add this line
-  },
-  { timestamps: true }
+        ignoredChannels: { type: [String], default: [] }, // Add this line
+    },
+    { timestamps: true }
 );
 
 export const LogsConfig = model('Guild-Logs-Config', LogsConfigSchema);

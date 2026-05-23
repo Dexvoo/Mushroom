@@ -1,10 +1,9 @@
-import { ShardingManager, EmbedBuilder, Colors } from 'discord.js';
+import { ShardingManager } from 'discord.js';
 import { LogData, Log } from './shared/utils/logger.js';
 import { ENV } from './bootstrap/environment.js';
 
 Log('Mushroom Discord Bot | Created by: @Dexvo');
-if(ENV.DEVELOPER_MODE) LogData('Developer Mode Enabled', 'The bot is running in Developer Mode.', 'warning');
-
+if (ENV.DEVELOPER_MODE) LogData('Developer Mode Enabled', 'The bot is running in Developer Mode.', 'warning');
 
 const token = ENV.DEVELOPER_MODE ? ENV.BOT_TOKEN_DEV : ENV.BOT_TOKEN;
 
@@ -26,8 +25,7 @@ ShardManager.on('shardCreate', (shard) => {
     });
     shard.on('death', () => {
         LogData('Shard Died', `Shard ${shard.id} has died.`, 'error');
-    }
-    );
+    });
 });
 
 ShardManager.spawn().catch((error) => {

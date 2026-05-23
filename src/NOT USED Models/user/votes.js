@@ -10,11 +10,11 @@ const { Schema, model } = mongoose;
  */
 
 const VoteSchema = new Schema(
-  {
-    userId: { type: String, required: true },
-    votes: { type: Number, default: 0 },
-  },
-  { timestamps: true }
+    {
+        userId: { type: String, required: true },
+        votes: { type: Number, default: 0 },
+    },
+    { timestamps: true }
 );
 
 export const UserVotes = model('User-Votes', VoteSchema);

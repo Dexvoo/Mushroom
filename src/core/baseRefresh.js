@@ -4,7 +4,7 @@ import { ENV } from '../bootstrap/environment.js';
 
 /**
  * @param { Client } client
-*/
+ */
 
 export default async function refreshCommands(client) {
     const rest = new REST({ version: '10' }).setToken(ENV.BOT_TOKEN);
@@ -18,14 +18,15 @@ export default async function refreshCommands(client) {
         const applicationId = ENV.DEVELOPER_MODE ? ENV.BOT_APPLICATION_ID_DEV : ENV.BOT_APPLICATION_ID;
         const guildId = ENV.DEV_GUILD_ID;
 
-        if(!guildId || guildId === 'none') {
+        if (!guildId || guildId === 'none') {
             await rest.put(Routes.applicationCommands(applicationId), { body: commands });
         } else {
-            await rest.put(Routes.applicationGuildCommands('1499756177158836225', '1503593846406123672'), { body: commands });
+            await rest.put(Routes.applicationGuildCommands('1499756177158836225', '1503593846406123672'), {
+                body: commands,
+            });
         }
 
         client.utils.LogData('Command Refresh', 'Successfully reloaded application (/) commands.', 'success');
-        
     } catch (error) {
         client.utils.LogData('Command Refresh', 'Error occurred while refreshing application (/) commands.', 'error');
         console.error(error);

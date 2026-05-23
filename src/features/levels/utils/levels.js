@@ -12,9 +12,9 @@ const COOLDOWN_VOICE_CHAT = 3; // Minutes
  */
 
 function MessageXP() {
-  const min = Math.ceil(XP_MINIMUM_TEXT_CHAT);
-  const max = Math.floor(XP_MAXIMUM_TEXT_CHAT);
-  return Math.floor(Math.random() * (max - min + 1) + min);
+    const min = Math.ceil(XP_MINIMUM_TEXT_CHAT);
+    const max = Math.floor(XP_MAXIMUM_TEXT_CHAT);
+    return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
 /**
@@ -23,11 +23,9 @@ function MessageXP() {
  */
 
 function VoiceXP(minutes) {
-  const min = Math.ceil(XP_MINIMUM_VOICE_CHAT);
-  const max = Math.floor(XP_MAXIMUM_VOICE_CHAT);
-  return Math.floor(
-    (Math.floor(Math.random() * (max - min + 1) + min) * minutes) / COOLDOWN_VOICE_CHAT
-  );
+    const min = Math.ceil(XP_MINIMUM_VOICE_CHAT);
+    const max = Math.floor(XP_MAXIMUM_VOICE_CHAT);
+    return Math.floor((Math.floor(Math.random() * (max - min + 1) + min) * minutes) / COOLDOWN_VOICE_CHAT);
 }
 
 /**
@@ -36,8 +34,8 @@ function VoiceXP(minutes) {
  */
 
 function ExpForLevel(level) {
-  if (level <= 0) return 0; // No XP required for level 0 or below
-  return 50 * Math.pow(level, 2) + 25 * level;
+    if (level <= 0) return 0; // No XP required for level 0 or below
+    return 50 * Math.pow(level, 2) + 25 * level;
 }
 
 /**
@@ -45,19 +43,19 @@ function ExpForLevel(level) {
  * @returns {[number, number, number]} - [level, currentXPInLevel, xpForNextLevel]
  */
 function LevelForExp(exp) {
-  if (exp <= 0) return [0, 0, ExpForLevel(1)];
+    if (exp <= 0) return [0, 0, ExpForLevel(1)];
 
-  let level = 0;
+    let level = 0;
 
-  while (exp >= ExpForLevel(level + 1)) {
-    level++;
-  }
+    while (exp >= ExpForLevel(level + 1)) {
+        level++;
+    }
 
-  const xpForCurrentLevel = ExpForLevel(level);
-  const xpIntoCurrentLevel = exp - xpForCurrentLevel;
-  const xpForNextLevel = ExpForLevel(level + 1) - xpForCurrentLevel;
+    const xpForCurrentLevel = ExpForLevel(level);
+    const xpIntoCurrentLevel = exp - xpForCurrentLevel;
+    const xpForNextLevel = ExpForLevel(level + 1) - xpForCurrentLevel;
 
-  return [level, xpIntoCurrentLevel, xpForNextLevel];
+    return [level, xpIntoCurrentLevel, xpForNextLevel];
 }
 
 /**
@@ -66,8 +64,8 @@ function LevelForExp(exp) {
  * @returns {string} - e.g. "34 / 125 (27%)"
  */
 function progressBar(current, required) {
-  const percent = ((current / required) * 100).toFixed(1);
-  return `${current} / ${required} (${percent}%)`;
+    const percent = ((current / required) * 100).toFixed(1);
+    return `${current} / ${required} (${percent}%)`;
 }
 
 export { MessageXP, VoiceXP, ExpForLevel, LevelForExp, progressBar };

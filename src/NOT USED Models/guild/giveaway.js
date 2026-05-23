@@ -17,20 +17,20 @@ const { Schema, model } = mongoose;
  */
 
 const GiveawaySchema = new Schema(
-  {
-    guildId: { type: String, required: true, index: true },
-    messageId: { type: String, required: true, unique: true },
-    channelId: { type: String, required: true },
-    prize: { type: String, required: true },
-    endsAt: { type: Date, required: true },
-    winnerCount: { type: Number, required: true, min: 1 },
-    hostId: { type: String, required: true },
-    requiredRoleId: { type: String, default: null },
-    entrants: { type: [String], default: [] },
-    winners: { type: [String], default: [] },
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true }
+    {
+        guildId: { type: String, required: true, index: true },
+        messageId: { type: String, required: true, unique: true },
+        channelId: { type: String, required: true },
+        prize: { type: String, required: true },
+        endsAt: { type: Date, required: true },
+        winnerCount: { type: Number, required: true, min: 1 },
+        hostId: { type: String, required: true },
+        requiredRoleId: { type: String, default: null },
+        entrants: { type: [String], default: [] },
+        winners: { type: [String], default: [] },
+        isActive: { type: Boolean, default: true },
+    },
+    { timestamps: true }
 );
 
 export const Giveaway = model('Guild-Giveaways', GiveawaySchema);

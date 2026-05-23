@@ -43,30 +43,27 @@ const UserLevelsSchema = new Schema({
 });
 
 // Compound index
-UserLevelsSchema.index(
-    { guildId: 1, userId: 1 },
-    { unique: true }
-);
+UserLevelsSchema.index({ guildId: 1, userId: 1 }, { unique: true });
 
 UserLevelsSchema.index({
     guildId: 1,
     level: -1,
-    xp: -1
+    xp: -1,
 });
 
 UserLevelsSchema.index({
     guildId: 1,
-    totalMessages: -1
+    totalMessages: -1,
 });
 
 UserLevelsSchema.index({
     guildId: 1,
-    totalVoice: -1
+    totalVoice: -1,
 });
 
 UserLevelsSchema.index({
     guildId: 1,
-    totalCommands: -1
+    totalCommands: -1,
 });
 
 export const UserLevels = model('User-Levels', UserLevelsSchema);

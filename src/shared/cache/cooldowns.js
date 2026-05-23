@@ -92,9 +92,7 @@ export class CooldownManager {
      * @param {string} [identifier]
      */
     remove(type, userId, identifier = '') {
-        this.cooldowns.delete(
-            this._getKey(type, userId, identifier)
-        );
+        this.cooldowns.delete(this._getKey(type, userId, identifier));
     }
 
     /**

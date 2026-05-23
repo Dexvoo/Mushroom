@@ -1,4 +1,13 @@
-import { ChatInputCommandInteraction, ApplicationCommand, Embed, EmbedBuilder, MessageFlags, Events, Colors, ApplicationCommandOptionType } from 'discord.js';
+import {
+    ChatInputCommandInteraction,
+    ApplicationCommand,
+    Embed,
+    EmbedBuilder,
+    MessageFlags,
+    Events,
+    Colors,
+    ApplicationCommandOptionType,
+} from 'discord.js';
 import Client from '../../../structures/extendedClient.js';
 import { ENV } from '../../../bootstrap/environment.js';
 
@@ -13,48 +22,46 @@ export const description = 'Developer Command Logs';
 export async function execute(interaction) {
     const { client, guild, user, channel } = interaction;
 
-    if(!interaction.isCommand()) return;
+    if (!interaction.isCommand()) return;
 
-    try{
+    try {
         const commandText = buildCommandText(interaction);
         const LogEmbed = new EmbedBuilder()
-        .setTitle(`Command Executed | Shard #${client.shard?.ids[0] ?? 0}`)
-        .setColor(Colors.DarkPurple)
-        .addFields(
-            { name: 'User', value: `@${user.username} (${user})`, inline: true },
-                ...(guild ? 
-                [
-                    { name: 'Guild', value: `${guild.name} (${guild.id})`, inline: true },
-                    { name: 'Channel', value: `${channel}`, inline: true },
-                ]
-                : []),
-            {
-                name: 'Command',
-                value: `\`${commandText.substring(0, 1020)}\``,
-                inline: false,
-            }
-        )
-        .setTimestamp();
+            .setTitle(`Command Executed | Shard #${client.shard?.ids[0] ?? 0}`)
+            .setColor(Colors.DarkPurple)
+            .addFields(
+                { name: 'User', value: `@${user.username} (${user})`, inline: true },
+                ...(guild
+                    ? [
+                          { name: 'Guild', value: `${guild.name} (${guild.id})`, inline: true },
+                          { name: 'Channel', value: `${channel}`, inline: true },
+                      ]
+                    : []),
+                {
+                    name: 'Command',
+                    value: `\`${commandText.substring(0, 1020)}\``,
+                    inline: false,
+                }
+            )
+            .setTimestamp();
 
         await client.utils.DevEmbed('command', client, LogEmbed);
-
-    } catch (err) {
-
-    }
-    
-};
-
+    } catch (err) {}
+}
 
 /**
  * @param { ChatInputCommandInteraction & { client: Client }} interaction
  */
 
 function buildCommandText(interaction) {
-    const parts =[`/${interaction.commandName}`];
+    const parts = [`/${interaction.commandName}`];
 
-    const processOptions = (options =[]) => {
+    const processOptions = (options = []) => {
         for (const opt of options) {
-            if (opt.type === ApplicationCommandOptionType.SubcommandGroup || opt.type === ApplicationCommandOptionType.Subcommand) {
+            if (
+                opt.type === ApplicationCommandOptionType.SubcommandGroup ||
+                opt.type === ApplicationCommandOptionType.Subcommand
+            ) {
                 parts.push(opt.name);
                 processOptions(opt.options);
             } else {
@@ -63,6 +70,6 @@ function buildCommandText(interaction) {
         }
     };
 
-  processOptions(interaction.options?.data);
-  return parts.join(' ');
-};
+    processOptions(interaction.options?.data);
+    return parts.join(' ');
+}

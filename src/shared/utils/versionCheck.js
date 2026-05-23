@@ -7,7 +7,6 @@ import path from 'path';
  */
 export async function checkVersion(LogData) {
     try {
-        
         const pkgPath = path.resolve(process.cwd(), 'package.json');
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
         const localVersion = pkg.version;
@@ -17,20 +16,28 @@ export async function checkVersion(LogData) {
         }
 
         const response = await fetch(`https://raw.githubusercontent.com/Dexvoo/Mushroom/main/package.json`, {
-            headers: { 'Cache-Control': 'no-cache' }
+            headers: { 'Cache-Control': 'no-cache' },
         });
 
-        if (!response.ok) return LogData('Version Check', `Could not reach GitHub. Error ${response.status}: ${response.statusText}`, 'debug');
+        if (!response.ok)
+            return LogData(
+                'Version Check',
+                `Could not reach GitHub. Error ${response.status}: ${response.statusText}`,
+                'debug'
+            );
 
         const remotePkg = await response.json();
-        const remoteVersion = remotePkg.version; 
+        const remoteVersion = remotePkg.version;
 
         if (remoteVersion !== localVersion) {
-            LogData('Update Available!', `You are running v${localVersion}, but v${remoteVersion} is available on GitHub!`, 'warning');
+            LogData(
+                'Update Available!',
+                `You are running v${localVersion}, but v${remoteVersion} is available on GitHub!`,
+                'warning'
+            );
         } else {
             LogData('Version Check', `You are running the latest version (v${localVersion}).`, 'success');
         }
-
     } catch (error) {
         LogData('Version Check', `Failed to verify version: ${error.message}`, 'error');
     }

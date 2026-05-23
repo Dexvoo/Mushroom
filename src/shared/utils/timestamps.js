@@ -3,9 +3,9 @@
  * @returns {String} - Short timestamp
  */
 const ShortTimestamp = (timestamp) => {
-  if (!timestamp) throw new Error('No timestamp provided.');
-  const date = new Date(timestamp);
-  return `<t:${Math.round(date / 1000)}:R>`;
+    if (!timestamp) throw new Error('No timestamp provided.');
+    const date = new Date(timestamp);
+    return `<t:${Math.round(date / 1000)}:R>`;
 };
 
 /**

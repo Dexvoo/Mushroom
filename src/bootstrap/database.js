@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { ENV } from '../bootstrap/environment.js';
 import { LogData } from '../shared/utils/logger.js';
 import { Shutdown } from './shutdown.js';
-import Client from '../structures/extendedClient.js'
+import Client from '../structures/extendedClient.js';
 
 export async function Database_Connect() {
     try {
@@ -10,12 +10,11 @@ export async function Database_Connect() {
         LogData('MongoDB', 'Connected to the database successfully.', 'success');
     } catch (error) {
         LogData('MongoDB', `Failed to connect: ${error.message}`, 'error');
-        await Shutdown('DATABASE FAILURE', Client)
+        await Shutdown('DATABASE FAILURE', Client);
     }
 }
 
 export async function Database_Disconnect() {
-
     try {
         if (mongoose.connection.readyState === 1) {
             await mongoose.connection.close();

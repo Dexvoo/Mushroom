@@ -15,25 +15,31 @@ export async function ValidateXP(member, channelLevel) {
     const guildConfig = await Guild_Level_Cache.get(guild.id);
     if (!guildConfig?.enabled || !guildConfig.channelId) {
         if (guildConfig && !guildConfig.enabled) {
-          client.utils.LogData('XP Pre-Check', `Guild: ${guild.name} | Levels disabled.`, 'warning');
+            client.utils.LogData('XP Pre-Check', `Guild: ${guild.name} | Levels disabled.`, 'warning');
         }
         return null;
     }
 
-    const botPermissions = [ PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks ];
+    const botPermissions = [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.EmbedLinks,
+    ];
     const [hasPerms] = client.utils.PermissionCheck(channelLevel, botPermissions, client);
     if (!hasPerms) {
-        client.utils.LogData('XP Pre-Check', `Guild: ${guild.name} | Missing permissions in level-up channel, disabling`, 'error');
+        client.utils.LogData(
+            'XP Pre-Check',
+            `Guild: ${guild.name} | Missing permissions in level-up channel, disabling`,
+            'error'
+        );
         await Guild_Level_Cache.setType(guild.id, 'enabled', false);
         return null;
     }
 
-    if(isBlacklisted(member, channelLevel, guildConfig)) return null
+    if (isBlacklisted(member, channelLevel, guildConfig)) return null;
 
     return { guildConfig };
 }
-
-
 
 /**
  * @param { GuildMember & { client: Client }} member
@@ -49,12 +55,20 @@ function isBlacklisted(member, channel, config) {
     const isBlacklistedChannel = config.blacklisted.channelIds?.includes(channel.id);
 
     if (hasBlacklistedRole) {
-      client.utils.LogData('XP Blacklist', `Guild: ${member.guild.name} | User: @${member.user.username} | Has blacklisted role`, 'info');
-      return true;
+        client.utils.LogData(
+            'XP Blacklist',
+            `Guild: ${member.guild.name} | User: @${member.user.username} | Has blacklisted role`,
+            'info'
+        );
+        return true;
     }
 
     if (isBlacklistedChannel) {
-        client.utils.LogData('XP Blacklist', `Guild: ${member.guild.name} | Channel: #${channel.name} | Is a blacklisted channel`, 'info');
+        client.utils.LogData(
+            'XP Blacklist',
+            `Guild: ${member.guild.name} | Channel: #${channel.name} | Is a blacklisted channel`,
+            'info'
+        );
         return true;
     }
 

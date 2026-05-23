@@ -1,7 +1,7 @@
 export default {
     ping: {
         title: '🏓 Pong!',
-        description: 'Latenz: {ms}ms\nAPI-Latenz: {api}ms'
+        description: 'Latenz: {ms}ms\nAPI-Latenz: {api}ms',
     },
     errors: {
         title: `⚠️ Fehler`,
@@ -10,5 +10,5 @@ export default {
         missingBotPerms: 'Ich benötige die folgenden Berechtigungen, um diesen Befehl auszuführen:\n`{perms}`',
         missingUserPerms: 'Du benötigst die folgenden Berechtigungen, um diesen Befehl zu verwenden:\n`{perms}`',
         cooldown: 'Bitte warte {time}, bevor du den Befehl `{command}` erneut verwendest.',
-    }
+    },
 };

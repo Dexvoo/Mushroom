@@ -31,13 +31,12 @@ import de from '../../locales/de.js';
 // import zh_TW from '../../locales/zh-TW.js';
 // import ko from '../../locales/ko.js';
 
-
 const locales = {
     'en-GB': en_GB,
     'en-US': en_GB,
     'es-ES': es_ES,
-    'fr': fr,
-    'de': de,
+    fr: fr,
+    de: de,
     // 'id': id,
     // 'es-419': es_419,
     // 'hr': hr,
@@ -70,7 +69,7 @@ const defaultLocale = ENV.DEFAULT_LANGUAGE;
 
 /**
  * Translates a key into the requested locale string.
- * 
+ *
  * @param {string} key - The dot-notated key (e.g., 'ping.latency')
  * @param {import('discord.js').Locale} locale - The interaction.locale from Discord
  * @param {object}[args={}] - Variables to replace in the string (e.g., { ms: 120 })
@@ -78,10 +77,10 @@ const defaultLocale = ENV.DEFAULT_LANGUAGE;
  */
 function Translate(key, locale = defaultLocale, args = {}) {
     const lang = locales[locale] || locales[defaultLocale];
-    
+
     const keys = key.split('.');
     let text = lang;
-    
+
     for (const k of keys) {
         text = text?.[k];
     }
@@ -91,10 +90,10 @@ function Translate(key, locale = defaultLocale, args = {}) {
     }
 
     if (text === undefined) {
-        return key; 
+        return key;
     }
 
-    for (const[k, v] of Object.entries(args)) {
+    for (const [k, v] of Object.entries(args)) {
         text = text.replace(new RegExp(`{${k}}`, 'g'), String(v));
     }
 

@@ -11,16 +11,38 @@ import Guild_Level_Cache from '../../cache/guildLevels.cache.js';
 export async function execute(interaction, guildConfig) {
     const { client, options, guild, member } = interaction;
 
-    if(!guildConfig) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('errors.no_config_found_generic', interaction.locale), { flags: MessageFlags.Ephemeral });
-    if(!guildConfig.enabled) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('commands.level_rank.not_configured_prompt', interaction.locale));
-    
-    const userPermissions = [ PermissionFlagsBits.ManageGuild ];
+    if (!guildConfig)
+        return client.utils.Embed(
+            interaction,
+            'Red',
+            client.utils.Translate('errors.title', interaction.locale),
+            client.utils.Translate('errors.no_config_found_generic', interaction.locale),
+            { flags: MessageFlags.Ephemeral }
+        );
+    if (!guildConfig.enabled)
+        return client.utils.Embed(
+            interaction,
+            'Red',
+            client.utils.Translate('errors.title', interaction.locale),
+            client.utils.Translate('commands.level_rank.not_configured_prompt', interaction.locale)
+        );
+
+    const userPermissions = [PermissionFlagsBits.ManageGuild];
     const [hasPerms, missingPerms] = await client.utils.PermissionCheck(interaction, userPermissions, member);
-    if (!hasPerms) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('errors.user_missing_perms', interaction.locale, { perms: missingPerms.flat().join(', ') }),  { flags: MessageFlags.Ephemeral });
+    if (!hasPerms)
+        return client.utils.Embed(
+            interaction,
+            'Red',
+            client.utils.Translate('errors.title', interaction.locale),
+            client.utils.Translate('errors.user_missing_perms', interaction.locale, {
+                perms: missingPerms.flat().join(', '),
+            }),
+            { flags: MessageFlags.Ephemeral }
+        );
 
     await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
-    const levelupMessage = options.getString('message') ?? '{user}, you just gained a level! Current Level: **{level}**!';
-
+    const levelupMessage =
+        options.getString('message') ?? '{user}, you just gained a level! Current Level: **{level}**!';
 
     const fields = [
         { name: 'Old', value: `${guildConfig.levelUpMessage ?? 'Not Configured'}`, inline: false },
@@ -29,6 +51,4 @@ export async function execute(interaction, guildConfig) {
 
     await Guild_Level_Cache.setType(guild.id, 'levelUpMessage', levelupMessage);
     client.utils.Embed(interaction, 'DarkPurple', 'Level Up Message Edited', '', { fields });
-
-    
 }

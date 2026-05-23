@@ -11,11 +11,23 @@ import User_Level_Cache from '../cache/userLevels.cache.js';
 export async function execute(interaction, guildConfig) {
     const { client, options, guild } = interaction;
 
-    
-    if(!guildConfig) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('errors.no_config_found_generic', interaction.locale), { flags: MessageFlags.Ephemeral });
-    
-    if(!guildConfig.enabled) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('commands.level_rank.not_configured_prompt', interaction.locale));
-    
+    if (!guildConfig)
+        return client.utils.Embed(
+            interaction,
+            'Red',
+            client.utils.Translate('errors.title', interaction.locale),
+            client.utils.Translate('errors.no_config_found_generic', interaction.locale),
+            { flags: MessageFlags.Ephemeral }
+        );
+
+    if (!guildConfig.enabled)
+        return client.utils.Embed(
+            interaction,
+            'Red',
+            client.utils.Translate('errors.title', interaction.locale),
+            client.utils.Translate('commands.level_rank.not_configured_prompt', interaction.locale)
+        );
+
     await interaction.deferReply();
     const type = options.getString('type') || 'level';
 
@@ -29,7 +41,7 @@ export async function execute(interaction, guildConfig) {
                 const messages = `⌨️ \`${data.totalMessages.toLocaleString().padEnd(6)}\``;
                 const voice = `🎙️ \`${(data.totalVoice / 60).toFixed(1).padEnd(5)}h\``;
                 const commands = `🤖 \`${data.totalCommands.toLocaleString().padEnd(6)}\``;
-                
+
                 return `${rank} ${name} | ${level} | ${messages} ${voice} ${commands}`;
             },
         },
@@ -39,7 +51,7 @@ export async function execute(interaction, guildConfig) {
                 const rank = formatRank(data);
                 const name = formatName(user);
                 const messages = `⌨️ \`${data.totalMessages.toLocaleString().padEnd(15)}\``;
-                const xp = ` ${client.customEmojis.levelling.XP} \`${data.messageXP.toLocaleString().padEnd(15)}\``
+                const xp = ` ${client.customEmojis.levelling.XP} \`${data.messageXP.toLocaleString().padEnd(15)}\``;
                 return `${rank} ${name} | ${messages} ${xp}`;
             },
         },
@@ -65,7 +77,13 @@ export async function execute(interaction, guildConfig) {
     };
 
     const config = typeConfig[type];
-    if(!config) return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('commands.level_leaderboard.invalid_type', interaction.locale));
+    if (!config)
+        return client.utils.Embed(
+            interaction,
+            'Red',
+            client.utils.Translate('errors.title', interaction.locale),
+            client.utils.Translate('commands.level_leaderboard.invalid_type', interaction.locale)
+        );
     const topUsers = await User_Level_Cache.getTopUsers(guild.id, type);
 
     const userPromises = topUsers.map(async (data, i) => {
@@ -83,8 +101,14 @@ export async function execute(interaction, guildConfig) {
     const leaderboardLines = settledResults
         .filter((result) => result.status === 'fulfilled' && result.value !== null)
         .map((result) => result.value);
-    
-    if(leaderboardLines.length === 0) return client.utils.Embed(interaction, 'Orange', client.utils.Translate('errors.title', interaction.locale), client.utils.Translate('commands.level_leaderboard.empty_description', interaction.locale));
+
+    if (leaderboardLines.length === 0)
+        return client.utils.Embed(
+            interaction,
+            'Orange',
+            client.utils.Translate('errors.title', interaction.locale),
+            client.utils.Translate('commands.level_leaderboard.empty_description', interaction.locale)
+        );
 
     const leaderboard = leaderboardLines.join('\n');
 
@@ -97,9 +121,6 @@ export async function execute(interaction, guildConfig) {
         console.error(error);
     }
 }
-
-
-
 
 function formatRank(data) {
     return `\`${data.rank}.\``.padEnd(4);

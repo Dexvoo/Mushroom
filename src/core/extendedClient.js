@@ -1,7 +1,7 @@
 import { Client, Embed } from 'discord.js';
-import emojis from '../shared/constants/emojis.json' with { type: 'json'};
-import * as Embeds from '../shared/utils/embed.js'; 
-import * as ConsoleLogs from '../shared/utils/logger.js'; 
+import emojis from '../shared/constants/emojis.json' with { type: 'json' };
+import * as Embeds from '../shared/utils/embed.js';
+import * as ConsoleLogs from '../shared/utils/logger.js';
 import * as Timestamps from '../shared/utils/timestamps.js';
 import * as Permissions from '../shared/utils/permissions.js';
 import * as I18n from '../shared/utils/i18n.js';
@@ -9,7 +9,7 @@ import * as Math from '../shared/utils/math.js';
 import * as String from '../shared/utils/string.js';
 import { CooldownManager } from '../shared/cache/cooldowns.js';
 
-class MushroomClient extends Client {
+class ModifiedClient extends Client {
     constructor(options) {
         super(options);
 
@@ -48,6 +48,6 @@ class MushroomClient extends Client {
          */
         this.cooldowns = new CooldownManager();
     }
-};
+}
 
-export default MushroomClient;
+export default ModifiedClient;

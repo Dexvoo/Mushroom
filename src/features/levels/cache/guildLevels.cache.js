@@ -24,7 +24,6 @@ class Guild_Level_Cache {
      */
     async get(guildId) {
         try {
-
             const cached = this.cache.get(guildId);
             if (cached) return cached;
 
@@ -50,15 +49,12 @@ class Guild_Level_Cache {
      * @return {Promise<GuildLevelsType>}
      */
     async setType(guildId, type, newData) {
-    try {
-        const updateData = typeof newData === 'object' && newData !== null &&
-                !Array.isArray(newData) ? Object.fromEntries(
-                    Object.entries(newData).map(([key, value]) => [
-                        `${type}.${key}`,
-                        value
-                    ])
-                ) : { [type]: newData };
-                
+        try {
+            const updateData =
+                typeof newData === 'object' && newData !== null && !Array.isArray(newData)
+                    ? Object.fromEntries(Object.entries(newData).map(([key, value]) => [`${type}.${key}`, value]))
+                    : { [type]: newData };
+
             const updatedConfig = await LevelConfig.findOneAndUpdate(
                 { guildId },
                 { $set: updateData },
@@ -66,14 +62,14 @@ class Guild_Level_Cache {
                     returnDocument: 'after',
                     upsert: true,
                     lean: true,
-                    setDefaultsOnInsert: true
+                    setDefaultsOnInsert: true,
                 }
             );
-        
+
             this.cache.set(guildId, updatedConfig);
-        
+
             LogData('Guild Level Cache', `Type '${type}' updated for guild ${guildId}`, 'debug');
-        
+
             return updatedConfig;
         } catch (error) {
             LogData('Guild Level Cache', `Failed to set type '${type}' for ${guildId}: ${error.message}`, 'error');
@@ -100,8 +96,7 @@ class Guild_Level_Cache {
             messageCooldown: 60,
             maxLevel: 100,
 
-            levelUpMessage:
-                '{user}, you just gained a level! Current Level: **{level}**!',
+            levelUpMessage: '{user}, you just gained a level! Current Level: **{level}**!',
 
             roleMultipliers: [],
         };
@@ -115,6 +110,6 @@ class Guild_Level_Cache {
         this.cache.del(guildId);
         LogData('Guild Level Cache', `Cache invalidated for guild ${guildId}`, 'debug');
     }
-};
+}
 
 export default new Guild_Level_Cache();
