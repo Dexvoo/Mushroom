@@ -13,8 +13,7 @@ class Guild_Level_Cache {
     cache;
 
     constructor() {
-        // stdTTL: 3600 (1 hour), checkperiod: 120 (cleans up expired keys every 2 mins)
-        this.cache = new NodeCache({ stdTTL: 3600, checkperiod: 120 });
+        this.cache = new NodeCache({ stdTTL: 1 * 60 * 60, checkperiod: 1 * 60 * 2 });
     }
 
     /**

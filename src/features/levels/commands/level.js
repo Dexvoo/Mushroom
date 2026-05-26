@@ -17,9 +17,9 @@ const handlers = {
         'max-level': () => import('../subcommands/settings/maxLevel.js'),
         'levelup-message': () => import('../subcommands/settings/levelUpMessage.js'),
         //     'remove-past-rewards': () => import('../subcommands/test.js'),
-        'add-reward': () => import('../subcommands/settings/rewardAdd.js'),
-        'remove-reward': () => import('../subcommands/settings/rewardRemove.js'),
-        //     'view-rewards': () => import('../subcommands/test.js'),
+        'add-level-reward': () => import('../subcommands/settings/levelRewardAdd.js'),
+        'remove-level-reward': () => import('../subcommands/settings/levelRewardRemove.js'),
+        'view-level-rewards': () => import('../subcommands/settings/levelRewardList.js'),
         blacklist: () => import('../subcommands/settings/blacklist.js'),
         //     'add-multiplier': () => import('../subcommands/test.js'),
         //     'remove-multiplier': () => import('../subcommands/test.js'),
@@ -145,7 +145,7 @@ commandData.addSubcommandGroup((g) =>
         )
         .addSubcommand((s) =>
             s
-                .setName('add-reward')
+                .setName('add-level-reward')
                 .setDescription('Add a role reward for reaching a certain level.')
                 .addIntegerOption((o) =>
                     o
@@ -161,7 +161,7 @@ commandData.addSubcommandGroup((g) =>
         )
         .addSubcommand((s) =>
             s
-                .setName('remove-reward')
+                .setName('remove-level-reward')
                 .setDescription('Remove a level reward.')
                 .addIntegerOption((o) =>
                     o
@@ -172,7 +172,7 @@ commandData.addSubcommandGroup((g) =>
                         .setRequired(true)
                 )
         )
-        .addSubcommand((s) => s.setName('view-rewards').setDescription('List all configured level reward roles.'))
+        .addSubcommand((s) => s.setName('view-level-rewards').setDescription('List all configured level reward roles.'))
         .addSubcommand((s) =>
             s
                 .setName('blacklist')
