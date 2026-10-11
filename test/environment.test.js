@@ -1,0 +1,94 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseEnvironment } from '../src/bootstrap/parseEnvironment.js';
+
+const APP_ID = '100000000000000000';
+const DEV_APP_ID = '200000000000000000';
+const base = { MONGO_URI: 'mongodb://localhost/test', BOT_TOKEN: 'prod-token', BOT_APPLICATION_ID: APP_ID };
+
+test('production only needs MONGO_URI, BOT_TOKEN and BOT_APPLICATION_ID', () => {
+    const { env, errors } = parseEnvironment(base);
+
+    assert.deepEqual(errors, []);
+    assert.equal(env.TOKEN, 'prod-token');
+    assert.equal(env.APPLICATION_ID, APP_ID);
+    assert.equal(env.DEVELOPER_MODE, false);
+    assert.equal(env.DEFAULT_LANGUAGE, 'en-GB');
+    assert.equal(env.DEV_GUILD_ID, null);
+    assert.deepEqual(env.DEVELOPER_IDS, []);
+});
+
+test('developer mode uses the dev token and application ID instead', () => {
+    const { env, errors } = parseEnvironment({
+        MONGO_URI: 'mongodb://localhost/test',
+        DEVELOPER_MODE: 'true',
+        BOT_TOKEN_DEV: 'dev-token',
+        BOT_APPLICATION_ID_DEV: DEV_APP_ID,
+    });
+
+    assert.deepEqual(errors, []);
+    assert.equal(env.TOKEN, 'dev-token');
+    assert.equal(env.APPLICATION_ID, DEV_APP_ID);
+});
+
+test('reports every missing required variable for the current mode', () => {
+    const { env, errors } = parseEnvironment({ DEVELOPER_MODE: 'true', BOT_TOKEN: 'prod-token' });
+
+    assert.equal(env, null);
+    assert.deepEqual(errors, [
+        'MONGO_URI is required',
+        'BOT_TOKEN_DEV is required',
+        'BOT_APPLICATION_ID_DEV is required',
+    ]);
+});
+
+test("treats empty, whitespace and 'none' as not set", () => {
+    const { env } = parseEnvironment({ ...base, DEV_GUILD_ID: 'none', COMMAND_CID: '  ', VOTE_CID: '' });
+
+    assert.equal(env.DEV_GUILD_ID, null);
+    assert.equal(env.COMMAND_CID, null);
+    assert.equal(env.VOTE_CID, null);
+});
+
+test('parses and trims the developer ID list', () => {
+    const { env } = parseEnvironment({ ...base, DEVELOPER_IDS: '387341502134878218, 300000000000000000 ,' });
+    assert.deepEqual(env.DEVELOPER_IDS, ['387341502134878218', '300000000000000000']);
+});
+
+test('rejects IDs that are not Discord IDs, such as placeholders copied from .env.example', () => {
+    const { env, errors } = parseEnvironment({
+        ...base,
+        DEV_GUILD_ID: 'DEV_GUILD_ID',
+        DEVELOPER_IDS: '387341502134878218,DEVELOPER_ID_2',
+        BOT_APPLICATION_ID: 'BOT_APPLICATION_ID',
+    });
+
+    assert.equal(env, null);
+    assert.equal(errors.length, 3);
+    assert.ok(errors.some((e) => e.startsWith('DEV_GUILD_ID must be a Discord ID')));
+    assert.ok(errors.some((e) => e.startsWith('DEVELOPER_IDS must be a Discord ID')));
+    assert.ok(errors.some((e) => e.startsWith('BOT_APPLICATION_ID must be a Discord ID')));
+});
+
+test('reads JOIN_GUILD_CID without warnings', () => {
+    const { env, warnings } = parseEnvironment({ ...base, JOIN_GUILD_CID: '300000000000000000' });
+    assert.equal(env.JOIN_GUILD_CID, '300000000000000000');
+    assert.deepEqual(warnings, []);
+});
+
+test('still accepts the old misspelled JOIN_GUID_CID, with a warning', () => {
+    const { env, errors, warnings } = parseEnvironment({ ...base, JOIN_GUID_CID: '300000000000000000' });
+    assert.deepEqual(errors, []);
+    assert.equal(env.JOIN_GUILD_CID, '300000000000000000');
+    assert.deepEqual(warnings, ['JOIN_GUID_CID is deprecated, rename it to JOIN_GUILD_CID']);
+});
+
+test('prefers JOIN_GUILD_CID when both names are set', () => {
+    const { env, warnings } = parseEnvironment({
+        ...base,
+        JOIN_GUILD_CID: '300000000000000000',
+        JOIN_GUID_CID: '400000000000000000',
+    });
+    assert.equal(env.JOIN_GUILD_CID, '300000000000000000');
+    assert.deepEqual(warnings, []);
+});

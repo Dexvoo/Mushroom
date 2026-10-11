@@ -1,5 +1,13 @@
-import { ChatInputCommandInteraction, GuildMember, GuildChannel, ThreadChannel, PermissionsBitField } from 'discord.js';
-import Client from '../../core/extendedClient.js';
+// discord.js's Client, not core/extendedClient.js: importing that here would be circular, and
+// our client extends this one, so instanceof still matches it
+import {
+    ChatInputCommandInteraction,
+    Client,
+    GuildMember,
+    GuildChannel,
+    ThreadChannel,
+    PermissionsBitField,
+} from 'discord.js';
 import { LogData } from './logger.js';
 import { ENV } from '../../bootstrap/environment.js';
 /**

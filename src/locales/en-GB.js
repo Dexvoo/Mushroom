@@ -141,6 +141,13 @@ export default {
         },
     },
 
+    levels: {
+        level_up_default: '{user} leveled up to **{level}**!',
+        rewards_added: 'Added Rewards',
+        rewards_removed: 'Removed Rewards',
+        rewards_failed: 'Failed Rewards',
+    },
+
     errors: {
         title: '⚠️ Error',
         no_command: 'Command not found!',

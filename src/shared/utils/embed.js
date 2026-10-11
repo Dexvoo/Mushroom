@@ -1,7 +1,6 @@
-import { BaseInteraction, EmbedBuilder, DiscordAPIError, RESTJSONErrorCodes } from 'discord.js';
+import { BaseInteraction, EmbedBuilder, DiscordAPIError, RESTJSONErrorCodes, ShardClientUtil } from 'discord.js';
 import { ENV } from '../../bootstrap/environment.js';
 import { LogData } from './logger.js';
-import Global_Cache from '../../features/utility/cache/global.js';
 /**
  * @typedef {import('../../core/extendedClient.js').default} Client
  */
@@ -90,9 +89,13 @@ async function Embed(target, colour, title, description, options = {}) {
         }
     } catch (error) {
         if (error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.CannotSendMessagesToThisUser) {
-            console.warn(`Could not send embed to ${'tag' in target ? target.tag : target.id} - DMs are closed.`);
+            LogData(
+                'Embed Utility',
+                `Could not send embed to ${'tag' in target ? target.tag : target.id} - DMs are closed.`,
+                'debug'
+            );
         } else {
-            console.error(error);
+            LogData('Embed Utility', `Failed to send embed: ${error.stack ?? error.message}`, 'error');
         }
     }
 }
@@ -110,37 +113,39 @@ async function DevEmbed(type, client, embed) {
 
     const typesOfLogs = {
         command: ENV.COMMAND_CID,
-        joinGuild: ENV.JOIN_GUID_CID,
+        joinGuild: ENV.JOIN_GUILD_CID,
         leaveGuild: ENV.LEAVE_GUILD_CID,
         userLevel: ENV.USER_LEVEL_CID,
         vote: ENV.VOTE_CID,
     };
 
     const currentLogChannelId = typesOfLogs[type];
-    if (!currentLogChannelId) throw new Error(`No log channel found for ${type}`);
+    // Dev logs are optional: skip quietly when this log or the dev guild isn't configured
+    if (!currentLogChannelId || !ENV.DEV_GUILD_ID) return;
+
+    const context = { embed: embed.toJSON(), channelId: currentLogChannelId, guildId: ENV.DEV_GUILD_ID };
+
+    // Self-contained (no outer variables) because broadcastEval runs it inside another shard process
+    const sendToDevChannel = async (shardClient, { embed, channelId, guildId }) => {
+        const channel = shardClient.guilds.cache.get(guildId)?.channels.cache.get(channelId);
+        if (!channel?.isTextBased()) return false;
+
+        await channel.send({ embeds: [embed] });
+        return true;
+    };
 
     try {
-        await client.shard.broadcastEval(
-            async (ShardClient, { embed, channelId, guildId }) => {
-                const guild = ShardClient.guilds.cache.get(guildId);
-                if (!guild) return console.error(`Guild with ID ${guildId} not found.`);
+        if (!client.shard) {
+            await sendToDevChannel(client, context);
+            return;
+        }
 
-                const channel = guild.channels.cache.get(channelId);
-                if (!channel?.isTextBased()) return;
-
-                await channel.send({ embeds: [embed] });
-            },
-            {
-                context: {
-                    embed: embed,
-                    channelId: currentLogChannelId,
-                    guildId: ENV.DEV_GUILD_ID,
-                },
-                shard: Global_Cache.DevSID,
-            }
-        );
+        // Discord assigns guilds to shards by ID, so the dev guild's shard can be computed directly
+        const shard = ShardClientUtil.shardIdForGuildId(ENV.DEV_GUILD_ID, client.shard.count);
+        const sent = await client.shard.broadcastEval(sendToDevChannel, { context, shard });
+        if (!sent) LogData('Dev Embed', `Dev log channel for '${type}' not found in the dev guild.`, 'warning');
     } catch (error) {
-        console.error(error);
+        LogData('Dev Embed', `Failed to send '${type}' dev log: ${error.message}`, 'error');
     }
 }
 

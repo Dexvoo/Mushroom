@@ -36,8 +36,8 @@ export async function execute(interaction) {
             .setTimestamp();
 
         await client.utils.DevEmbed('command', client, LogEmbed);
-    } catch (err) {
-        console.error(err);
+    } catch (error) {
+        client.utils.LogData('Command Log', `Failed to send command log: ${error.message}`, 'error');
     }
 }
 

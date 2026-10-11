@@ -52,7 +52,6 @@ export default async function loadEvents(client, dir) {
 
             client.utils.LogData('Event', `${description}`, 'success');
         } catch (error) {
-            console.log(error);
             client.utils.LogData('Event Loader', `Failed loading ${fullPath}: ${error.message}`, 'error');
         }
     }

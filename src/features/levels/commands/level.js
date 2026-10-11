@@ -238,11 +238,8 @@ export async function execute(interaction) {
             { flags: MessageFlags.Ephemeral }
         );
 
-    try {
-        const guildConfig = await Guild_Level_Cache.get(interaction.guildId);
-        const handlerModule = await handler();
-        await handlerModule.execute(interaction, guildConfig);
-    } catch (error) {
-        console.error(error);
-    }
+    // Errors propagate to the slash command handler, which logs them and replies to the user
+    const guildConfig = await Guild_Level_Cache.get(interaction.guildId);
+    const handlerModule = await handler();
+    await handlerModule.execute(interaction, guildConfig);
 }

@@ -11,17 +11,15 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Only what features use; each intent adds gateway traffic. Slash commands (even in DMs) need none.
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildModeration,
-        GatewayIntentBits.GuildExpressions,
-        GatewayIntentBits.GuildInvites,
-        GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers, // Member logs (privileged)
+        GatewayIntentBits.GuildModeration, // Ban logs
+        GatewayIntentBits.GuildVoiceStates, // Voice XP and voice logs
+        GatewayIntentBits.GuildMessages, // Message XP and message logs
+        GatewayIntentBits.MessageContent, // Message log content and XP length check (privileged)
     ],
 });
 
@@ -62,13 +60,11 @@ if (!client.shard || client.shard.ids[0] === 0) {
     client.utils.LogData('Command Refresh', `Skipped on Shard ${client.shard.ids[0]} to prevent API spam.`, 'info');
 }
 
-const token = ENV.DEVELOPER_MODE ? ENV.BOT_TOKEN_DEV : ENV.BOT_TOKEN;
-
 try {
-    await Database_Connect(client);
+    await Database_Connect();
     await checkVersion(client.utils.LogData);
 
-    await client.login(token);
+    await client.login(ENV.TOKEN);
 } catch (error) {
     client.utils.LogData('Startup', `Failed to start: ${error.stack ?? error.message}`, 'error');
     process.exit(1);

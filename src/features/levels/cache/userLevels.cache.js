@@ -54,26 +54,35 @@ class User_Levels_Cache {
     }
 
     /**
-     * Writes all dirty users to the database in one bulk write.
-     * Concurrent calls share the in-progress flush.
+     * Writes dirty users to the database in one bulk write.
+     * Flushes run one at a time, so a flush requested during another still runs afterwards.
+     * @param {string} [guildId] - Only flush this guild's users; all guilds if omitted
      * @returns {Promise<void>}
      */
-    flush() {
-        if (!this.flushing) {
-            this.flushing = this._flush().finally(() => {
-                this.flushing = null;
-            });
-        }
-        return this.flushing;
+    flush(guildId) {
+        // A failed earlier flush must not stop this one from running
+        const previous = (this.flushing ?? Promise.resolve()).catch(() => {});
+        const current = previous.then(() => this._flush(guildId));
+        this.flushing = current;
+        current
+            .finally(() => {
+                if (this.flushing === current) this.flushing = null;
+            })
+            .catch(() => {}); // The caller handles errors from `current` itself
+        return current;
     }
 
-    /** @private */
-    async _flush() {
-        if (this.dirty.size === 0) return;
+    /**
+     * @private
+     * @param {string} [guildId]
+     */
+    async _flush(guildId) {
+        // Take the matching dirty keys; changes made during the write re-mark their key
+        const prefix = guildId ? `${guildId}:` : '';
+        const keys = [...this.dirty].filter((key) => key.startsWith(prefix));
+        if (keys.length === 0) return;
 
-        // Take the current dirty keys; changes made during the write re-mark their key
-        const keys = [...this.dirty];
-        this.dirty.clear();
+        for (const key of keys) this.dirty.delete(key);
 
         const operations = [];
         for (const key of keys) {
@@ -318,28 +327,32 @@ class User_Levels_Cache {
 
         if (!channel?.isTextBased()) return false;
 
-        const levelUpMessageTemplate = guildData.levelUpMessage || '{user} leveled up to **{level}**!';
-        const levelUpMessage = levelUpMessageTemplate
-            .replaceAll('{user}', member.toString())
-            .replaceAll('{level}', userData.level.toString());
+        const locale = guild.preferredLocale;
+        const user = member.toString();
+        const level = userData.level.toString();
+
+        // A server's own template is used as-is; otherwise the translated default
+        const levelUpMessage = guildData.levelUpMessage
+            ? guildData.levelUpMessage.replaceAll('{user}', user).replaceAll('{level}', level)
+            : client.utils.Translate('levels.level_up_default', locale, { user, level });
 
         const embed = new EmbedBuilder().setDescription(levelUpMessage);
 
         if (rewards.added.length > 0)
             embed.addFields({
-                name: 'Added Rewards',
+                name: client.utils.Translate('levels.rewards_added', locale),
                 value: rewards.added.map((reward) => `<@&${reward.roleId}>`).join(', '),
                 inline: true,
             });
         if (rewards.removed.length > 0)
             embed.addFields({
-                name: 'Removed Rewards',
+                name: client.utils.Translate('levels.rewards_removed', locale),
                 value: rewards.removed.map((reward) => `<@&${reward.roleId}>`).join(', '),
                 inline: true,
             });
         if (rewards.failed.length > 0)
             embed.addFields({
-                name: 'Failed Rewards',
+                name: client.utils.Translate('levels.rewards_failed', locale),
                 value: rewards.failed.map((reward) => `<@&${reward.roleId}>`).join(', '),
                 inline: true,
             });
@@ -351,15 +364,13 @@ class User_Levels_Cache {
             return false;
         }
 
-        if (client.shard) {
-            const devEmbed = new EmbedBuilder().setDescription(
-                `User: ${member} | Guild: ${guild.name} | Level: \`${userData.level}\``
-            );
+        const devEmbed = new EmbedBuilder().setDescription(
+            `User: ${member} | Guild: ${guild.name} | Level: \`${userData.level}\``
+        );
 
-            await client.utils
-                .DevEmbed('userLevel', client, devEmbed)
-                .catch((error) => LogData('User Levels Cache', `Failed to send dev embed: ${error.message}`, 'error'));
-        }
+        await client.utils
+            .DevEmbed('userLevel', client, devEmbed)
+            .catch((error) => LogData('User Levels Cache', `Failed to send dev embed: ${error.message}`, 'error'));
 
         return true;
     }
@@ -497,8 +508,8 @@ class User_Levels_Cache {
         const limit = 15;
 
         try {
-            // Ensure DB is up to date first
-            await this.flush();
+            // Save this guild's pending XP first so the query sees it; other guilds can wait
+            await this.flush(guildId);
 
             /** @type {Record<string, 1 | -1>} */
             const sortQuery = type === 'level' ? { level: -1, xp: -1 } : { [type]: -1 };

@@ -14,7 +14,6 @@ export async function execute(interaction) {
 
     let ignoredChannels = logsConfig.ignoredChannels || [];
 
-    console.log(ignoredChannels);
     if (enabled) {
         if (ignoredChannels.includes(channel.id))
             return client.utils.Embed(

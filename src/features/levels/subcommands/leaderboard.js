@@ -94,7 +94,7 @@ export async function execute(interaction, guildConfig) {
             const rankedData = { ...data, rank: `${i + 1}`.padStart(2, ' ') };
             return config.format(user, rankedData);
         } catch (error) {
-            console.error(`Could not fetch user ${data.userId} for leaderboard:`, error);
+            client.utils.LogData('Leaderboard', `Could not fetch user ${data.userId}: ${error.message}`, 'warning');
             return `???? \`@Unknown User\``;
         }
     });
@@ -112,14 +112,10 @@ export async function execute(interaction, guildConfig) {
 
     const leaderboard = leaderboardLines.join('\n');
 
-    try {
-        const title = `${guild.name} | ${config.type} Leaderboard 🏆`;
-        const description = leaderboard.length > 4096 ? leaderboard.substring(0, 4093) + '...' : leaderboard;
+    const title = `${guild.name} | ${config.type} Leaderboard 🏆`;
+    const description = leaderboard.length > 4096 ? leaderboard.substring(0, 4093) + '...' : leaderboard;
 
-        await client.utils.Embed(interaction, 'DarkPurple', title, description);
-    } catch (error) {
-        console.error(error);
-    }
+    await client.utils.Embed(interaction, 'DarkPurple', title, description);
 }
 
 function formatRank(data) {

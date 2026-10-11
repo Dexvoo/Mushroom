@@ -6,15 +6,13 @@ import { ENV } from './bootstrap/environment.js';
 Log('Mushroom Discord Bot | Created by: @Dexvo');
 if (ENV.DEVELOPER_MODE) LogData('Developer Mode Enabled', 'The bot is running in Developer Mode.', 'warning');
 
-const token = ENV.DEVELOPER_MODE ? ENV.BOT_TOKEN_DEV : ENV.BOT_TOKEN;
-
 // Shards get FORCE_EXIT_MS (10s) to shut down themselves; give them a little longer here
 const SHARD_SHUTDOWN_TIMEOUT_MS = 15_000;
 
 let shuttingDown = false;
 
 const ShardManager = new ShardingManager(fileURLToPath(new URL('./bootstrap/client.js', import.meta.url)), {
-    token: token,
+    token: ENV.TOKEN,
     totalShards: 'auto',
 });
 
@@ -36,8 +34,7 @@ ShardManager.on('shardCreate', (shard) => {
 });
 
 ShardManager.spawn().catch((error) => {
-    LogData('Shard Spawn Error', 'An error occurred while spawning shards.', 'error');
-    console.error(error);
+    LogData('Shard Spawn Error', `An error occurred while spawning shards: ${error.stack ?? error.message}`, 'error');
 });
 
 /**

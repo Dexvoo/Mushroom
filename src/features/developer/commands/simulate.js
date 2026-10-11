@@ -130,7 +130,7 @@ export async function execute(interaction, client) {
             flags: MessageFlags.Ephemeral,
         });
     } catch (error) {
-        console.error(`Failed to simulate event ${event}:`, error);
+        client.utils.LogData('Simulate', `Failed to simulate ${event}: ${error.stack ?? error.message}`, 'error');
         client.utils.Embed(
             interaction,
             'Red',

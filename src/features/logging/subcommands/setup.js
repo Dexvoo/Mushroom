@@ -78,7 +78,11 @@ export async function execute(interaction) {
 
             await channel.send({ embeds: [embed] });
         } catch (error) {
-            console.error(error);
+            client.utils.LogData(
+                'Logs Setup',
+                `Guild: ${guild.name} | Test message failed: ${error.message}`,
+                'warning'
+            );
             const msg = client.utils.Translate('errors.test_log_fail_perms', interaction.locale, {
                 channel: channel.toString(),
             });
@@ -103,7 +107,7 @@ export async function execute(interaction) {
             await Logs_Cache.setType(guild.id, type, settings);
         }
     } catch (error) {
-        console.error('Failed to update log settings:', error);
+        client.utils.LogData('Logs Setup', `Guild: ${guild.name} | Failed to save settings: ${error.message}`, 'error');
         const msg = client.utils.Translate('errors.save_settings_fail', interaction.locale);
         return client.utils.Embed(interaction, 'Red', client.utils.Translate('errors.title', interaction.locale), msg, {
             flags: MessageFlags.Ephemeral,

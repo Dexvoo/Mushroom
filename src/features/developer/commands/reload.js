@@ -72,7 +72,8 @@ export async function execute(interaction) {
         // Register only this command with Discord (create overwrites a command with the same name).
         // Developer-only commands always stay in the dev guild, even if "global" was chosen.
         const newCommand = client.commands.get(newName);
-        const registerGlobally = global && !newCommand.meta.developerOnly;
+        // Without a dev guild there is nowhere else to register, matching refreshCommands
+        const registerGlobally = !ENV.DEV_GUILD_ID || (global && !newCommand.meta.developerOnly);
         await client.application.commands.create(
             newCommand.commandData,
             registerGlobally ? undefined : ENV.DEV_GUILD_ID

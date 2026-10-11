@@ -1,29 +1,13 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { stubEnvironment } from './helpers/env.js';
 
 /** @type {typeof import('../src/shared/utils/i18n.js').Translate} */
 let Translate;
 
 before(async () => {
-    // i18n reads the environment module, which exits if required variables are missing.
-    // Fill in placeholders so the tests run without a .env file.
-    const required = [
-        'MONGO_URI',
-        'DEVELOPER_MODE',
-        'DEV_GUILD_ID',
-        'BOT_TOKEN',
-        'BOT_APPLICATION_ID',
-        'BOT_TOKEN_DEV',
-        'BOT_APPLICATION_ID_DEV',
-        'DEVELOPER_IDS',
-        'COMMAND_CID',
-        'JOIN_GUID_CID',
-        'LEAVE_GUILD_CID',
-        'USER_LEVEL_CID',
-        'VOTE_CID',
-    ];
-    for (const name of required) process.env[name] ??= 'test';
-    process.env.DEFAULT_LANGUAGE = 'en-GB';
+    // i18n reads the environment module, which exits if required variables are missing
+    stubEnvironment();
 
     ({ Translate } = await import('../src/shared/utils/i18n.js'));
 });

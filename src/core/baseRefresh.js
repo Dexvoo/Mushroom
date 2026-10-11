@@ -7,15 +7,14 @@ import { ENV } from '../bootstrap/environment.js';
  */
 
 export default async function refreshCommands(client) {
-    const token = ENV.DEVELOPER_MODE ? ENV.BOT_TOKEN_DEV : ENV.BOT_TOKEN;
-    const rest = new REST({ version: '10' }).setToken(token);
+    const rest = new REST({ version: '10' }).setToken(ENV.TOKEN);
 
     try {
         client.utils.LogData('Command Refresh', 'Started refreshing application (/) commands.', 'info');
 
-        const applicationId = ENV.DEVELOPER_MODE ? ENV.BOT_APPLICATION_ID_DEV : ENV.BOT_APPLICATION_ID;
+        const applicationId = ENV.APPLICATION_ID;
         const guildId = ENV.DEV_GUILD_ID;
-        const hasDevGuild = Boolean(guildId) && guildId !== 'none';
+        const hasDevGuild = guildId !== null;
 
         const [devCommands, publicCommands] = client.commands.partition((cmd) => cmd.meta.developerOnly);
 
@@ -45,7 +44,10 @@ export default async function refreshCommands(client) {
 
         client.utils.LogData('Command Refresh', 'Successfully reloaded application (/) commands.', 'success');
     } catch (error) {
-        client.utils.LogData('Command Refresh', 'Error occurred while refreshing application (/) commands.', 'error');
-        console.error(error);
+        client.utils.LogData(
+            'Command Refresh',
+            `Error occurred while refreshing application (/) commands: ${error.stack ?? error.message}`,
+            'error'
+        );
     }
 }

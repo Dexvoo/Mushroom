@@ -108,10 +108,7 @@ export async function execute(interaction) {
             { flags: MessageFlags.Ephemeral }
         );
 
-    try {
-        const handlerModule = await handlerPromise();
-        await handlerModule.execute(interaction);
-    } catch (error) {
-        console.error(error);
-    }
+    // Errors propagate to the slash command handler, which logs them and replies to the user
+    const handlerModule = await handlerPromise();
+    await handlerModule.execute(interaction);
 }
