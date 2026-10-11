@@ -50,5 +50,5 @@ export async function execute(interaction, guildConfig) {
     ];
 
     await Guild_Level_Cache.setType(guild.id, 'levelUpMessage', levelupMessage);
-    client.utils.Embed(interaction, 'DarkPurple', 'Level Up Message Edited', '', { fields });
+    client.utils.Embed(interaction, 'Brand', 'Level Up Message Edited', '', { fields });
 }

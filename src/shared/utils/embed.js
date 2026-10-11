@@ -1,13 +1,15 @@
 import { BaseInteraction, EmbedBuilder, DiscordAPIError, RESTJSONErrorCodes, ShardClientUtil } from 'discord.js';
 import { ENV } from '../../bootstrap/environment.js';
 import { LogData } from './logger.js';
+import { brandColour } from '../cache/guildSettings.cache.js';
 /**
  * @typedef {import('../../core/extendedClient.js').default} Client
  */
 /**
  * Create and send an embed message.
  * @param { BaseInteraction | import('discord.js').GuildBasedChannel | import('discord.js').TextBasedChannel | import('discord.js').User | import('discord.js').GuildMember } target - The target to send the embed to.
- * @param { keyof typeof import('discord.js').Colors } colour - The colour of the embed.
+ * @param { keyof typeof import('discord.js').Colors | 'Brand' } colour - The colour of the embed. 'Brand' is the
+ *   server's chosen embed colour (Bot Settings on the dashboard), for the bot's general embeds.
  * @param { string } title - The title of the embed.
  * @param { string } description - The description of the embed.
  * @param { object } [options={}] Optional parameters.
@@ -51,7 +53,8 @@ async function Embed(target, colour, title, description, options = {}) {
         return null;
     }
 
-    const embed = new EmbedBuilder().setColor(colour).setTitle(title).addFields(fields);
+    const resolvedColour = colour === 'Brand' ? await brandColour(guildIdOf(target)) : colour;
+    const embed = new EmbedBuilder().setColor(resolvedColour).setTitle(title).addFields(fields);
 
     if (footer) {
         embed.setFooter(footer);
@@ -106,6 +109,15 @@ async function Embed(target, colour, title, description, options = {}) {
  * @param {Client} client - discord client
  * @param {EmbedBuilder} embed - The embed to send
  */
+/**
+ * The server an embed is being sent in, if any.
+ * @param {any} target
+ * @returns {string | null}
+ */
+function guildIdOf(target) {
+    return target.guildId ?? target.guild?.id ?? null;
+}
+
 async function DevEmbed(type, client, embed) {
     if (!type) throw new Error('No type provided.');
     if (!client) throw new Error('No interaction provided.');

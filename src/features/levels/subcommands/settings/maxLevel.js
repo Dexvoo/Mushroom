@@ -49,5 +49,5 @@ export async function execute(interaction, guildConfig) {
     ];
 
     await Guild_Level_Cache.setType(guild.id, 'maxLevel', maxLevel);
-    client.utils.Embed(interaction, 'DarkPurple', 'Maximum Level Edited', '', { fields });
+    client.utils.Embed(interaction, 'Brand', 'Maximum Level Edited', '', { fields });
 }

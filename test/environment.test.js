@@ -92,3 +92,52 @@ test('prefers JOIN_GUILD_CID when both names are set', () => {
     assert.equal(env.JOIN_GUILD_CID, '300000000000000000');
     assert.deepEqual(warnings, []);
 });
+
+const dashboardBase = {
+    ...base,
+    DASHBOARD_ENABLED: 'true',
+    BOT_CLIENT_SECRET: 'client-secret',
+    SESSION_SECRET: 'x'.repeat(32),
+};
+
+test('the dashboard is off, and needs no settings, unless DASHBOARD_ENABLED is true', () => {
+    const { env, errors } = parseEnvironment(base);
+    assert.deepEqual(errors, []);
+    assert.equal(env.DASHBOARD, null);
+});
+
+test('dashboard defaults to localhost:3000 over http', () => {
+    const { env, errors } = parseEnvironment(dashboardBase);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(env.DASHBOARD, {
+        PORT: 3000,
+        HOST: '127.0.0.1',
+        URL: 'http://localhost:3000',
+        SECURE: false,
+        TRUST_PROXY: false,
+        CLIENT_SECRET: 'client-secret',
+        SESSION_SECRET: 'x'.repeat(32),
+    });
+});
+
+test('dashboard requires a client secret for the current mode and a long session secret', () => {
+    const { errors } = parseEnvironment({ ...base, DASHBOARD_ENABLED: 'true', SESSION_SECRET: 'short' });
+    assert.ok(errors.includes('BOT_CLIENT_SECRET is required'));
+    assert.ok(errors.some((e) => e.startsWith('SESSION_SECRET must be at least 32 characters')));
+});
+
+test('dashboard refuses plain http on a public domain, but allows https', () => {
+    const insecure = parseEnvironment({ ...dashboardBase, DASHBOARD_URL: 'http://dash.example.com' });
+    assert.ok(insecure.errors.some((e) => e.startsWith('DASHBOARD_URL must use https://')));
+
+    const { env, errors } = parseEnvironment({ ...dashboardBase, DASHBOARD_URL: 'https://dash.example.com/' });
+    assert.deepEqual(errors, []);
+    assert.equal(env.DASHBOARD.URL, 'https://dash.example.com', 'trailing slash removed');
+    assert.equal(env.DASHBOARD.SECURE, true);
+});
+
+test('dashboard rejects invalid ports and URLs', () => {
+    const { errors } = parseEnvironment({ ...dashboardBase, DASHBOARD_PORT: '99999', DASHBOARD_URL: 'not a url' });
+    assert.ok(errors.some((e) => e.startsWith('DASHBOARD_PORT must be a port number')));
+    assert.ok(errors.some((e) => e.startsWith('DASHBOARD_URL must be a full URL')));
+});

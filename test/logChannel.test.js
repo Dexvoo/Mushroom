@@ -96,3 +96,18 @@ test('findAuditLogExecutor returns null without permission, without a match, or 
     }).guild;
     assert.equal(await findAuditLogExecutor(failing, 0, () => true, { delayMs: 0 }), null);
 });
+
+test('join and leave logs follow the member log settings until they are set up on their own', async () => {
+    const { guild, channel } = makeGuild();
+    config = { guildId: 'g', member: { enabled: true, channelId: 'log' } };
+    assert.equal(await getLogChannel(guild, 'join'), channel);
+    assert.equal(await getLogChannel(guild, 'leave'), channel);
+
+    // Once set up (even turned off), they no longer follow member logs
+    config.join = { enabled: false, channelId: null };
+    assert.equal(await getLogChannel(guild, 'join'), null);
+    assert.equal(await getLogChannel(guild, 'leave'), channel);
+
+    // Other log types never borrow settings
+    assert.equal(await getLogChannel(guild, 'server'), null);
+});

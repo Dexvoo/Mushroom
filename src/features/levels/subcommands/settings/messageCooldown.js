@@ -49,5 +49,5 @@ export async function execute(interaction, guildConfig) {
     ];
 
     await Guild_Level_Cache.setType(guild.id, 'messageCooldown', cooldown);
-    client.utils.Embed(interaction, 'DarkPurple', 'Message Cooldown Edited', '', { fields });
+    client.utils.Embed(interaction, 'Brand', 'Message Cooldown Edited', '', { fields });
 }

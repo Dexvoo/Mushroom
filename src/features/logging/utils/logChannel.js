@@ -1,5 +1,6 @@
 import { PermissionFlagsBits } from 'discord.js';
 import Logs_Cache from '../cache/logs.cache.js';
+import { logSettings } from '../models/logging.js';
 import { PermissionCheck } from '../../../shared/utils/permissions.js';
 import { LogData } from '../../../shared/utils/logger.js';
 
@@ -25,7 +26,7 @@ const REQUIRED_PERMISSIONS = [
  */
 export async function getLogChannel(guild, type, { sourceChannelId } = {}) {
     const config = await Logs_Cache.get(guild.id);
-    const settings = config[type];
+    const settings = logSettings(config, type);
     if (!settings?.enabled || !settings.channelId) return null;
 
     if (sourceChannelId && config.ignoredChannels?.includes(sourceChannelId)) return null;

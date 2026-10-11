@@ -1,6 +1,7 @@
 import { PermissionFlagsBits, MessageFlags, EmbedBuilder, ChannelType } from 'discord.js';
 import Logs_Cache from '../cache/logs.cache.js';
 import { LOG_TYPES } from '../models/logging.js';
+import { brandColour } from '../../../shared/cache/guildSettings.cache.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
@@ -13,18 +14,6 @@ export async function execute(interaction) {
     const type = /** @type {import('../models/logging.js').LogType | 'all'} */ (options.getString('log-type'));
     const enabled = options.getBoolean('enabled');
     const channel = options.getChannel('channel', false, [ChannelType.GuildText]);
-
-    // TODO: server logs
-    if (type === 'server') {
-        const msg = client.utils.Translate('commands.log_setup.server_logs_soon', interaction.locale);
-        return interaction.client.utils.Embed(
-            interaction,
-            'Red',
-            client.utils.Translate('errors.title', interaction.locale),
-            msg,
-            { flags: MessageFlags.Ephemeral }
-        );
-    }
 
     if (!channel && enabled) {
         const msg = client.utils.Translate('commands.log_setup.provide_channel', interaction.locale);
@@ -63,7 +52,7 @@ export async function execute(interaction) {
 
         try {
             const embed = new EmbedBuilder()
-                .setColor('DarkPurple')
+                .setColor(await brandColour(interaction.guildId))
                 .setTitle(client.utils.Translate('commands.log_test.test_embed_title', interaction.locale))
                 .setDescription(
                     client.utils.Translate('commands.log_test.test_embed_description', interaction.locale, { type })

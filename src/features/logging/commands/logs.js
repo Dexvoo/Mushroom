@@ -6,6 +6,10 @@ import {
     ChannelType,
     MessageFlags,
 } from 'discord.js';
+import Logs_Cache from '../cache/logs.cache.js';
+import { withCommandAudit } from '../../../dashboard/commandAudit.js';
+import { describeLoggingChanges } from '../../../dashboard/describeChanges.js';
+import { loggingView, nameLookup } from '../../../dashboard/settingsViews.js';
 
 const logChoices = [
     { name: 'Message', value: 'message' },
@@ -27,6 +31,9 @@ const handlers = {
     'logs-ignore': () => import('../subcommands/ignore.js'),
     'logs-ignore-view': () => import('../subcommands/ignoreView.js'),
 };
+
+// Subcommands that change settings, recorded in the dashboard's Web Logs
+const AUDITED = new Set(['setup', 'ignore']);
 
 export const commandData = new SlashCommandBuilder();
 commandData.setName('logs');
@@ -110,5 +117,16 @@ export async function execute(interaction) {
 
     // Errors propagate to the slash command handler, which logs them and replies to the user
     const handlerModule = await handlerPromise();
-    await handlerModule.execute(interaction);
+    const run = () => handlerModule.execute(interaction);
+
+    if (!AUDITED.has(subcommand)) return run();
+    await withCommandAudit(
+        interaction,
+        {
+            action: 'Updated logging settings',
+            snapshot: async () => loggingView(await Logs_Cache.get(interaction.guildId)),
+            describe: (before, after, guild) => describeLoggingChanges(before, after, nameLookup(guild)),
+        },
+        run
+    );
 }

@@ -115,7 +115,7 @@ export async function execute(interaction, guildConfig) {
     const title = `${guild.name} | ${config.type} Leaderboard 🏆`;
     const description = leaderboard.length > 4096 ? leaderboard.substring(0, 4093) + '...' : leaderboard;
 
-    await client.utils.Embed(interaction, 'DarkPurple', title, description);
+    await client.utils.Embed(interaction, 'Brand', title, description);
 }
 
 function formatRank(data) {

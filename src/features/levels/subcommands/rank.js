@@ -1,6 +1,7 @@
 import { MessageFlags, EmbedBuilder } from 'discord.js';
 import User_Level_Cache from '../cache/userLevels.cache.js';
 import { ExpForLevel, progressBar } from '../utils/levels.js';
+import { brandColour } from '../../../shared/cache/guildSettings.cache.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
@@ -66,7 +67,7 @@ export async function execute(interaction, guildConfig) {
     const title = `@${user.username}'s Rank`;
 
     const embed = new EmbedBuilder()
-        .setColor('DarkPurple')
+        .setColor(await brandColour(interaction.guildId))
         .setTitle(title)
         .setThumbnail(user.displayAvatarURL())
         .addFields(

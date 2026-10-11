@@ -15,7 +15,7 @@ export async function execute(member) {
 
     if (!guild) return;
 
-    const logChannel = await getLogChannel(guild, 'member');
+    const logChannel = await getLogChannel(guild, 'join');
     if (!logChannel) return;
 
     const position = `${guild.memberCount}${client.utils.GetOrdinalSuffix(guild.memberCount)}`;

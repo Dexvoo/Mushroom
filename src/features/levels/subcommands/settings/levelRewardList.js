@@ -57,5 +57,5 @@ export async function execute(interaction, guildConfig) {
         await Guild_Level_Cache.setType(guild.id, 'rewards', updatedRewards);
     }
 
-    return client.utils.Embed(interaction, 'DarkPurple', `${guild.name} | Level Rewards`, rewardLines.join('\n'));
+    return client.utils.Embed(interaction, 'Brand', `${guild.name} | Level Rewards`, rewardLines.join('\n'));
 }

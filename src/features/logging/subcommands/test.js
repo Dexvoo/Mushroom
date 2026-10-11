@@ -1,6 +1,7 @@
 import { PermissionFlagsBits, MessageFlags, EmbedBuilder } from 'discord.js';
 import Logs_Cache from '../cache/logs.cache.js';
-import { LOG_TYPES } from '../models/logging.js';
+import { LOG_TYPES, logSettings } from '../models/logging.js';
+import { brandColour } from '../../../shared/cache/guildSettings.cache.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
@@ -32,10 +33,10 @@ export async function execute(interaction) {
         const progressDesc = client.utils.Translate('commands.log_test.in_progress_desc', interaction.locale, {
             user: interaction.member.toString(),
         });
-        client.utils.Embed(interaction, 'DarkPurple', progressTitle, progressDesc, { flags: MessageFlags.Ephemeral });
+        client.utils.Embed(interaction, 'Brand', progressTitle, progressDesc, { flags: MessageFlags.Ephemeral });
 
         for (const logType of LOG_TYPES) {
-            const config = currentConfig[logType];
+            const config = logSettings(currentConfig, logType);
             if (!config?.enabled) continue;
 
             const channel =
@@ -60,7 +61,7 @@ export async function execute(interaction) {
             }
 
             const embed = new EmbedBuilder()
-                .setColor('DarkPurple')
+                .setColor(await brandColour(interaction.guildId))
                 .setTitle(client.utils.Translate('commands.log_test.test_embed_title', interaction.locale))
                 .setDescription(
                     client.utils.Translate('commands.log_test.test_embed_description', interaction.locale, {
@@ -118,7 +119,7 @@ export async function execute(interaction) {
         );
     }
 
-    const config = currentConfig[type];
+    const config = logSettings(currentConfig, type);
 
     if (!config) {
         const errorMsg = client.utils.Translate('commands.log_ignore_view.no_log_config', interaction.locale, { type });
@@ -169,7 +170,7 @@ export async function execute(interaction) {
     }
 
     const embed = new EmbedBuilder()
-        .setColor('DarkPurple')
+        .setColor(await brandColour(interaction.guildId))
         .setTitle(client.utils.Translate('commands.log_test.test_embed_title', interaction.locale))
         .setDescription(
             client.utils.Translate('commands.log_test.test_embed_description', interaction.locale, { type })

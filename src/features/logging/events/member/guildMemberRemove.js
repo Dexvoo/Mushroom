@@ -15,7 +15,7 @@ export async function execute(member) {
 
     if (!guild) return;
 
-    const logChannel = await getLogChannel(guild, 'member');
+    const logChannel = await getLogChannel(guild, 'leave');
     if (!logChannel) return;
 
     const longTimestamp = `${client.utils.Timestamp(member.joinedAt, 'F')}`;

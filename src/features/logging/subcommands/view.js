@@ -1,6 +1,7 @@
-import { MessageFlags, EmbedBuilder, Colors } from 'discord.js';
+import { MessageFlags, EmbedBuilder } from 'discord.js';
 import Logs_Cache from '../cache/logs.cache.js';
-import { LOG_TYPES } from '../models/logging.js';
+import { LOG_TYPES, logSettings } from '../models/logging.js';
+import { brandColour } from '../../../shared/cache/guildSettings.cache.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
@@ -26,7 +27,7 @@ export async function execute(interaction) {
 
     if (type === 'all') {
         const embed = new EmbedBuilder()
-            .setColor(Colors.DarkPurple)
+            .setColor(await brandColour(interaction.guildId))
             .setTitle(client.utils.Translate('commands.log_view.all_title', interaction.locale))
             .setFooter({
                 text: client.utils.Translate('commands.log_view.requested_by', interaction.locale, {
@@ -37,7 +38,7 @@ export async function execute(interaction) {
             .setTimestamp();
 
         for (const logType of LOG_TYPES) {
-            const config = currentConfig[logType];
+            const config = logSettings(currentConfig, logType);
             if (!config) continue; // Not set up
             embed.addFields({
                 name: logType.charAt(0).toUpperCase() + logType.slice(1),
@@ -49,7 +50,7 @@ export async function execute(interaction) {
         return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
-    const config = currentConfig[type];
+    const config = logSettings(currentConfig, type);
     if (!config) {
         const errorMsg = client.utils.Translate('commands.log_ignore_view.no_log_config', interaction.locale, { type });
         return client.utils.Embed(
@@ -82,7 +83,7 @@ export async function execute(interaction) {
     const formattedType = type.charAt(0).toUpperCase() + type.slice(1);
     const title = client.utils.Translate('commands.log_view.single_title', interaction.locale, { type: formattedType });
 
-    client.utils.Embed(interaction, 'DarkPurple', title, '', {
+    client.utils.Embed(interaction, 'Brand', title, '', {
         fields,
         footer: { text: footerText, iconURL: footerIconURL },
         flags: MessageFlags.Ephemeral,

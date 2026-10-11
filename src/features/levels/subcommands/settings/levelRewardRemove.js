@@ -80,7 +80,7 @@ export async function execute(interaction, guildConfig) {
 
     return client.utils.Embed(
         interaction,
-        'DarkPurple',
+        'Brand',
         'Level Settings',
         `Successfully removed level reward for level \`${level}\``,
         { flags: MessageFlags.Ephemeral }

@@ -23,4 +23,13 @@ export default [
             eqeqeq: ['warn', 'always'],
         },
     },
+    {
+        // Dashboard front-end runs in the browser
+        files: ['src/dashboard/public/**/*.js'],
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+            },
+        },
+    },
 ];

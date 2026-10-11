@@ -29,5 +29,5 @@ export async function execute(interaction) {
     const title = client.utils.Translate('commands.ping.title', locale);
     const description = client.utils.Translate('commands.ping.description', locale, { ms, api });
 
-    client.utils.Embed(interaction, 'DarkPurple', title, description, { flags: MessageFlags.Ephemeral });
+    client.utils.Embed(interaction, 'Brand', title, description, { flags: MessageFlags.Ephemeral });
 }

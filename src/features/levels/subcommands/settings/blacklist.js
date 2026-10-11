@@ -48,14 +48,14 @@ export async function execute(interaction, guildConfig) {
         const { roleIds = [], channelIds = [] } = guildConfig.blacklisted || {};
 
         const roleMentions = roleIds.map((id) => `<@&${id}>`).join('\n') || 'None';
-        const channelMentions = channelIds.map((id) => `<@&${id}>`).join('\n') || 'None';
+        const channelMentions = channelIds.map((id) => `<#${id}>`).join('\n') || 'None';
 
         const fields = [
             { name: 'Blacklisted Roles', value: roleMentions, inline: true },
             { name: 'Blacklisted Channels', value: channelMentions, inline: true },
         ];
 
-        client.utils.Embed(interaction, 'DarkPurple', 'Current Level Blacklist', '', { fields });
+        client.utils.Embed(interaction, 'Brand', 'Current Level Blacklist', '', { fields });
         return;
     }
 
@@ -90,5 +90,5 @@ export async function execute(interaction, guildConfig) {
     }
 
     await Guild_Level_Cache.setType(guild.id, 'blacklisted', guildConfig.blacklisted);
-    client.utils.Embed(interaction, 'DarkPurple', 'Blacklist Edited', '', { fields });
+    client.utils.Embed(interaction, 'Brand', 'Blacklist Edited', '', { fields });
 }

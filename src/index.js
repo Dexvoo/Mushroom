@@ -33,9 +33,19 @@ ShardManager.on('shardCreate', (shard) => {
     });
 });
 
-ShardManager.spawn().catch((error) => {
-    LogData('Shard Spawn Error', `An error occurred while spawning shards: ${error.stack ?? error.message}`, 'error');
-});
+/** @type {import('node:http').Server | null} */
+let dashboardServer = null;
+
+ShardManager.spawn()
+    .then(async () => {
+        if (!ENV.DASHBOARD) return;
+        // Loaded only when enabled, so the bot doesn't pull in the web server otherwise
+        const { startDashboard } = await import('./dashboard/server.js');
+        dashboardServer = await startDashboard({ manager: ShardManager, env: ENV });
+    })
+    .catch((error) => {
+        LogData('Startup Error', `${error.stack ?? error.message}`, 'error');
+    });
 
 /**
  * Asks every shard to shut down cleanly (saving XP, closing the database) and waits for them.
@@ -71,6 +81,14 @@ async function shutdownShards(signal) {
     }
 
     LogData('Shutdown', 'All shards stopped.', 'success');
+
+    if (dashboardServer) {
+        dashboardServer.closeAllConnections();
+        await new Promise((resolve) => dashboardServer.close(resolve));
+        const { default: mongoose } = await import('mongoose');
+        await mongoose.disconnect();
+    }
+
     process.exit(timedOut ? 1 : 0);
 }
 

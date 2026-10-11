@@ -9,5 +9,6 @@ declare module 'discord.js' {
         commands: ModifiedClient['commands'];
         cooldowns: ModifiedClient['cooldowns'];
         reloadCommand(commandName: string): Promise<string>;
+        dashboard(action: string, payload: unknown): Promise<unknown>;
     }
 }

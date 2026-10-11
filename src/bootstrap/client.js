@@ -17,6 +17,7 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers, // Member logs (privileged)
         GatewayIntentBits.GuildModeration, // Ban logs
+        GatewayIntentBits.GuildExpressions, // Emoji and sticker logs (server logs)
         GatewayIntentBits.GuildVoiceStates, // Voice XP and voice logs
         GatewayIntentBits.GuildMessages, // Message XP and message logs
         GatewayIntentBits.MessageContent, // Message log content and XP length check (privileged)

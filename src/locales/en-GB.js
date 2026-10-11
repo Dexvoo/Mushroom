@@ -14,7 +14,6 @@ export default {
         },
 
         log_setup: {
-            server_logs_soon: 'Server Logs coming soon',
             provide_channel: 'Please provide a channel to send the logs to',
             setup_success_title: 'Logs Setup Successful',
             setup_success_desc: 'Successfully {status} `{type}` logs.',
@@ -118,6 +117,16 @@ export default {
 
             untimeout_title: 'Member Timeout Removed',
             untimeout_description: 'User: {user}\nModerator: {moderator}',
+        },
+
+        server: {
+            update: 'Server Updated',
+            emoji_create: 'Emoji Created',
+            emoji_delete: 'Emoji Deleted',
+            emoji_update: 'Emoji Updated',
+            sticker_create: 'Sticker Created',
+            sticker_delete: 'Sticker Deleted',
+            sticker_update: 'Sticker Updated',
         },
 
         role: {

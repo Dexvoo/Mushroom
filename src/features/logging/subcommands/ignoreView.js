@@ -24,7 +24,7 @@ export async function execute(interaction) {
     const description = ignored.map((id) => `<#${id}>`).join('\n') || 'None';
     return client.utils.Embed(
         interaction,
-        'DarkPurple',
+        'Brand',
         client.utils.Translate('commands.log_ignore_view.title', interaction.locale),
         description,
         { flags: MessageFlags.Ephemeral }

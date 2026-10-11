@@ -66,6 +66,18 @@ class ModifiedClient extends Client {
     reloadCommand(commandName) {
         return reloadCommand(this, commandName);
     }
+
+    /**
+     * Runs a dashboard action on this shard. Called by the dashboard server (in the manager
+     * process) through broadcastEval. Loaded lazily so shards only load it when it's used.
+     * @param {string} action
+     * @param {any} payload
+     * @returns {Promise<any>}
+     */
+    async dashboard(action, payload) {
+        const { handle } = await import('../dashboard/shardHandlers.js');
+        return handle(this, action, payload);
+    }
 }
 
 export default ModifiedClient;

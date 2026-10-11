@@ -26,6 +26,7 @@ const { Schema, model } = mongoose;
  * @property {number} maxLevel - The maximum level a user can reach.
  * @property {string} levelUpMessage - Template message sent when a user levels up. Use placeholders like {user} and {level}.
  * @property {RoleMultiplier[]} roleMultipliers - Roles that apply bonus XP multipliers when held.
+ * @property {boolean} publicLeaderboard - Whether anyone can view the leaderboard on the dashboard without logging in.
  */
 
 const LevelConfigSchema = new Schema({
@@ -46,6 +47,8 @@ const LevelConfigSchema = new Schema({
         default: '{user}, you just gained a level! Current Level: **{level}**!',
     },
     roleMultipliers: [{ roleId: String, multiplier: Number }],
+    // Opt-in: a public leaderboard shows member names and levels to anyone with the link
+    publicLeaderboard: { type: Boolean, default: false },
 });
 
 LevelConfigSchema.index({ guildId: 1 }, { unique: true });

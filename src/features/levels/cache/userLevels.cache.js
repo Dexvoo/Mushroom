@@ -502,11 +502,10 @@ class User_Levels_Cache {
      *
      * @param {string} guildId
      * @param {'totalMessages' | 'totalVoice' | 'totalCommands' | 'level' | 'xp'} type
+     * @param {number} [limit=15]
      * @returns {Promise<UserLevelsType[]>}
      */
-    async getTopUsers(guildId, type) {
-        const limit = 15;
-
+    async getTopUsers(guildId, type, limit = 15) {
         try {
             // Save this guild's pending XP first so the query sees it; other guilds can wait
             await this.flush(guildId);

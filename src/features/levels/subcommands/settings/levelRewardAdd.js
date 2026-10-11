@@ -101,7 +101,7 @@ export async function execute(interaction, guildConfig) {
 
     return client.utils.Embed(
         interaction,
-        'DarkPurple',
+        'Brand',
         'Level Settings',
         `Successfully added level reward for ${role} at level \`${level}\``,
         { flags: MessageFlags.Ephemeral }

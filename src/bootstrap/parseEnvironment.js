@@ -14,6 +14,18 @@ const SNOWFLAKE = /^\d{17,20}$/;
  * @property {string | null} LEAVE_GUILD_CID - Dev log channel for guild leaves
  * @property {string | null} USER_LEVEL_CID - Dev log channel for level-ups
  * @property {string | null} VOTE_CID - Dev log channel for votes
+ * @property {DashboardConfig | null} DASHBOARD - null when the dashboard is disabled
+ */
+
+/**
+ * @typedef {Object} DashboardConfig
+ * @property {number} PORT
+ * @property {string} HOST - Interface to listen on; 127.0.0.1 (this machine only) unless DASHBOARD_HOST is set
+ * @property {string} URL - Public base URL with no trailing slash, e.g. https://dash.example.com
+ * @property {boolean} SECURE - Whether URL is https (cookies are then marked Secure)
+ * @property {boolean} TRUST_PROXY - Set when behind a reverse proxy (nginx, Caddy) that terminates HTTPS
+ * @property {string} CLIENT_SECRET - OAuth2 client secret for the current mode
+ * @property {string} SESSION_SECRET - Signs session cookies; at least 32 characters
  */
 
 /**
@@ -66,6 +78,46 @@ export function parseEnvironment(env) {
         warnings.push('JOIN_GUID_CID is deprecated, rename it to JOIN_GUILD_CID');
     }
 
+    const dashboard = optional('DASHBOARD_ENABLED') === 'true' ? parseDashboard() : null;
+
+    function parseDashboard() {
+        const port = Number(optional('DASHBOARD_PORT') ?? 3000);
+        if (!Number.isInteger(port) || port < 1 || port > 65535) {
+            errors.push(`DASHBOARD_PORT must be a port number (1-65535), got "${env.DASHBOARD_PORT}"`);
+        }
+
+        const url = (optional('DASHBOARD_URL') ?? `http://localhost:${port}`).replace(/\/+$/, '');
+        let secure = false;
+        try {
+            const { protocol, hostname } = new URL(url);
+            secure = protocol === 'https:';
+            const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(hostname);
+            if (!secure && !isLocal) {
+                errors.push(
+                    'DASHBOARD_URL must use https:// unless it is localhost (logins would be sent unencrypted)'
+                );
+            }
+        } catch {
+            errors.push(`DASHBOARD_URL must be a full URL like https://dash.example.com, got "${url}"`);
+        }
+
+        const secretName = developerMode ? 'BOT_CLIENT_SECRET_DEV' : 'BOT_CLIENT_SECRET';
+        const sessionSecret = required('SESSION_SECRET');
+        if (sessionSecret && sessionSecret.length < 32) {
+            errors.push('SESSION_SECRET must be at least 32 characters (see .env.example for how to generate one)');
+        }
+
+        return {
+            PORT: port,
+            HOST: optional('DASHBOARD_HOST') ?? '127.0.0.1',
+            URL: url,
+            SECURE: secure,
+            TRUST_PROXY: optional('DASHBOARD_TRUST_PROXY') === 'true',
+            CLIENT_SECRET: required(secretName),
+            SESSION_SECRET: sessionSecret,
+        };
+    }
+
     const parsed = {
         MONGO_URI: required('MONGO_URI'),
         DEFAULT_LANGUAGE: optional('DEFAULT_LANGUAGE') ?? 'en-GB',
@@ -82,6 +134,8 @@ export function parseEnvironment(env) {
         LEAVE_GUILD_CID: snowflake('LEAVE_GUILD_CID'),
         USER_LEVEL_CID: snowflake('USER_LEVEL_CID'),
         VOTE_CID: snowflake('VOTE_CID'),
+
+        DASHBOARD: dashboard,
     };
 
     return errors.length > 0 ? { env: null, errors, warnings } : { env: parsed, errors, warnings };

@@ -6,6 +6,9 @@ import {
     MessageFlags,
 } from 'discord.js';
 import Guild_Level_Cache from '../cache/guildLevels.cache.js';
+import { withCommandAudit } from '../../../dashboard/commandAudit.js';
+import { describeLevelChanges } from '../../../dashboard/describeChanges.js';
+import { levelsView, nameLookup } from '../../../dashboard/settingsViews.js';
 
 const handlers = {
     setup: () => import('../subcommands/setup.js'),
@@ -31,6 +34,17 @@ const handlers = {
     //     'remove': () => import('../subcommands/test.js'),
     // },
 };
+
+// Subcommands that change settings, recorded in the dashboard's Web Logs
+const AUDITED = new Set([
+    'setup',
+    'settings message-cooldown',
+    'settings max-level',
+    'settings levelup-message',
+    'settings add-level-reward',
+    'settings remove-level-reward',
+    'settings blacklist',
+]);
 
 export const commandData = new SlashCommandBuilder();
 commandData.setName('level');
@@ -241,5 +255,16 @@ export async function execute(interaction) {
     // Errors propagate to the slash command handler, which logs them and replies to the user
     const guildConfig = await Guild_Level_Cache.get(interaction.guildId);
     const handlerModule = await handler();
-    await handlerModule.execute(interaction, guildConfig);
+    const run = () => handlerModule.execute(interaction, guildConfig);
+
+    if (!AUDITED.has([subcommandGroup, subcommand].filter(Boolean).join(' '))) return run();
+    await withCommandAudit(
+        interaction,
+        {
+            action: 'Updated level settings',
+            snapshot: async () => levelsView(await Guild_Level_Cache.get(interaction.guildId)),
+            describe: (before, after, guild) => describeLevelChanges(before, after, nameLookup(guild)),
+        },
+        run
+    );
 }

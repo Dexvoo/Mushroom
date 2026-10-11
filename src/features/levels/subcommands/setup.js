@@ -1,5 +1,6 @@
 import { PermissionFlagsBits, MessageFlags, EmbedBuilder, ChannelType } from 'discord.js';
 import Guild_Level_Cache from '../cache/guildLevels.cache.js';
+import { brandColour } from '../../../shared/cache/guildSettings.cache.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
@@ -53,7 +54,7 @@ export async function execute(interaction) {
             );
 
         const embed = new EmbedBuilder()
-            .setColor('DarkPurple')
+            .setColor(await brandColour(interaction.guildId))
             .setTitle(client.utils.Translate('commands.level_setup.test_embed_title', interaction.locale))
             .setDescription(client.utils.Translate('commands.level_setup.test_embed_description', interaction.locale))
             .setFooter({
@@ -80,7 +81,7 @@ export async function execute(interaction) {
     await Guild_Level_Cache.setType(guild.id, 'channelId', channel?.id || null);
     await Guild_Level_Cache.setType(guild.id, 'enabled', enabled);
 
-    client.utils.Embed(interaction, 'DarkPurple', 'Level Setup', `Levels are now ${enabled ? 'enabled' : 'disabled'}`, {
+    client.utils.Embed(interaction, 'Brand', 'Level Setup', `Levels are now ${enabled ? 'enabled' : 'disabled'}`, {
         flags: MessageFlags.Ephemeral,
     });
 }

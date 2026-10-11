@@ -76,6 +76,30 @@ class Guild_Level_Cache {
         }
     }
 
+    /**
+     * Sets several top-level fields in one atomic update and refreshes the cache.
+     * @param {string} guildId
+     * @param {Partial<GuildLevelsType>} updates - Must already be validated; keys are written as-is
+     * @return {Promise<GuildLevelsType>}
+     */
+    async set(guildId, updates) {
+        try {
+            const updatedConfig = await LevelConfig.findOneAndUpdate(
+                { guildId },
+                { $set: updates },
+                { returnDocument: 'after', upsert: true, lean: true, setDefaultsOnInsert: true }
+            );
+
+            this.cache.set(guildId, updatedConfig);
+            LogData('Guild Level Cache', `Config updated for guild ${guildId}`, 'debug');
+
+            return /** @type {GuildLevelsType} */ (updatedConfig);
+        } catch (error) {
+            LogData('Guild Level Cache', `Failed to update config for ${guildId}: ${error.message}`, 'error');
+            throw error;
+        }
+    }
+
     createDefault(guildId) {
         return {
             guildId,
@@ -98,6 +122,8 @@ class Guild_Level_Cache {
             levelUpMessage: '{user}, you just gained a level! Current Level: **{level}**!',
 
             roleMultipliers: [],
+
+            publicLeaderboard: false,
         };
     }
 
