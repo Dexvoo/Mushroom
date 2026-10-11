@@ -26,6 +26,18 @@ const client = new Client({
 
 client.commands = new Collection();
 
+// Registered before any startup work so failures during loading are caught too
+process.on('SIGINT', () => Shutdown('SIGINT', client)); // CTRL+C in terminal
+process.on('SIGTERM', () => Shutdown('SIGTERM', client)); // Docker/PM2 stop commands
+process.on('unhandledRejection', (reason) => {
+    client.utils.LogData('Unhandled Rejection', reason?.stack ?? String(reason), 'error');
+});
+process.on('uncaughtException', (error) => {
+    // State is unknown after an uncaught exception; exit and let the ShardingManager respawn this shard
+    client.utils.LogData('Uncaught Exception', error.stack ?? error.message, 'error');
+    process.exit(1);
+});
+
 const featuresPath = path.join(process.cwd(), 'src/features');
 const features = fs.readdirSync(featuresPath);
 client.utils.Log('Loading Commands/Events');
@@ -46,22 +58,11 @@ if (!client.shard || client.shard.ids[0] === 0) {
 const token = ENV.DEVELOPER_MODE ? ENV.BOT_TOKEN_DEV : ENV.BOT_TOKEN;
 
 try {
-    await Database_Connect();
+    await Database_Connect(client);
     await checkVersion(client.utils.LogData);
 
-    client.login(token);
+    await client.login(token);
 } catch (error) {
-    console.error(error);
+    client.utils.LogData('Startup', `Failed to start: ${error.stack ?? error.message}`, 'error');
     process.exit(1);
 }
-
-process.on('SIGINT', () => Shutdown('SIGINT', client)); // CTRL+C in terminal
-process.on('SIGTERM', () => Shutdown('SIGTERM', client)); // Docker/PM2 stop commands
-process.on('unhandledRejection', (reason) => {
-    console.log(reason);
-    client.utils.LogData('Unhandled Rejection', String(reason), 'error');
-});
-process.on('uncaughtException', (err) => {
-    console.log(err);
-    client.utils.LogData('Uncaught Exception', err.message, 'error');
-});

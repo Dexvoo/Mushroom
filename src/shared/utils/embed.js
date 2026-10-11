@@ -1,13 +1,6 @@
-import {
-    BaseInteraction,
-    EmbedBuilder,
-    GuildMember,
-    TextChannel,
-    User,
-    DiscordAPIError,
-    RESTJSONErrorCodes,
-} from 'discord.js';
+import { BaseInteraction, EmbedBuilder, GuildMember, User, DiscordAPIError, RESTJSONErrorCodes } from 'discord.js';
 import { ENV } from '../../bootstrap/environment.js';
+import { LogData } from './logger.js';
 import Global_Cache from '../../features/utility/cache/global.js';
 /**
  * @typedef {import('../../core/extendedClient.js').default} Client
@@ -32,6 +25,11 @@ import Global_Cache from '../../features/utility/cache/global.js';
  */
 
 async function Embed(target, colour, title, description, options = {}) {
+    if (!target) {
+        LogData('Embed Utility', 'No target provided for embed.', 'error');
+        return null;
+    }
+
     const { client } = target;
     const {
         fields = [],
@@ -44,11 +42,6 @@ async function Embed(target, colour, title, description, options = {}) {
         thumbnail = false,
         url = false,
     } = options;
-
-    if (!target) {
-        client.utils.LogData('Embed Utility', 'No target provided for embed.', 'error');
-        return null;
-    }
 
     if (!colour || !title) {
         client.utils.LogData(
@@ -90,7 +83,7 @@ async function Embed(target, colour, title, description, options = {}) {
             } else {
                 return await target.reply({ embeds: [embed], components, files, flags });
             }
-        } else if (target instanceof User || target instanceof GuildMember || target instanceof TextChannel) {
+        } else if (target instanceof User || target instanceof GuildMember || target.isTextBased?.()) {
             return await target.send({ embeds: [embed], components, files, flags });
         }
     } catch (error) {

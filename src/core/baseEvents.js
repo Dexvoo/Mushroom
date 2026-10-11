@@ -30,7 +30,17 @@ export default async function loadEvents(client, dir) {
                 continue;
             }
 
-            const listener = (...args) => event.execute(...args, client);
+            const listener = async (...args) => {
+                try {
+                    await event.execute(...args, client);
+                } catch (error) {
+                    client.utils.LogData(
+                        'Event Error',
+                        `${event.name} (${path.relative(process.cwd(), fullPath)})\n${error.stack ?? error.message}`,
+                        'error'
+                    );
+                }
+            };
 
             if (event.once) {
                 client.once(event.name, listener);

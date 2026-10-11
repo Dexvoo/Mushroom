@@ -6,7 +6,7 @@ export async function Shutdown(signal, client) {
     LogData('Shutdown Initiated', `Received ${signal}. Closing connections cleanly...`, 'warning');
 
     try {
-        if (client) {
+        if (client?.destroy && typeof client.destroy === 'function') {
             client.destroy();
         }
 

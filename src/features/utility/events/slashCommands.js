@@ -1,7 +1,5 @@
 import { MessageFlags, Events } from 'discord.js';
-import { CooldownManager } from '../../../shared/cache/cooldowns.js';
 import User_Level_Cache from '../../levels/cache/userLevels.cache.js';
-const cooldowns = new CooldownManager();
 
 export const name = Events.InteractionCreate;
 export const once = false;
@@ -23,7 +21,25 @@ export async function execute(interaction) {
         } catch (error) {
             client.utils.LogData(`Autocomplete Error: ${interaction.commandName}`, error.message, 'error');
         }
+        return;
     }
+
+    if (interaction.isMessageComponent())
+        return client.utils.Embed(
+            interaction,
+            'Red',
+            client.utils.Translate('errors.title', interaction.locale),
+            `This component is not functional yet.`,
+            { flags: MessageFlags.Ephemeral }
+        );
+    if (interaction.isModalSubmit())
+        return client.utils.Embed(
+            interaction,
+            'Red',
+            client.utils.Translate('errors.title', interaction.locale),
+            `This modal is not functional yet.`,
+            { flags: MessageFlags.Ephemeral }
+        );
 
     if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
@@ -49,7 +65,7 @@ export async function execute(interaction) {
             );
         }
 
-        if (!commandCooldown(interaction, command, client)) return;
+        if (!commandCooldown(interaction, command)) return;
 
         // Bot Permissions
         if (guild && command.commandData.botPermissions?.length > 0) {
@@ -95,52 +111,47 @@ export async function execute(interaction) {
 
         try {
             await command.execute(interaction, client);
-            await User_Level_Cache.incrementCommands(guild.id, interaction.user.id);
         } catch (error) {
             // TODO: log errors with webhook to a private channel for better visibility and debugging, instead of just console logging.
 
-            client.utils.LogData(`Command Error: ${interaction.commandName}`, error.message, 'error');
+            client.utils.LogData(`Command Error: ${interaction.commandName}`, error.stack ?? error.message, 'error');
 
-            if (interaction.replied || interaction.deferred) {
-                await interaction.followUp({
-                    content: `${client.customEmojis.reactions.Warning} An error occurred while executing this command.`,
-                    flags: MessageFlags.Ephemeral,
-                });
-            } else {
-                await interaction.reply({
-                    content: `${client.customEmojis.reactions.Warning} An error occurred while executing this command.`,
-                    flags: MessageFlags.Ephemeral,
-                });
+            const errorReply = {
+                content: `${client.customEmojis.reactions.Warning} An error occurred while executing this command.`,
+                flags: MessageFlags.Ephemeral,
+            };
+
+            try {
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp(errorReply);
+                } else {
+                    await interaction.reply(errorReply);
+                }
+            } catch (replyError) {
+                client.utils.LogData(
+                    'Command Error Reply',
+                    `${interaction.commandName}: ${replyError.message}`,
+                    'error'
+                );
             }
+            return;
         }
 
-        if (interaction.isMessageComponent())
-            return client.utils.Embed(
-                interaction,
-                'Red',
-                client.utils.Translate('errors.title', interaction.locale),
-                `This component is not functional yet.`,
-                { flags: MessageFlags.Ephemeral }
+        if (guild) {
+            await User_Level_Cache.incrementCommands(guild.id, interaction.user.id).catch((error) =>
+                client.utils.LogData('Command Usage', `Failed to increment command count: ${error.message}`, 'error')
             );
-        if (interaction.isModalSubmit())
-            return client.utils.Embed(
-                interaction,
-                'Red',
-                client.utils.Translate('errors.title', interaction.locale),
-                `This modal is not functional yet.`,
-                { flags: MessageFlags.Ephemeral }
-            );
+        }
     }
 }
 
 /**
- * @param { import('discord.js').BaseInteraction & { client: Client } } interaction
- * @param { import('discord.js').ApplicationCommand } command
- * @param { Client } client
+ * @param { import('discord.js').ChatInputCommandInteraction & { client: Client } } interaction
+ * @param {{ commandData: import('discord.js').SlashCommandBuilder & { cooldown?: number } }} command
  */
 function commandCooldown(interaction, command) {
     const { commandName, user, client } = interaction;
-    const expiresAt = cooldowns.getRemaining('command', user.id, commandName);
+    const expiresAt = client.cooldowns.getRemaining('command', user.id, commandName);
 
     if (expiresAt) {
         const msg = client.utils.Translate('errors.cooldown', interaction.locale, {
@@ -153,7 +164,7 @@ function commandCooldown(interaction, command) {
         return false;
     }
 
-    const cooldownAmount = command.cooldown || 5;
-    cooldowns.add('command', user.id, cooldownAmount, commandName);
+    const cooldownAmount = command.commandData.cooldown ?? 5;
+    client.cooldowns.add('command', user.id, cooldownAmount, commandName);
     return true;
 }

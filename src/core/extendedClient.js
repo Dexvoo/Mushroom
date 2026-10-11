@@ -5,8 +5,8 @@ import * as ConsoleLogs from '../shared/utils/logger.js';
 import * as Timestamps from '../shared/utils/timestamps.js';
 import * as Permissions from '../shared/utils/permissions.js';
 import * as I18n from '../shared/utils/i18n.js';
-import * as Math from '../shared/utils/math.js';
-import * as String from '../shared/utils/string.js';
+import * as MathUtils from '../shared/utils/math.js';
+import * as StringUtils from '../shared/utils/string.js';
 import { CooldownManager } from '../shared/cache/cooldowns.js';
 
 class ModifiedClient extends Client {
@@ -24,8 +24,8 @@ class ModifiedClient extends Client {
          *  PermissionCheck: typeof Permissions.PermissionCheck,
          *  DevPermissionCheck: typeof Permissions.DevPermissionCheck,
          *  Translate: typeof I18n.Translate,
-         *  GetOrdinalSuffix: typeof Math.GetOrdinalSuffix,
-         *  Truncate: typeof String.Truncate
+         *  GetOrdinalSuffix: typeof MathUtils.GetOrdinalSuffix,
+         *  Truncate: typeof StringUtils.Truncate
          * }}
          */
 
@@ -35,8 +35,8 @@ class ModifiedClient extends Client {
             ...Timestamps,
             ...Permissions,
             ...I18n,
-            ...Math,
-            ...String,
+            ...MathUtils,
+            ...StringUtils,
         };
 
         this.customEmojis = emojis;

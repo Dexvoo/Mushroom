@@ -187,17 +187,21 @@ class User_Levels_Cache {
         userData.lastMessageAt = new Date();
 
         const [newLevel] = LevelForExp(userData.xp);
+        const leveledUp = newLevel > oldLevel;
 
-        if (newLevel > oldLevel) {
+        if (leveledUp) {
             userData.level = newLevel;
             userData.lastLevelUpAt = new Date();
+        }
 
+        // Persist XP before level-up side effects so a failed reward/message can't lose it
+        this.cache.set(key, userData);
+        this.dirty.add(key);
+
+        if (leveledUp) {
             const rewards = await this.rewards(member, guildData, userData);
             await this.send(member, guildData, userData, rewards);
         }
-
-        this.cache.set(key, userData);
-        this.dirty.add(key);
 
         return true;
     }
@@ -231,17 +235,21 @@ class User_Levels_Cache {
         userData.lastVoiceAt = new Date();
 
         const [newLevel] = LevelForExp(userData.xp);
+        const leveledUp = newLevel > oldLevel;
 
-        if (newLevel > oldLevel) {
+        if (leveledUp) {
             userData.level = newLevel;
             userData.lastLevelUpAt = new Date();
+        }
 
+        // Persist XP before level-up side effects so a failed reward/message can't lose it
+        this.cache.set(key, userData);
+        this.dirty.add(key);
+
+        if (leveledUp) {
             const rewards = await this.rewards(member, guildData, userData);
             await this.send(member, guildData, userData, rewards);
         }
-
-        this.cache.set(key, userData);
-        this.dirty.add(key);
 
         return true;
     }
@@ -264,8 +272,8 @@ class User_Levels_Cache {
 
         const levelUpMessageTemplate = guildData.levelUpMessage || '{user} leveled up to **{level}**!';
         const levelUpMessage = levelUpMessageTemplate
-            .replace('{user}', member.toString())
-            .replace('{level}', userData.level.toString());
+            .replaceAll('{user}', member.toString())
+            .replaceAll('{level}', userData.level.toString());
 
         const embed = new EmbedBuilder().setDescription(levelUpMessage);
 
@@ -288,13 +296,24 @@ class User_Levels_Cache {
                 inline: true,
             });
 
-        await channel.send({ embeds: [embed] });
+        try {
+            await channel.send({ embeds: [embed] });
+        } catch (error) {
+            LogData('User Levels Cache', `Failed to send level up message in ${guild.id}: ${error.message}`, 'error');
+            return false;
+        }
 
-        const devEmbed = new EmbedBuilder().setDescription(
-            `User: ${member} | Guild: ${guild.name} | Level: \`${userData.level}\``
-        );
+        if (client.shard) {
+            const devEmbed = new EmbedBuilder().setDescription(
+                `User: ${member} | Guild: ${guild.name} | Level: \`${userData.level}\``
+            );
 
-        await client.utils.DevEmbed('userLevel', client, devEmbed);
+            await client.utils
+                .DevEmbed('userLevel', client, devEmbed)
+                .catch((error) => LogData('User Levels Cache', `Failed to send dev embed: ${error.message}`, 'error'));
+        }
+
+        return true;
     }
 
     /**
