@@ -14,7 +14,7 @@ export const description = 'User Message XP';
 export async function execute(message) {
     const { guild, author, member, channel, content, attachments, client } = message;
 
-    if (author.bot || !guild || !member || !channel.isTextBased()) return;
+    if (author.bot || !message.inGuild() || !member || !channel.isTextBased()) return;
 
     const cleanContent = content.trim();
     if (cleanContent.length < 5 && attachments.size === 0) return;
@@ -27,7 +27,7 @@ export async function execute(message) {
             'debug'
         );
 
-    const validate = await ValidateXP(member, channel);
+    const validate = await ValidateXP(member, message.channel);
     if (!validate) return;
 
     // Re-check and claim the cooldown synchronously, before any further awaits,

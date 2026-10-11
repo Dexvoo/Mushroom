@@ -2,7 +2,7 @@ import { UserLevels } from '../../../features/levels/models/userLevels.js';
 import NodeCache from 'node-cache';
 import { LogData } from '../../../shared/utils/logger.js';
 import { EmbedBuilder } from 'discord.js';
-import { LevelForExp, MessageXP, VoiceXP } from '../utils/levels.js';
+import { ExpForLevel, LevelForExp, MessageXP, VoiceXP } from '../utils/levels.js';
 
 /**
  * @typedef {Object} LevelReward
@@ -35,9 +35,10 @@ class User_Levels_Cache {
         });
         this.dirty = new Set();
 
+        // unref: the Discord connection keeps the bot alive, and shutdown flushes explicitly
         setInterval(() => {
             this.flush();
-        }, 30000);
+        }, 30000).unref();
     }
 
     /**
@@ -134,8 +135,6 @@ class User_Levels_Cache {
             lastMessageAt: null,
             lastVoiceAt: null,
             lastLevelUpAt: null,
-
-            dailyStreak: 0,
         };
     }
 
@@ -153,7 +152,7 @@ class User_Levels_Cache {
             const cached = this.cache.get(key);
             if (cached) return cached;
 
-            let userData = await UserLevels.findOne({ guildId, userId }).lean();
+            let userData = /** @type {UserLevelsType | null} */ (await UserLevels.findOne({ guildId, userId }).lean());
 
             if (!userData) {
                 userData = this.createDefault(guildId, userId);
@@ -211,6 +210,32 @@ class User_Levels_Cache {
     }
 
     /**
+     * Adds XP to a user, capped at the guild's max level, and updates their level.
+     * Users at or above the max level (e.g. after the max was lowered) gain nothing but keep their level.
+     * @param {UserLevelsType} userData - Modified in place
+     * @param {number} amount
+     * @param {number} [maxLevel] - Defaults to no limit
+     * @returns {{ gained: number, leveledUp: boolean }} The XP actually added, and whether the level went up
+     */
+    applyXP(userData, amount, maxLevel = Infinity) {
+        if (userData.level >= maxLevel) return { gained: 0, leveledUp: false };
+
+        // XP stops at exactly the amount needed for the max level
+        const gained = Math.max(0, Math.min(amount, ExpForLevel(maxLevel) - userData.xp));
+        userData.xp += gained;
+
+        const [newLevel] = LevelForExp(userData.xp);
+        const leveledUp = newLevel > userData.level;
+
+        if (leveledUp) {
+            userData.level = Math.min(newLevel, maxLevel);
+            userData.lastLevelUpAt = new Date();
+        }
+
+        return { gained, leveledUp };
+    }
+
+    /**
      * Adds message XP to a user.
      * @param {import('discord.js').GuildMember & { client: Client }} member
      * @param {GuildLevelsType} guildData
@@ -223,27 +248,14 @@ class User_Levels_Cache {
         const userData = await this.get(guild.id, member.id);
         if (!userData) return false;
 
-        let userXP = MessageXP();
         const roleMulti = await this.getCombinedRoleMultiplier(member, guildData);
+        const userXP = Math.floor(MessageXP() * roleMulti * guildData.xpMultiplier);
 
-        userXP *= roleMulti;
-        userXP *= guildData.xpMultiplier;
-        userXP = Math.floor(userXP);
+        const { gained, leveledUp } = this.applyXP(userData, userXP, guildData.maxLevel);
 
-        const oldLevel = userData.level;
-
-        userData.xp += userXP;
-        userData.messageXP += userXP;
+        userData.messageXP += gained;
         userData.totalMessages += 1;
         userData.lastMessageAt = new Date();
-
-        const [newLevel] = LevelForExp(userData.xp);
-        const leveledUp = newLevel > oldLevel;
-
-        if (leveledUp) {
-            userData.level = newLevel;
-            userData.lastLevelUpAt = new Date();
-        }
 
         // Persist XP before level-up side effects so a failed reward/message can't lose it
         this.markDirty(key, userData);
@@ -270,27 +282,14 @@ class User_Levels_Cache {
         const userData = await this.get(guild.id, member.id);
         if (!userData) return false;
 
-        let userXP = VoiceXP(minutes);
         const roleMulti = await this.getCombinedRoleMultiplier(member, guildData);
+        const userXP = Math.floor(VoiceXP(minutes) * roleMulti * guildData.xpMultiplier);
 
-        userXP *= roleMulti;
-        userXP *= guildData.xpMultiplier;
-        userXP = Math.floor(userXP);
+        const { gained, leveledUp } = this.applyXP(userData, userXP, guildData.maxLevel);
 
-        const oldLevel = userData.level;
-
-        userData.xp += userXP;
-        userData.voiceXP += userXP;
+        userData.voiceXP += gained;
         userData.totalVoice += minutes;
         userData.lastVoiceAt = new Date();
-
-        const [newLevel] = LevelForExp(userData.xp);
-        const leveledUp = newLevel > oldLevel;
-
-        if (leveledUp) {
-            userData.level = newLevel;
-            userData.lastLevelUpAt = new Date();
-        }
 
         // Persist XP before level-up side effects so a failed reward/message can't lose it
         this.markDirty(key, userData);
@@ -437,7 +436,7 @@ class User_Levels_Cache {
      * Increments command usage count.
      * @param {string} guildId
      * @param {string} userId
-     * @returns {Promise<UserLevelsType>}
+     * @returns {Promise<UserLevelsType | null>} null if the user could not be loaded
      */
     async incrementCommands(guildId, userId) {
         const key = `${guildId}:${userId}`;
@@ -455,7 +454,7 @@ class User_Levels_Cache {
      * Calculates the combined role multiplier for a member.
      * @param {import('discord.js').GuildMember} member
      * @param {GuildLevelsType} levelConfig
-     * @returns {number} Combined multiplier
+     * @returns {Promise<number>} Combined multiplier
      */
     async getCombinedRoleMultiplier(member, levelConfig) {
         if (!levelConfig.roleMultipliers?.length) {
@@ -491,7 +490,7 @@ class User_Levels_Cache {
      * Ensures cache is flushed before querying.
      *
      * @param {string} guildId
-     * @param {'totalMessages' | 'totalVoice' | 'level' | 'xp'} type
+     * @param {'totalMessages' | 'totalVoice' | 'totalCommands' | 'level' | 'xp'} type
      * @returns {Promise<UserLevelsType[]>}
      */
     async getTopUsers(guildId, type) {
@@ -501,6 +500,7 @@ class User_Levels_Cache {
             // Ensure DB is up to date first
             await this.flush();
 
+            /** @type {Record<string, 1 | -1>} */
             const sortQuery = type === 'level' ? { level: -1, xp: -1 } : { [type]: -1 };
 
             const topUsers = await UserLevels.find({ guildId, [type]: { $gt: 0 } })

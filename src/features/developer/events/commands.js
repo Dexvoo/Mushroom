@@ -6,13 +6,13 @@ export const description = 'Developer Command Logs';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').Interaction} interaction
  */
 
 export async function execute(interaction) {
     const { client, guild, user, channel } = interaction;
 
-    if (!interaction.isCommand()) return;
+    if (!interaction.isChatInputCommand() && !interaction.isContextMenuCommand()) return;
 
     try {
         const commandText = buildCommandText(interaction);
@@ -42,12 +42,13 @@ export async function execute(interaction) {
 }
 
 /**
- * @param { ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction | import('discord.js').ContextMenuCommandInteraction} interaction
  */
 
 function buildCommandText(interaction) {
     const parts = [`/${interaction.commandName}`];
 
+    /** @param {readonly import('discord.js').CommandInteractionOption[]} [options] */
     const processOptions = (options = []) => {
         for (const opt of options) {
             if (

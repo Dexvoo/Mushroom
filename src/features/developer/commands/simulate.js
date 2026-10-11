@@ -40,10 +40,13 @@ commandData.setContexts([InteractionContextType.Guild]);
 commandData.addStringOption((o) =>
     o.setName('event').setDescription('The event you would like to simulate.').setAutocomplete(true).setRequired(true)
 );
-commandData.cooldown = 5;
-commandData.userPermissions = [];
-commandData.botPermissions = [];
-commandData.developerOnly = true;
+
+export const meta = {
+    cooldown: 5,
+    developerOnly: true,
+    botPermissions: [],
+    userPermissions: [],
+};
 
 /**
  * @param { import('discord.js').AutocompleteInteraction } interaction
@@ -58,7 +61,7 @@ export async function autocomplete(interaction) {
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 export async function execute(interaction, client) {
     const { options } = interaction;

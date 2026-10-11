@@ -1,16 +1,16 @@
-import { PermissionFlagsBits, MessageFlags, EmbedBuilder } from 'discord.js';
+import { PermissionFlagsBits, MessageFlags, EmbedBuilder, ChannelType } from 'discord.js';
 import Guild_Level_Cache from '../cache/guildLevels.cache.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 
 export async function execute(interaction) {
     const { client, options, guild, member } = interaction;
 
     const enabled = options.getBoolean('enabled');
-    const channel = options.getChannel('channel') || null;
+    const channel = options.getChannel('channel', false, [ChannelType.GuildText]);
 
     const userPermissions = [PermissionFlagsBits.ManageGuild];
     const [hasPerms, missingPerms] = await client.utils.PermissionCheck(interaction, userPermissions, member);

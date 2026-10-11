@@ -3,7 +3,7 @@ import Logs_Cache from '../cache/logs.cache.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 
 export async function execute(interaction) {

@@ -1,13 +1,12 @@
-import { Events, PermissionFlagsBits, AuditLogEvent } from 'discord.js';
-import Logs_Cache from '../../cache/logs.cache.js';
+import { Events, AuditLogEvent } from 'discord.js';
+import { getLogChannel, findAuditLogExecutor } from '../../utils/logChannel.js';
 
 export const name = Events.GuildRoleDelete;
 export const once = false;
 export const description = 'Guild Role Delete Logs';
 
 /**
- * @typedef {import('../../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').Role & { client: Client }} role
+ * @param {import('discord.js').Role} role
  */
 
 export async function execute(role) {
@@ -15,69 +14,17 @@ export async function execute(role) {
 
     if (!guild) return;
 
-    const logsData = await Logs_Cache.get(guild.id);
-    if (!logsData?.role?.enabled || !logsData?.role?.channelId)
-        return client.utils.LogData('Role Deleted', `Guild: ${guild.name} | Disabled`, 'warning');
+    const logChannel = await getLogChannel(guild, 'role');
+    if (!logChannel) return;
 
-    const logChannel = guild.channels.cache.get(logsData.channel.channelId);
-    if (!logChannel) {
-        await Logs_Cache.setType(guild.id, 'role', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Role Deleted',
-            `Guild: ${guild.name} | Log channel not found, disabling logs`,
-            'error'
-        );
-    }
-
-    const botPermissions = [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.EmbedLinks,
-    ];
-    const [hasPermissions, missingPermissions] = client.utils.PermissionCheck(
-        logChannel,
-        botPermissions,
-        guild.members.me
-    );
-    if (!hasPermissions) {
-        await Logs_Cache.setType(guild.id, 'role', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Role Deleted',
-            `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`,
-            'error'
-        );
-    }
-
-    let executor = null;
-    let username = 'Unknown';
-    if (guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
-        // Waiting for discord push to audit logs
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        const fetchedLogs = await guild.fetchAuditLogs({
-            limit: 5,
-            type: AuditLogEvent.RoleDelete,
-        });
-
-        const channelLog = fetchedLogs.entries.find((entry) => entry?.targetId === role.id);
-
-        if (channelLog) {
-            executor = channelLog.executor;
-            username = channelLog.executor.username;
-        }
-    }
+    const executor = await findAuditLogExecutor(guild, AuditLogEvent.RoleDelete, (entry) => entry.targetId === role.id);
+    const username = executor?.username ?? 'Unknown';
 
     const title = client.utils.Translate('logs.role.delete', guild.preferredLocale, { username });
-    const footerText = `RID: ${role.id} | ${username !== 'Unknown' ? `UID: ${executor.id}` : ''}`;
+    const footerText = `RID: ${role.id} | ${executor ? `UID: ${executor.id}` : ''}`;
 
-    await client.utils
-        .Embed(logChannel, 'Red', title, `@${role.name} | ${executor ? executor : 'Unknown Tag'}`, {
-            timestamp: true,
-            footer: { text: footerText },
-        })
-        .catch((err) => {
-            client.utils.LogData('Role Deleted', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');
-            // TODO: Add error logging for failed embed creation
-            return;
-        });
+    await client.utils.Embed(logChannel, 'Red', title, `@${role.name} | ${executor ?? 'Unknown Tag'}`, {
+        timestamp: true,
+        footer: { text: footerText },
+    });
 }

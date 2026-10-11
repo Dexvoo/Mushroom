@@ -1,15 +1,16 @@
 import { MessageFlags, EmbedBuilder, Colors } from 'discord.js';
 import Logs_Cache from '../cache/logs.cache.js';
+import { LOG_TYPES } from '../models/logging.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 
 export async function execute(interaction) {
     const { client, options, guild, user } = interaction;
 
-    const type = options.getString('log-type');
+    const type = /** @type {import('../models/logging.js').LogType | 'all'} */ (options.getString('log-type'));
     const currentConfig = await Logs_Cache.get(guild.id);
 
     if (!currentConfig) {
@@ -35,8 +36,9 @@ export async function execute(interaction) {
             })
             .setTimestamp();
 
-        for (const [logType, config] of Object.entries(currentConfig)) {
-            if (config.enabled === undefined) continue;
+        for (const logType of LOG_TYPES) {
+            const config = currentConfig[logType];
+            if (!config) continue; // Not set up
             embed.addFields({
                 name: logType.charAt(0).toUpperCase() + logType.slice(1),
                 value: `${config.enabled ? client.customEmojis.reactions.Yes : client.customEmojis.reactions.No}\n${config.channelId ? `<#${config.channelId}>` : ''}`,

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { registerHooks } from 'module';
+import { PermissionsBitField } from 'discord.js';
 
 /**
  * @typedef {import('./extendedClient.js').default} Client
@@ -37,19 +38,62 @@ registerHooks({
  * @returns { Promise<string> } The reloaded command's name
  */
 export async function reloadCommand(client, commandName) {
-    const existing = client.commands.get(commandName);
-    const filePath = existing?.commandData.filePath;
+    const filePath = client.commands.get(commandName)?.filePath;
     if (!filePath) throw new Error(`No command file found for \`${commandName}\`.`);
 
-    const command = await import(`${filePath}?${RELOAD_PARAM}=${Date.now()}`);
-    if (!command.execute) throw new Error(`Missing execute function in ${filePath}`);
+    const imported = await import(`${filePath}?${RELOAD_PARAM}=${Date.now()}`);
+    if (!imported.execute) throw new Error(`Missing execute function in ${filePath}`);
 
-    command.commandData.filePath = filePath;
+    const command = createCommand(imported, filePath);
 
     if (command.commandData.name !== commandName) client.commands.delete(commandName);
     client.commands.set(command.commandData.name, command);
 
     return command.commandData.name;
+}
+
+/**
+ * @typedef {Object} CommandMeta
+ * @property {number} cooldown - Seconds between uses per user
+ * @property {boolean} developerOnly - Only usable by DEVELOPER_IDS; registered to the dev guild only
+ * @property {bigint[]} botPermissions - Permissions the bot needs in the channel
+ * @property {bigint[]} userPermissions - Permissions the user needs; also hides the command from users without them
+ */
+
+/**
+ * @typedef {Object} Command
+ * @property {import('discord.js').SlashCommandBuilder} commandData
+ * @property {CommandMeta} meta
+ * @property {(interaction: import('discord.js').ChatInputCommandInteraction, client: Client) => Promise<unknown>} execute
+ * @property {(interaction: import('discord.js').AutocompleteInteraction, client: Client) => Promise<unknown>} [autocomplete]
+ * @property {string} filePath - file:// URL of the command module
+ */
+
+/** @type {CommandMeta} */
+const DEFAULT_META = Object.freeze({
+    cooldown: 5,
+    developerOnly: false,
+    botPermissions: [],
+    userPermissions: [],
+});
+
+/**
+ * Builds the object stored in client.commands from an imported command module.
+ * Module namespaces are read-only, so this copies them and adds the defaults and file path.
+ * @param {Record<string, any>} imported
+ * @param {string} filePath
+ * @returns {Command}
+ */
+function createCommand(imported, filePath) {
+    const meta = { ...DEFAULT_META, ...imported.meta };
+
+    // Hide the command from users who lack the permissions (the handler still enforces them,
+    // since server admins can override command visibility)
+    if (meta.userPermissions.length > 0 && imported.commandData.default_member_permissions === undefined) {
+        imported.commandData.setDefaultMemberPermissions(PermissionsBitField.resolve(meta.userPermissions));
+    }
+
+    return /** @type {Command} */ ({ ...imported, meta, filePath });
 }
 
 /**
@@ -78,14 +122,14 @@ export default async function loadCommands(client, dir) {
         }
 
         try {
-            const command = await import(pathToFileURL(fullPath).href);
-            if (!command.execute) {
+            const fileUrl = pathToFileURL(fullPath).href;
+            const imported = await import(fileUrl);
+            if (!imported.execute) {
                 client.utils.LogData('Command Init Load Error', `Missing execute function at ${fullPath}`, 'error');
                 continue;
             }
 
-            command.commandData.filePath = pathToFileURL(fullPath).href;
-
+            const command = createCommand(imported, fileUrl);
             client.commands.set(command.commandData.name, command);
             client.utils.LogData(
                 'Command',

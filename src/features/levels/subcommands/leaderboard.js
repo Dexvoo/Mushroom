@@ -4,7 +4,7 @@ import User_Level_Cache from '../cache/userLevels.cache.js';
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
  * @typedef {import('../models/guildLevels.js').GuildLevelsType} GuildLevelsType
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  * @param { GuildLevelsType } guildConfig
  */
 
@@ -29,7 +29,9 @@ export async function execute(interaction, guildConfig) {
         );
 
     await interaction.deferReply();
-    const type = options.getString('type') || 'level';
+    const type = /** @type {'level' | 'totalMessages' | 'totalVoice' | 'totalCommands'} */ (
+        options.getString('type') || 'level'
+    );
 
     const typeConfig = {
         level: {
@@ -97,10 +99,8 @@ export async function execute(interaction, guildConfig) {
         }
     });
 
-    const settledResults = await Promise.allSettled(userPromises);
-    const leaderboardLines = settledResults
-        .filter((result) => result.status === 'fulfilled' && result.value !== null)
-        .map((result) => result.value);
+    // Each promise catches its own errors, so Promise.all never rejects here
+    const leaderboardLines = (await Promise.all(userPromises)).filter((line) => line !== null);
 
     if (leaderboardLines.length === 0)
         return client.utils.Embed(

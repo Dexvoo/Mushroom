@@ -1,18 +1,18 @@
-import { PermissionFlagsBits, MessageFlags, EmbedBuilder } from 'discord.js';
+import { PermissionFlagsBits, MessageFlags, EmbedBuilder, ChannelType } from 'discord.js';
 import Logs_Cache from '../cache/logs.cache.js';
-import { LogsConfig } from '../models/logging.js';
+import { LOG_TYPES } from '../models/logging.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 
 export async function execute(interaction) {
     const { client, options, guild, user } = interaction;
 
-    const type = options.getString('log-type');
+    const type = /** @type {import('../models/logging.js').LogType | 'all'} */ (options.getString('log-type'));
     const enabled = options.getBoolean('enabled');
-    const channel = options.getChannel('channel') || null;
+    const channel = options.getChannel('channel', false, [ChannelType.GuildText]);
 
     // TODO: server logs
     if (type === 'server') {
@@ -96,10 +96,7 @@ export async function execute(interaction) {
 
     try {
         if (type === 'all') {
-            const allTypes = Object.keys(LogsConfig.schema.obj).filter(
-                (k) => k !== 'guildId' && k !== 'ignoredChannels'
-            );
-            const updatePromises = allTypes.map((logType) => Logs_Cache.setType(guild.id, logType, settings));
+            const updatePromises = LOG_TYPES.map((logType) => Logs_Cache.setType(guild.id, logType, settings));
 
             await Promise.all(updatePromises);
         } else {

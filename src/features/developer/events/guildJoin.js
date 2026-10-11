@@ -18,7 +18,7 @@ export async function execute(guild) {
         const Embed = new EmbedBuilder()
             .setTitle('Guild Joined')
             .setColor(Colors.Green)
-            .setThumbnail(guild.iconURL({ dynamic: true }))
+            .setThumbnail(guild.iconURL())
             .addFields(
                 { name: 'Guild', value: `${name} (\`${id}\`)`, inline: false },
                 { name: 'Owner', value: `<@${ownerId}>`, inline: true },

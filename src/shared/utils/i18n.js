@@ -71,7 +71,7 @@ const defaultLocale = ENV.DEFAULT_LANGUAGE;
  * Translates a key into the requested locale string.
  *
  * @param {string} key - The dot-notated key (e.g., 'ping.latency')
- * @param {import('discord.js').Locale} locale - The interaction.locale from Discord
+ * @param {import('discord.js').Locale | string} [locale] - The interaction.locale from Discord, or a default language code
  * @param {object}[args={}] - Variables to replace in the string (e.g., { ms: 120 })
  * @returns {string} The translated string
  */
@@ -94,7 +94,8 @@ function Translate(key, locale = defaultLocale, args = {}) {
     }
 
     for (const [k, v] of Object.entries(args)) {
-        text = text.replace(new RegExp(`{${k}}`, 'g'), String(v));
+        // Replacer function so values containing $&, $1 etc. are inserted literally
+        text = text.replaceAll(`{${k}}`, () => String(v));
     }
 
     return text;

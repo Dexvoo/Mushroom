@@ -3,7 +3,7 @@ import Logs_Cache from '../cache/logs.cache.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 export async function execute(interaction) {
     const { client, options, guild, locale } = interaction;
@@ -26,8 +26,7 @@ export async function execute(interaction) {
             );
 
         ignoredChannels.push(channel.id);
-        console.log('pushing channel id to ', ignoredChannels);
-        await Logs_Cache.setType(guild.id, 'ignoredChannels', ignoredChannels);
+        await Logs_Cache.set(guild.id, { ignoredChannels });
 
         return client.utils.Embed(
             interaction,
@@ -48,7 +47,7 @@ export async function execute(interaction) {
         );
 
     ignoredChannels = ignoredChannels.filter((ic) => ic !== channel.id);
-    await Logs_Cache.setType(guild.id, 'ignoredChannels', ignoredChannels);
+    await Logs_Cache.set(guild.id, { ignoredChannels });
 
     return client.utils.Embed(
         interaction,

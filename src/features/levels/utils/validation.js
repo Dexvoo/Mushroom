@@ -5,9 +5,9 @@ import Guild_Level_Cache from '../cache/guildLevels.cache.js';
  * @typedef {import('../../../core/extendedClient.js').default} Client
  *
  * Performs all preliminary checks for granting XP.
- * @param { import('discord.js').GuildMember & { client: Client }} member
- * @param { import('discord.js').GuildChannel & { client: Client }} channelLevel - The channel where the event occurred.
- * @returns {Promise<{guildConfig: import('../models/guildLevels.js').GuildLevelsType|null>}}
+ * @param {import('discord.js').GuildMember} member
+ * @param {import('discord.js').GuildBasedChannel} channelLevel - The channel where the event occurred.
+ * @returns {Promise<{ guildConfig: import('../models/guildLevels.js').GuildLevelsType } | null>} null if XP should not be granted
  */
 export async function ValidateXP(member, channelLevel) {
     const { guild, client } = member;
@@ -44,8 +44,8 @@ export async function ValidateXP(member, channelLevel) {
 }
 
 /**
- * @param { GuildMember & { client: Client }} member
- * @param { GuildChannel & { client: Client }} channel
+ * @param {import('discord.js').GuildMember} member
+ * @param {import('discord.js').GuildBasedChannel} channel
  * @param {import('../models/guildLevels.js').GuildLevelsType} config
  * @returns {boolean}
  */

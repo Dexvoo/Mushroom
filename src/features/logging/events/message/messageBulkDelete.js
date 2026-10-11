@@ -1,5 +1,5 @@
-import { Events, PermissionFlagsBits, AuditLogEvent } from 'discord.js';
-import Logs_Cache from '../../cache/logs.cache.js';
+import { Events, AuditLogEvent } from 'discord.js';
+import { getLogChannel, findAuditLogExecutor } from '../../utils/logChannel.js';
 
 export const name = Events.MessageBulkDelete;
 export const once = false;
@@ -7,8 +7,8 @@ export const description = 'Guild Message Bulk Delete Logs';
 
 /**
  * @typedef {import('../../../../core/extendedClient.js').default} Client
- * @param {import('discord.js').Message & { client: Client }} messages
- * @param {import('discord.js').GuildChannel & { client: Client }} channel
+ * @param {import('discord.js').ReadonlyCollection<string, import('discord.js').Message | import('discord.js').PartialMessage>} messages
+ * @param {import('discord.js').GuildTextBasedChannel} channel
  */
 
 export async function execute(messages, channel) {
@@ -16,62 +16,16 @@ export async function execute(messages, channel) {
 
     if (!guild) return;
 
-    const logsData = await Logs_Cache.get(guild.id);
-    if (!logsData?.message?.enabled || !logsData?.message?.channelId)
-        return client.utils.LogData('Message Deleted', `Guild: ${guild.name} | Disabled`, 'warning');
+    const logChannel = await getLogChannel(guild, 'message', { sourceChannelId: channel.id });
+    if (!logChannel) return;
 
-    if (logsData.ignoredChannels?.includes(channel.id)) return;
-
-    const logChannel = guild.channels.cache.get(logsData.message.channelId);
-    if (!logChannel) {
-        await Logs_Cache.setType(guild.id, 'message', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Message Deleted',
-            `Guild: ${guild.name} | Log channel not found, disabling logs`,
-            'error'
-        );
-    }
-
-    const botPermissions = [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.EmbedLinks,
-    ];
-    const [hasPermissions, missingPermissions] = client.utils.PermissionCheck(
-        logChannel,
-        botPermissions,
-        guild.members.me
+    // Bulk deletes take Discord longer to write to the audit log
+    const executor = await findAuditLogExecutor(
+        guild,
+        AuditLogEvent.MessageBulkDelete,
+        (entry) => entry.targetId === channel.id && Date.now() - entry.createdTimestamp < 10_000,
+        { delayMs: 5000 }
     );
-    if (!hasPermissions) {
-        await Logs_Cache.setType(guild.id, 'message', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Message Deleted',
-            `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`,
-            'error'
-        );
-    }
-
-    let executor = false;
-    let username = 'Unknown';
-    if (guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
-        // Waiting for discord push to audit logs
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-
-        const fetchedLogs = await guild.fetchAuditLogs({
-            limit: 5,
-            type: AuditLogEvent.MessageBulkDelete,
-        });
-
-        const deletionLog = fetchedLogs.entries.find(
-            (entry) => entry.targetId === channel.id && Date.now() - entry.createdTimestamp < 10_000
-        );
-
-        if (deletionLog) {
-            const fetchExecutor = (await guild.members.fetch(deletionLog.executor.id)).user;
-            executor = fetchExecutor;
-            username = fetchExecutor.username;
-        }
-    }
 
     const title = client.utils.Translate('logs.message.bulkDelete_title', guild.preferredLocale, {
         channel: channel.name,
@@ -80,17 +34,11 @@ export async function execute(messages, channel) {
         count: messages.size,
         user: executor ? executor : 'Unknown Tag',
     });
-    const footerText = `${username !== 'Unknown' ? `UID: ${executor.id} | ` : ''}CID: ${channel.id}`;
+    const footerText = `${executor ? `UID: ${executor.id} | ` : ''}CID: ${channel.id}`;
 
-    await client.utils
-        .Embed(logChannel, 'DarkRed', title, description, {
-            timestamp: true,
-            footer: { text: footerText },
-            author: executor,
-        })
-        .catch((err) => {
-            client.utils.LogData('Message Deleted', `Guild: ${guild.name} | Error creating embed: ${err}`, 'error');
-            // TODO: Add error logging for failed embed creation
-            return null;
-        });
+    await client.utils.Embed(logChannel, 'DarkRed', title, description, {
+        timestamp: true,
+        footer: { text: footerText },
+        author: executor,
+    });
 }

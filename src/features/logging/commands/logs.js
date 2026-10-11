@@ -84,14 +84,17 @@ commandData.addSubcommand((s) =>
         )
 );
 commandData.addSubcommand((s) => s.setName('ignore-view').setDescription('View all channels on the log ignore list.'));
-commandData.cooldown = 5;
-commandData.userPermissions = [];
-commandData.botPermissions = [];
-commandData.developerOnly = false;
+
+export const meta = {
+    cooldown: 5,
+    developerOnly: false,
+    botPermissions: [],
+    userPermissions: [],
+};
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 export async function execute(interaction) {
     const subcommand = interaction.options.getSubcommand();

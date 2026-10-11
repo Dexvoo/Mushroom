@@ -1,4 +1,4 @@
-import { Client } from 'discord.js';
+import { Client, Collection } from 'discord.js';
 import emojis from '../shared/constants/emojis.json' with { type: 'json' };
 import * as Embeds from '../shared/utils/embed.js';
 import * as ConsoleLogs from '../shared/utils/logger.js';
@@ -43,11 +43,18 @@ class ModifiedClient extends Client {
         this.customEmojis = emojis;
 
         /**
+         * Loaded slash commands, keyed by name.
+         * @type {Collection<string, import('./baseCommands.js').Command>}
+         */
+        this.commands = new Collection();
+
+        /**
          * Global cooldown manager.
          * Used for commands, message XP, reactions, dailies, etc.
+         * Expired entries are swept every 5 minutes so memory doesn't grow with every user seen.
          * @type {CooldownManager}
          */
-        this.cooldowns = new CooldownManager();
+        this.cooldowns = new CooldownManager(5 * 60_000);
     }
 
     /**

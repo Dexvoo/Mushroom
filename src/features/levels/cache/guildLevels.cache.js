@@ -26,7 +26,7 @@ class Guild_Level_Cache {
             const cached = this.cache.get(guildId);
             if (cached) return cached;
 
-            let config = await LevelConfig.findOne({ guildId }).lean();
+            let config = /** @type {GuildLevelsType | null} */ (await LevelConfig.findOne({ guildId }).lean());
 
             if (!config) {
                 config = this.createDefault(guildId);
@@ -69,7 +69,7 @@ class Guild_Level_Cache {
 
             LogData('Guild Level Cache', `Type '${type}' updated for guild ${guildId}`, 'debug');
 
-            return updatedConfig;
+            return /** @type {GuildLevelsType} */ (updatedConfig);
         } catch (error) {
             LogData('Guild Level Cache', `Failed to set type '${type}' for ${guildId}: ${error.message}`, 'error');
             throw error;

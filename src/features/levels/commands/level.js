@@ -212,14 +212,17 @@ commandData.addSubcommandGroup((g) =>
         )
         .addSubcommand((s) => s.setName('view-multipliers').setDescription('View all configured role XP multipliers.'))
 );
-commandData.cooldown = 5;
-commandData.userPermissions = [];
-commandData.botPermissions = [];
-commandData.developerOnly = false;
+
+export const meta = {
+    cooldown: 5,
+    developerOnly: false,
+    botPermissions: [],
+    userPermissions: [],
+};
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 export async function execute(interaction) {
     if (!interaction.guild) return;

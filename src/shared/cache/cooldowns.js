@@ -11,12 +11,22 @@ export const CooldownType = Object.freeze({
 });
 
 export class CooldownManager {
-    constructor() {
+    /**
+     * @param {number} [sweepIntervalMs=0] - How often to remove expired cooldowns. Expired entries are
+     * otherwise only removed when the same cooldown is checked again, so without sweeping the map
+     * keeps one entry for every user that ever triggered a cooldown. 0 disables sweeping.
+     */
+    constructor(sweepIntervalMs = 0) {
         /**
          * Stores cooldown expiration timestamps
          * @type {Map<string, number>}
          */
         this.cooldowns = new Map();
+
+        if (sweepIntervalMs > 0) {
+            // unref so the sweep timer never keeps the process alive on its own
+            setInterval(() => this.cleanup(), sweepIntervalMs).unref();
+        }
     }
 
     /**

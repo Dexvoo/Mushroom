@@ -1,5 +1,5 @@
-import { Events, PermissionFlagsBits } from 'discord.js';
-import Logs_Cache from '../../cache/logs.cache.js';
+import { Events } from 'discord.js';
+import { getLogChannel } from '../../utils/logChannel.js';
 
 export const name = Events.UserUpdate;
 export const once = false;
@@ -16,6 +16,7 @@ export async function execute(oldUser, newUser) {
     const { client } = newUser;
 
     const fields = [];
+    /** @type {string | false} */
     let thumbnail = false;
 
     if (oldUser.username !== newUser.username) {
@@ -67,25 +68,8 @@ export async function execute(oldUser, newUser) {
 
     for (const guild of mutualGuilds.values()) {
         try {
-            const logsData = await Logs_Cache.get(guild.id);
-            if (!logsData?.member?.enabled || !logsData?.member?.channelId) continue;
-
-            const logChannel = guild.channels.cache.get(logsData.member.channelId);
-            if (!logChannel) {
-                await Logs_Cache.setType(guild.id, 'member', { enabled: false, channelId: null });
-                continue;
-            }
-
-            const botPermissions = [
-                PermissionFlagsBits.ViewChannel,
-                PermissionFlagsBits.SendMessages,
-                PermissionFlagsBits.EmbedLinks,
-            ];
-            const [hasPermissions] = client.utils.PermissionCheck(logChannel, botPermissions, guild.members.me);
-            if (!hasPermissions) {
-                await Logs_Cache.setType(guild.id, 'member', { enabled: false, channelId: null });
-                continue;
-            }
+            const logChannel = await getLogChannel(guild, 'member');
+            if (!logChannel) continue;
 
             const title = client.utils.Translate('logs.member.user_update_title', guild.preferredLocale);
             const footerText = `UID: ${newUser.id}`;

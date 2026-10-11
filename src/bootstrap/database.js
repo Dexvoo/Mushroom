@@ -9,8 +9,15 @@ export async function Database_Connect(client) {
         LogData('MongoDB', 'Connected to the database successfully.', 'success');
     } catch (error) {
         console.error(`Failed to connect to the database: ${error}`);
-        await Shutdown('DATABASE FAILURE', client);
+        await Shutdown('DATABASE FAILURE', client, 1);
     }
+}
+
+/**
+ * @returns {boolean} Whether mongoose currently has an open connection
+ */
+export function Database_IsConnected() {
+    return mongoose.connection.readyState === 1;
 }
 
 export async function Database_Disconnect() {

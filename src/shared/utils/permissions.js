@@ -5,10 +5,10 @@ import { ENV } from '../../bootstrap/environment.js';
 /**
  * Checks if a user/bot has the required permissions in a channel
  *
- * @param {ChatInputCommandInteraction | GuildChannel | ThreadChannel} interactionChannel - Interaction or Channel to check permissions in
- * @param {Array<string>} permissions - Array of permission names to check
+ * @param {ChatInputCommandInteraction | import('discord.js').GuildBasedChannel} interaction - Interaction or Channel to check permissions in
+ * @param {import('discord.js').PermissionResolvable[]} permissions - Permissions to check (flags or names)
  * @param {GuildMember | Client} member - GuildMember or Client to check permissions for
- * @returns {[boolean, string[]?]} Array with boolean success flag and optional array of missing permissions
+ * @returns {[boolean, string[][]?]} Array with boolean success flag and optional array of missing permission names
  * @throws {Error} If invalid parameters are provided
  */
 

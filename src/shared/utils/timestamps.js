@@ -5,7 +5,7 @@
 const ShortTimestamp = (timestamp) => {
     if (!timestamp) throw new Error('No timestamp provided.');
     const date = new Date(timestamp);
-    return `<t:${Math.round(date / 1000)}:R>`;
+    return `<t:${Math.round(date.getTime() / 1000)}:R>`;
 };
 
 /**

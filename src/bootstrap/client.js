@@ -1,4 +1,4 @@
-import { GatewayIntentBits, Collection } from 'discord.js';
+import { GatewayIntentBits } from 'discord.js';
 import loadCommands from '../core/baseCommands.js';
 import loadEvents from '../core/baseEvents.js';
 import refreshCommands from '../core/baseRefresh.js';
@@ -25,13 +25,15 @@ const client = new Client({
     ],
 });
 
-client.commands = new Collection();
-
 // Registered before any startup work so failures during loading are caught too
 process.on('SIGINT', () => Shutdown('SIGINT', client)); // CTRL+C in terminal
 process.on('SIGTERM', () => Shutdown('SIGTERM', client)); // Docker/PM2 stop commands
+process.on('message', (/** @type {any} */ message) => {
+    if (message?.type === 'shutdown') Shutdown('MANAGER SHUTDOWN', client); // Sent by the ShardingManager
+});
+process.on('disconnect', () => Shutdown('MANAGER DISCONNECTED', client)); // Manager exited; don't run orphaned
 process.on('unhandledRejection', (reason) => {
-    client.utils.LogData('Unhandled Rejection', reason?.stack ?? String(reason), 'error');
+    client.utils.LogData('Unhandled Rejection', reason instanceof Error ? reason.stack : String(reason), 'error');
 });
 process.on('uncaughtException', (error) => {
     // State is unknown after an uncaught exception; exit and let the ShardingManager respawn this shard

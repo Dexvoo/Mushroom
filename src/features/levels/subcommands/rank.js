@@ -5,7 +5,7 @@ import { ExpForLevel, progressBar } from '../utils/levels.js';
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
  * @typedef {import('../models/guildLevels.js').GuildLevelsType} GuildLevelsType
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  * @param { GuildLevelsType } guildConfig
  */
 
@@ -56,7 +56,13 @@ export async function execute(interaction, guildConfig) {
             client.utils.Translate('commands.level_rank.not_levelled_yet', interaction.locale, { user })
         );
 
-    const xpNextLevel = ExpForLevel(userConfig.level + 1) - ExpForLevel(userConfig.level);
+    // Progress within the current level, not total XP against one level's requirement
+    const xpIntoLevel = userConfig.xp - ExpForLevel(userConfig.level);
+    const xpForNextLevel = ExpForLevel(userConfig.level + 1) - ExpForLevel(userConfig.level);
+    const atMaxLevel = userConfig.level >= (guildConfig.maxLevel ?? Infinity);
+    const xpText = atMaxLevel
+        ? `Max level (${userConfig.xp.toLocaleString()} XP)`
+        : progressBar(xpIntoLevel, xpForNextLevel);
     const title = `@${user.username}'s Rank`;
 
     const embed = new EmbedBuilder()
@@ -65,7 +71,7 @@ export async function execute(interaction, guildConfig) {
         .setThumbnail(user.displayAvatarURL())
         .addFields(
             { name: 'Level', value: `**${userConfig.level}**`, inline: true },
-            { name: 'XP', value: `**${progressBar(userConfig.xp, xpNextLevel)}**`, inline: true },
+            { name: 'XP', value: `**${xpText}**`, inline: true },
             { name: 'Messages', value: `**${userConfig.totalMessages.toLocaleString()}**`, inline: true },
             {
                 name: 'Voice',

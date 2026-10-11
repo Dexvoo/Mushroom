@@ -15,21 +15,26 @@ const LogChannelSchema = new Schema(
     { _id: false }
 );
 
+/** Every log category a guild can configure. */
+export const LOG_TYPES = /** @type {const} */ ([
+    'message',
+    'channel',
+    'join',
+    'leave',
+    'voice',
+    'role',
+    'server',
+    'member',
+    'punishment',
+]);
+
 /**
- * @typedef {Object} LogsConfigType
- * @property {string} guildId
- * @property {LogsType} message
- * @property {LogsType} channel
- * @property {LogsType} join
- * @property {LogsType} leave
- * @property {LogsType} voice
- * @property {LogsType} role
- * @property {LogsType} server
- * @property {LogsType} member
- * @property {LogsType} punishment
- * @property {string[]} ignoredChannels
- *
- *
+ * @typedef {typeof LOG_TYPES[number]} LogType
+ */
+
+/**
+ * Categories are optional: they only exist once set up.
+ * @typedef {{ guildId: string, ignoredChannels?: string[] } & Partial<Record<LogType, LogsType>>} LogsConfigType
  */
 const LogsConfigSchema = new Schema(
     {

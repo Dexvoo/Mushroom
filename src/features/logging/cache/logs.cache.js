@@ -4,6 +4,8 @@ import { LogData } from '../../../shared/utils/logger.js';
 
 /**
  * @typedef {import('../models/logging.js').LogsConfigType} LogsConfigType
+ * @typedef {import('../models/logging.js').LogsType} LogsType
+ * @typedef {import('../models/logging.js').LogType} LogType
  */
 class LogsCache {
     /**
@@ -28,18 +30,18 @@ class LogsCache {
                 return this.cache.get(guildId);
             }
 
-            let config = await LogsConfig.findOne({ guildId }).lean();
+            let config = /** @type {LogsConfigType | null} */ (await LogsConfig.findOne({ guildId }).lean());
 
             if (!config) {
                 // If it doesn't exist, we cache a default state so we don't spam the DB
-                config = { guildId, enabled: false };
+                config = { guildId };
             }
 
             this.cache.set(guildId, config);
             return config;
         } catch (error) {
             LogData('LogsCache', `Failed to get config for ${guildId}: ${error.message}`, 'error');
-            return { guildId, enabled: false };
+            return { guildId };
         }
     }
 
@@ -47,7 +49,7 @@ class LogsCache {
      * Updates the main logs config and instantly updates the cache.
      * @param {string} guildId - The ID of the guild.
      * @param {Partial<LogsConfigType>} updates - The fields to update.
-     * @return {Promise<void>} The updated log configuration.
+     * @return {Promise<LogsConfigType>} The updated log configuration.
      */
     async set(guildId, updates) {
         try {
@@ -60,7 +62,7 @@ class LogsCache {
             this.cache.set(guildId, updatedConfig);
             LogData('LogsCache', `Config updated for guild ${guildId}`, 'debug');
 
-            return updatedConfig;
+            return /** @type {LogsConfigType} */ (updatedConfig);
         } catch (error) {
             LogData('LogsCache', `Failed to set config for ${guildId}: ${error.message}`, 'error');
             throw error; // Re-throw so the command handler knows it failed
@@ -70,8 +72,8 @@ class LogsCache {
     /**
      * Updates a specific sub-category (like 'message', 'join', 'leave') and updates cache.
      * @param {string} guildId
-     * @param {keyof LogsConfigType} type
-     * @param {Partial<LogsConfigType[keyof LogsConfigType]>} newData - The new data for this category.
+     * @param {LogType} type
+     * @param {Partial<LogsType>} newData - The new data for this category.
      * @return {Promise<LogsConfigType>}
      */
     async setType(guildId, type, newData) {
@@ -85,7 +87,7 @@ class LogsCache {
             this.cache.set(guildId, updatedConfig);
             LogData('LogsCache', `Type '${type}' updated for guild ${guildId}`, 'debug');
 
-            return updatedConfig;
+            return /** @type {LogsConfigType} */ (updatedConfig);
         } catch (error) {
             LogData('LogsCache', `Failed to set type '${type}' for ${guildId}: ${error.message}`, 'error');
             throw error;
@@ -95,8 +97,8 @@ class LogsCache {
     /**
      * Deletes/unsets a specific log category from the DB and updates the cache.
      * @param {string} guildId
-     * @param {keyof LogsConfigType} type
-     * @returns {Promise<LogsConfigType>}
+     * @param {LogType} type
+     * @returns {Promise<LogsConfigType | null>}
      */
     async deleteType(guildId, type) {
         try {
@@ -113,7 +115,7 @@ class LogsCache {
             }
 
             LogData('LogsCache', `Type '${type}' deleted for guild ${guildId}`, 'debug');
-            return updatedConfig;
+            return /** @type {LogsConfigType | null} */ (updatedConfig);
         } catch (error) {
             LogData('LogsCache', `Failed to delete type '${type}' for ${guildId}: ${error.message}`, 'error');
             throw error;

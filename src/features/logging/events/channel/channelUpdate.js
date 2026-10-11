@@ -1,5 +1,5 @@
-import { Events, PermissionFlagsBits, AuditLogEvent, ChannelType, PermissionsBitField } from 'discord.js';
-import Logs_Cache from '../../cache/logs.cache.js';
+import { Events, AuditLogEvent, ChannelType, PermissionsBitField } from 'discord.js';
+import { getLogChannel, findAuditLogExecutor } from '../../utils/logChannel.js';
 
 export const name = Events.ChannelUpdate;
 export const once = false;
@@ -16,59 +16,14 @@ export async function execute(oldChannel, newChannel) {
 
     if (!guild) return;
 
-    const logsData = await Logs_Cache.get(guild.id);
-    if (!logsData?.channel?.enabled || !logsData?.channel?.channelId)
-        return client.utils.LogData('Channel Update', `Guild: ${guild.name} | Disabled`, 'warning');
+    const logChannel = await getLogChannel(guild, 'channel', { sourceChannelId: newChannel.id });
+    if (!logChannel) return;
 
-    if (logsData.ignoredChannels?.includes(newChannel.id)) return;
-
-    const logChannel = guild.channels.cache.get(logsData.member.channelId);
-    if (!logChannel) {
-        await Logs_Cache.setType(guild.id, 'channel', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Channel Update',
-            `Guild: ${guild.name} | Log channel not found, disabling logs`,
-            'error'
-        );
-    }
-
-    const botPermissions = [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.EmbedLinks,
-    ];
-    const [hasPermissions, missingPermissions] = client.utils.PermissionCheck(
-        logChannel,
-        botPermissions,
-        guild.members.me
+    const executor = await findAuditLogExecutor(
+        guild,
+        AuditLogEvent.ChannelUpdate,
+        (entry) => entry.targetId === newChannel.id && Date.now() - entry.createdTimestamp < 5000
     );
-    if (!hasPermissions) {
-        await Logs_Cache.setType(guild.id, 'channel', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Channel Update',
-            `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`,
-            'error'
-        );
-    }
-
-    let executor = null;
-    if (guild.members.me.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
-        // Waiting for discord push to audit logs
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        const fetchedLogs = await guild.fetchAuditLogs({
-            limit: 5,
-            type: AuditLogEvent.ChannelUpdate,
-        });
-
-        const deletionLog = fetchedLogs.entries.find(
-            (entry) => entry.target?.id === newChannel.id && Date.now() - entry.createdTimestamp < 5000
-        );
-
-        if (deletionLog) {
-            executor = deletionLog.executor;
-        }
-    }
 
     let description = '';
     if (oldChannel.name !== newChannel.name) {
@@ -79,28 +34,37 @@ export async function execute(oldChannel, newChannel) {
         description += `**Type:** \`${ChannelType[oldChannel.type] || 'Unknown'}\` → \`${ChannelType[newChannel.type] || 'Unknown'}\`\n`;
     }
 
-    if (oldChannel.topic !== newChannel.topic) {
-        const oldTopic = oldChannel.topic ? client.utils.Truncate(oldChannel.topic, 100) : 'None';
-        const newTopic = newChannel.topic ? client.utils.Truncate(newChannel.topic, 100) : 'None';
-        description += `**Topic:** \`${oldTopic}\` → \`${newTopic}\`\n`;
+    // These only exist on some channel types (e.g. topic on text channels, bitrate on voice)
+    const oldTopic = channelProp(oldChannel, 'topic');
+    const newTopic = channelProp(newChannel, 'topic');
+    if (oldTopic !== newTopic) {
+        const oldText = oldTopic ? client.utils.Truncate(oldTopic, 100) : 'None';
+        const newText = newTopic ? client.utils.Truncate(newTopic, 100) : 'None';
+        description += `**Topic:** \`${oldText}\` → \`${newText}\`\n`;
     }
 
-    if (oldChannel.nsfw !== newChannel.nsfw) {
-        description += `**NSFW:** \`${oldChannel.nsfw ? 'Yes' : 'No'}\` → \`${newChannel.nsfw ? 'Yes' : 'No'}\`\n`;
+    const oldNsfw = channelProp(oldChannel, 'nsfw');
+    const newNsfw = channelProp(newChannel, 'nsfw');
+    if (oldNsfw !== newNsfw) {
+        description += `**NSFW:** \`${oldNsfw ? 'Yes' : 'No'}\` → \`${newNsfw ? 'Yes' : 'No'}\`\n`;
     }
 
-    if (oldChannel.rateLimitPerUser !== newChannel.rateLimitPerUser) {
-        description += `**Slowmode:** \`${oldChannel.rateLimitPerUser || 0}s\` → \`${newChannel.rateLimitPerUser || 0}s\`\n`;
+    const oldSlowmode = channelProp(oldChannel, 'rateLimitPerUser');
+    const newSlowmode = channelProp(newChannel, 'rateLimitPerUser');
+    if (oldSlowmode !== newSlowmode) {
+        description += `**Slowmode:** \`${oldSlowmode || 0}s\` → \`${newSlowmode || 0}s\`\n`;
     }
 
-    if (oldChannel.bitrate !== newChannel.bitrate) {
-        description += `**Bitrate:** \`${(oldChannel.bitrate || 0) / 1000}kbps\` → \`${(newChannel.bitrate || 0) / 1000}kbps\`\n`;
+    const oldBitrate = channelProp(oldChannel, 'bitrate');
+    const newBitrate = channelProp(newChannel, 'bitrate');
+    if (oldBitrate !== newBitrate) {
+        description += `**Bitrate:** \`${(oldBitrate || 0) / 1000}kbps\` → \`${(newBitrate || 0) / 1000}kbps\`\n`;
     }
 
-    if (oldChannel.userLimit !== newChannel.userLimit) {
-        const oldLimit = oldChannel.userLimit === 0 || !oldChannel.userLimit ? 'Unlimited' : oldChannel.userLimit;
-        const newLimit = newChannel.userLimit === 0 || !newChannel.userLimit ? 'Unlimited' : newChannel.userLimit;
-        description += `**User Limit:** \`${oldLimit}\` → \`${newLimit}\`\n`;
+    const oldUserLimit = channelProp(oldChannel, 'userLimit');
+    const newUserLimit = channelProp(newChannel, 'userLimit');
+    if (oldUserLimit !== newUserLimit) {
+        description += `**User Limit:** \`${oldUserLimit || 'Unlimited'}\` → \`${newUserLimit || 'Unlimited'}\`\n`;
     }
 
     if (oldChannel.parentId !== newChannel.parentId) {
@@ -145,21 +109,21 @@ export async function execute(oldChannel, newChannel) {
     const footerText = `CID: ${newChannel.id}`;
     const title = client.utils.Translate('logs.channel.update', guild.preferredLocale);
 
-    return client.utils
-        .Embed(logChannel, 'White', title, description, {
-            timestamp: true,
-            footer: { text: footerText },
-            author: executor,
-        })
-        .catch((err) => {
-            client.utils.LogData(
-                'Channel Update',
-                `Guild: ${guild.name} | Error creating embed: ${err.message}`,
-                'error'
-            );
-            // TODO: Add error logging for failed embed creation
-            return;
-        });
+    return client.utils.Embed(logChannel, 'White', title, description, {
+        timestamp: true,
+        footer: { text: footerText },
+        author: executor,
+    });
+}
+
+/**
+ * Reads a property that only some channel types have.
+ * @param {import('discord.js').GuildChannel} channel
+ * @param {'topic' | 'nsfw' | 'rateLimitPerUser' | 'bitrate' | 'userLimit'} key
+ * @returns {any} The value, or undefined if this channel type doesn't have it
+ */
+function channelProp(channel, key) {
+    return key in channel ? channel[key] : undefined;
 }
 
 /**
@@ -184,7 +148,7 @@ function formatPermissions(overwrite) {
  */
 function comparePermissionDiff(oldPerm, newPerm) {
     const changes = [];
-    const allPerms = Object.keys(PermissionsBitField.Flags);
+    const allPerms = /** @type {import('discord.js').PermissionsString[]} */ (Object.keys(PermissionsBitField.Flags));
 
     for (const perm of allPerms) {
         const oldAllowed = oldPerm.allow.has(perm);

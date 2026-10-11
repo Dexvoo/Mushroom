@@ -1,4 +1,4 @@
-import { BaseInteraction, EmbedBuilder, GuildMember, User, DiscordAPIError, RESTJSONErrorCodes } from 'discord.js';
+import { BaseInteraction, EmbedBuilder, DiscordAPIError, RESTJSONErrorCodes } from 'discord.js';
 import { ENV } from '../../bootstrap/environment.js';
 import { LogData } from './logger.js';
 import Global_Cache from '../../features/utility/cache/global.js';
@@ -7,21 +7,21 @@ import Global_Cache from '../../features/utility/cache/global.js';
  */
 /**
  * Create and send an embed message.
- * @param { import('discord.js').BaseInteraction & { client: Client } | import('discord.js').TextChannel & { client: Client } | import('discord.js').User & { client: Client } | import('discord.js').GuildMember & { client: Client }} target - The target to send the embed to.
+ * @param { BaseInteraction | import('discord.js').GuildBasedChannel | import('discord.js').TextBasedChannel | import('discord.js').User | import('discord.js').GuildMember } target - The target to send the embed to.
  * @param { keyof typeof import('discord.js').Colors } colour - The colour of the embed.
  * @param { string } title - The title of the embed.
  * @param { string } description - The description of the embed.
  * @param { object } [options={}] Optional parameters.
  * @param { import('discord.js').APIEmbedField[] } [options.fields=[]] - The fields of the embed.
- * @param { import('discord.js').MessageFlags } [options.flags] - Whether the message should be ephemeral (only for interactions).
- * @param { import('discord.js').ActionRowBuilder[] } [options.components=[]] - The components (buttons, select menus) to include in the message.
+ * @param { import('discord.js').InteractionReplyOptions['flags'] } [options.flags] - Whether the message should be ephemeral (only for interactions).
+ * @param { import('discord.js').BaseMessageOptions['components'] } [options.components=[]] - The components (buttons, select menus) to include in the message.
  * @param { import('discord.js').AttachmentBuilder[] }[options.files=[]] - The files to attach to the message.
  * @param { import('discord.js').EmbedFooterOptions } [options.footer] - The footer of the embed.
- * @param { boolean }[options.timestamp] - timestamp
- * @param { import('discord.js').User } [options.author] - author
- * @param { string } [options.thumbnail] - image url
+ * @param { boolean | number | Date } [options.timestamp] - true for now, or a specific time
+ * @param { import('discord.js').User | import('discord.js').PartialUser | null } [options.author] - author
+ * @param { string | false } [options.thumbnail] - image url, or false for none
  * @param { string } [options.url] - url for title
- * @returns { Promise<Message | void> } The sent message, or void if the target is not an interaction.
+ * @returns { Promise<import('discord.js').Message | import('discord.js').InteractionResponse | null | undefined> } The sent message or reply, or null/undefined if nothing was sent
  */
 
 async function Embed(target, colour, title, description, options = {}) {
@@ -30,7 +30,7 @@ async function Embed(target, colour, title, description, options = {}) {
         return null;
     }
 
-    const { client } = target;
+    const client = /** @type {Client} */ (target.client);
     const {
         fields = [],
         flags = [],
@@ -67,7 +67,7 @@ async function Embed(target, colour, title, description, options = {}) {
     }
 
     if (timestamp) {
-        embed.setTimestamp();
+        embed.setTimestamp(timestamp === true ? undefined : timestamp);
     }
     if (author) {
         embed.setAuthor({ name: author.username, iconURL: author.displayAvatarURL({ size: 512, extension: 'png' }) });
@@ -77,18 +77,20 @@ async function Embed(target, colour, title, description, options = {}) {
     }
 
     try {
-        if (target instanceof BaseInteraction) {
+        if (target instanceof BaseInteraction && target.isRepliable()) {
             if (target.replied || target.deferred) {
                 return await target.followUp({ embeds: [embed], components, files, flags });
             } else {
                 return await target.reply({ embeds: [embed], components, files, flags });
             }
-        } else if (target instanceof User || target instanceof GuildMember || target.isTextBased?.()) {
-            return await target.send({ embeds: [embed], components, files, flags });
+        } else if ('send' in target) {
+            // Users, members and text-based channels
+            // Reply-only flags (e.g. Ephemeral) don't apply to normal messages, but others like SuppressEmbeds do
+            return await target.send({ embeds: [embed], components, files, flags: /** @type {any} */ (flags) });
         }
     } catch (error) {
         if (error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.CannotSendMessagesToThisUser) {
-            console.warn(`Could not send embed to ${target.tag || target.id} - DMs are closed.`);
+            console.warn(`Could not send embed to ${'tag' in target ? target.tag : target.id} - DMs are closed.`);
         } else {
             console.error(error);
         }
@@ -124,7 +126,7 @@ async function DevEmbed(type, client, embed) {
                 if (!guild) return console.error(`Guild with ID ${guildId} not found.`);
 
                 const channel = guild.channels.cache.get(channelId);
-                if (!channel) return;
+                if (!channel?.isTextBased()) return;
 
                 await channel.send({ embeds: [embed] });
             },

@@ -3,7 +3,7 @@ import Guild_Level_Cache from '../../cache/guildLevels.cache.js';
 /**
  * @typedef {import('../../../../core/extendedClient.js').default} Client
  * @typedef {import('../../models/guildLevels.js').GuildLevelsType} GuildLevelsType
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  * @param { GuildLevelsType } guildConfig
  */
 

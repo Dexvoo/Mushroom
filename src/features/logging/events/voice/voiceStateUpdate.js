@@ -1,5 +1,5 @@
-import { Events, PermissionFlagsBits } from 'discord.js';
-import Logs_Cache from '../../cache/logs.cache.js';
+import { Events } from 'discord.js';
+import { getLogChannel } from '../../utils/logChannel.js';
 
 export const name = Events.VoiceStateUpdate;
 export const once = false;
@@ -16,42 +16,10 @@ export async function execute(oldState, newState) {
 
     if (!guild) return;
 
-    const logsData = await Logs_Cache.get(guild.id);
-    if (!logsData?.voice?.enabled || !logsData?.voice?.channelId)
-        return client.utils.LogData('Voice Updated', `Guild: ${guild.name} | Disabled`, 'warning');
-
     const relevantChannelId = newState.channelId || oldState.channelId;
-    if (logsData.ignoredChannels?.includes(relevantChannelId))
-        return client.utils.LogData('Voice Updated', `Guild: ${guild.name} | Ignored Channel`, 'info');
 
-    const logChannel = guild.channels.cache.get(logsData.voice.channelId);
-    if (!logChannel) {
-        await Logs_Cache.setType(guild.id, 'voice', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Member Joined',
-            `Guild: ${guild.name} | Log channel not found, disabling logs`,
-            'error'
-        );
-    }
-
-    const botPermissions = [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.EmbedLinks,
-    ];
-    const [hasPermissions, missingPermissions] = client.utils.PermissionCheck(
-        logChannel,
-        botPermissions,
-        guild.members.me
-    );
-    if (!hasPermissions) {
-        await Logs_Cache.setType(guild.id, 'voice', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Member Joined',
-            `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`,
-            'error'
-        );
-    }
+    const logChannel = await getLogChannel(guild, 'voice', { sourceChannelId: relevantChannelId });
+    if (!logChannel) return;
 
     const footer = { text: `CID: ${relevantChannelId} | UID: ${member.id}` };
 

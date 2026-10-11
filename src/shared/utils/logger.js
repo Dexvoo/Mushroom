@@ -35,7 +35,6 @@ const LogData = (title, description, type) => {
 
     if (typeof title !== 'string') title = String(title);
     if (typeof description !== 'string') description = String(description);
-    if (typeof type !== 'string') type = String(type);
 
     const maxTitleLength = 20;
     title = title.padEnd(maxTitleLength).substring(0, maxTitleLength);

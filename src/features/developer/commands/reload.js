@@ -12,10 +12,13 @@ commandData.addStringOption((o) =>
 commandData.addBooleanOption((o) =>
     o.setName('global').setDescription('Set to true to be global, false is just developer guild').setRequired(true)
 );
-commandData.cooldown = 5;
-commandData.userPermissions = [];
-commandData.botPermissions = [];
-commandData.developerOnly = true;
+
+export const meta = {
+    cooldown: 5,
+    developerOnly: true,
+    botPermissions: [],
+    userPermissions: [],
+};
 
 /**
  * @param { import('discord.js').AutocompleteInteraction } interaction
@@ -31,7 +34,7 @@ export async function autocomplete(interaction) {
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param {import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 export async function execute(interaction) {
     const { options, client } = interaction;
@@ -66,15 +69,20 @@ export async function execute(interaction) {
             newName = await client.reloadCommand(commandName);
         }
 
-        // Register only this command with Discord (create overwrites a command with the same name)
+        // Register only this command with Discord (create overwrites a command with the same name).
+        // Developer-only commands always stay in the dev guild, even if "global" was chosen.
         const newCommand = client.commands.get(newName);
-        await client.application.commands.create(newCommand.commandData, global ? undefined : ENV.DEV_GUILD_ID);
+        const registerGlobally = global && !newCommand.meta.developerOnly;
+        await client.application.commands.create(
+            newCommand.commandData,
+            registerGlobally ? undefined : ENV.DEV_GUILD_ID
+        );
 
         client.utils.Embed(
             interaction,
             'Green',
             `${client.customEmojis.reactions.Yes} Command Reloaded`,
-            `\`${newCommand.commandData.name}\` reloaded on ${shardCount} shard(s) and registered ${global ? 'globally' : 'to the developer guild'}.`
+            `\`${newCommand.commandData.name}\` reloaded on ${shardCount} shard(s) and registered ${registerGlobally ? 'globally' : 'to the developer guild'}.`
         );
     } catch (error) {
         client.utils.LogData('Reload', `${commandName}: ${error.stack ?? error.message}`, 'error');

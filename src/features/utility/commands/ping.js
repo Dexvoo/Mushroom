@@ -10,14 +10,17 @@ commandData.setContexts([
     InteractionContextType.PrivateChannel,
 ]);
 commandData.setDMPermission(true);
-commandData.cooldown = 5;
-commandData.userPermissions = [];
-commandData.botPermissions = [];
-commandData.developerOnly = false;
+
+export const meta = {
+    cooldown: 5,
+    developerOnly: false,
+    botPermissions: [],
+    userPermissions: [],
+};
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction} interaction
  */
 export async function execute(interaction) {
     const { locale, createdTimestamp, client } = interaction;

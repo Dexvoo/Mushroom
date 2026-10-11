@@ -1,5 +1,5 @@
-import { Events, PermissionFlagsBits } from 'discord.js';
-import Logs_Cache from '../../cache/logs.cache.js';
+import { Events } from 'discord.js';
+import { getLogChannel } from '../../utils/logChannel.js';
 
 export const name = Events.GuildMemberRemove;
 export const once = false;
@@ -15,38 +15,8 @@ export async function execute(member) {
 
     if (!guild) return;
 
-    const logsData = await Logs_Cache.get(guild.id);
-    if (!logsData?.member?.enabled || !logsData?.member?.channelId)
-        return client.utils.LogData('Member Left', `Guild: ${guild.name} | Disabled`, 'warning');
-
-    const logChannel = guild.channels.cache.get(logsData.member.channelId);
-    if (!logChannel) {
-        await Logs_Cache.setType(guild.id, 'member', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Member Left',
-            `Guild: ${guild.name} | Log channel not found, disabling logs`,
-            'error'
-        );
-    }
-
-    const botPermissions = [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.EmbedLinks,
-    ];
-    const [hasPermissions, missingPermissions] = client.utils.PermissionCheck(
-        logChannel,
-        botPermissions,
-        guild.members.me
-    );
-    if (!hasPermissions) {
-        await Logs_Cache.setType(guild.id, 'member', { enabled: false, channelId: null });
-        return client.utils.LogData(
-            'Member Left',
-            `Guild: ${guild.name} | Missing permissions in log channel, disabling logs. Missing perms: ${missingPermissions.flat().join(', ')}`,
-            'error'
-        );
-    }
+    const logChannel = await getLogChannel(guild, 'member');
+    if (!logChannel) return;
 
     const longTimestamp = `${client.utils.Timestamp(member.joinedAt, 'F')}`;
     const shortTimestamp = `${client.utils.Timestamp(member.joinedAt, 'R')}`;
@@ -66,15 +36,9 @@ export async function execute(member) {
 
     const footerText = `UID: ${member.id}`;
 
-    await client.utils
-        .Embed(logChannel, 'Red', title, description, {
-            timestamp: true,
-            footer: { text: footerText },
-            author: member.user,
-        })
-        .catch((err) => {
-            client.utils.LogData('Member Left', `Guild: ${guild.name} | Error creating embed: ${err.message}`, 'error');
-            // TODO: Add error logging for failed embed creation
-            return;
-        });
+    await client.utils.Embed(logChannel, 'Red', title, description, {
+        timestamp: true,
+        footer: { text: footerText },
+        author: member.user,
+    });
 }

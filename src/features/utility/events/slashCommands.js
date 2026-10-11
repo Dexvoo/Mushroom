@@ -7,7 +7,7 @@ export const description = 'Registering Slash Commands / Autocomplete';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').BaseInteraction & { client: Client } } interaction
+ * @param {import('discord.js').BaseInteraction} interaction
  */
 
 export async function execute(interaction) {
@@ -54,7 +54,7 @@ export async function execute(interaction) {
             );
         }
 
-        if (command.commandData.developerOnly && !client.utils.DevPermissionCheck(interaction.user.id)) {
+        if (command.meta.developerOnly && !client.utils.DevPermissionCheck(interaction.user.id)) {
             const msg = client.utils.Translate('errors.developer_only', interaction.locale);
             return client.utils.Embed(
                 interaction,
@@ -68,10 +68,10 @@ export async function execute(interaction) {
         if (!commandCooldown(interaction, command)) return;
 
         // Bot Permissions
-        if (guild && command.commandData.botPermissions?.length > 0) {
+        if (interaction.inCachedGuild() && command.meta.botPermissions.length > 0) {
             const [hasPerms, missingPerms] = client.utils.PermissionCheck(
                 interaction,
-                command.commandData.botPermissions,
+                command.meta.botPermissions,
                 guild.members.me
             );
             if (!hasPerms) {
@@ -89,10 +89,10 @@ export async function execute(interaction) {
         }
 
         // User Permissions
-        if (guild && command.commandData.userPermissions?.length > 0) {
+        if (interaction.inCachedGuild() && command.meta.userPermissions.length > 0) {
             const [hasPerms, missingPerms] = client.utils.PermissionCheck(
                 interaction,
-                command.commandData.userPermissions,
+                command.meta.userPermissions,
                 interaction.member
             );
             if (!hasPerms) {
@@ -116,6 +116,7 @@ export async function execute(interaction) {
 
             client.utils.LogData(`Command Error: ${interaction.commandName}`, error.stack ?? error.message, 'error');
 
+            /** @type {import('discord.js').InteractionReplyOptions} */
             const errorReply = {
                 content: `${client.customEmojis.reactions.Warning} An error occurred while executing this command.`,
                 flags: MessageFlags.Ephemeral,
@@ -146,8 +147,8 @@ export async function execute(interaction) {
 }
 
 /**
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client } } interaction
- * @param {{ commandData: import('discord.js').SlashCommandBuilder & { cooldown?: number } }} command
+ * @param {import('discord.js').ChatInputCommandInteraction} interaction
+ * @param {import('../../../core/baseCommands.js').Command} command
  */
 function commandCooldown(interaction, command) {
     const { commandName, user, client } = interaction;
@@ -164,7 +165,6 @@ function commandCooldown(interaction, command) {
         return false;
     }
 
-    const cooldownAmount = command.commandData.cooldown ?? 5;
-    client.cooldowns.add('command', user.id, cooldownAmount, commandName);
+    client.cooldowns.add('command', user.id, command.meta.cooldown, commandName);
     return true;
 }

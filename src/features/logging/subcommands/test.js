@@ -1,15 +1,16 @@
 import { PermissionFlagsBits, MessageFlags, EmbedBuilder } from 'discord.js';
 import Logs_Cache from '../cache/logs.cache.js';
+import { LOG_TYPES } from '../models/logging.js';
 
 /**
  * @typedef {import('../../../core/extendedClient.js').default} Client
- * @param { import('discord.js').ChatInputCommandInteraction & { client: Client }} interaction
+ * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
  */
 
 export async function execute(interaction) {
     const { client, options, guild } = interaction;
 
-    const type = options.getString('log-type');
+    const type = /** @type {import('../models/logging.js').LogType | 'all'} */ (options.getString('log-type'));
     const currentConfig = await Logs_Cache.get(guild.id);
 
     if (!currentConfig) {
@@ -33,12 +34,13 @@ export async function execute(interaction) {
         });
         client.utils.Embed(interaction, 'DarkPurple', progressTitle, progressDesc, { flags: MessageFlags.Ephemeral });
 
-        for (const [logType, config] of Object.entries(currentConfig)) {
+        for (const logType of LOG_TYPES) {
+            const config = currentConfig[logType];
             if (!config?.enabled) continue;
 
             const channel =
                 guild.channels.cache.get(config?.channelId) ||
-                (await guild.channels.fetch(config?.channelId)).catch(() => null);
+                (await guild.channels.fetch(config?.channelId).catch(() => null));
             if (!channel) {
                 await Logs_Cache.deleteType(guild.id, logType);
                 failedLogs.push(logType);
@@ -131,7 +133,7 @@ export async function execute(interaction) {
 
     const channel =
         guild.channels.cache.get(config?.channelId) ||
-        (await guild.channels.fetch(config?.channelId)).catch(() => null);
+        (await guild.channels.fetch(config?.channelId).catch(() => null));
     if (!channel) {
         await Logs_Cache.deleteType(guild.id, type);
         const failMsg = client.utils.Translate('commands.log_test.log_send_fail', interaction.locale, {
