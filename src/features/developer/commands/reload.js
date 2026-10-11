@@ -1,6 +1,5 @@
 import { SlashCommandBuilder, MessageFlags, ApplicationIntegrationType, InteractionContextType } from 'discord.js';
 import { ENV } from '../../../bootstrap/environment.js';
-import refreshCommands from '../../../core/baseRefresh.js';
 
 export const commandData = new SlashCommandBuilder();
 commandData.setName('reload');
@@ -37,12 +36,10 @@ export async function autocomplete(interaction) {
 export async function execute(interaction) {
     const { options, client } = interaction;
 
-    await refreshCommands(client);
-
     const commandName = options.getString('command');
     const global = options.getBoolean('global');
-    const command = client.commands.get(commandName);
-    if (!command)
+
+    if (!client.commands.has(commandName))
         return client.utils.Embed(
             interaction,
             'Red',
@@ -51,39 +48,41 @@ export async function execute(interaction) {
             { flags: MessageFlags.Ephemeral }
         );
 
-    const commandPath = command.commandData.filePath;
-    if (!commandPath)
-        return client.utils.Embed(
-            interaction,
-            'Red',
-            client.utils.Translate('errors.title', interaction.locale),
-            `Could not find the file for command \`${commandName}\`.`,
-            { flags: MessageFlags.Ephemeral }
-        );
-
-    const fileUrl = `${command.commandData.filePath}?t=${Date.now()}`;
+    // Reloading every shard can take a moment
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     try {
-        const newCommand = await import(fileUrl);
-
-        newCommand.commandData.filePath = commandPath;
-        client.commands.set(newCommand.commandData.name, newCommand);
-        if (global) {
-            await client.application.commands.create(newCommand.commandData);
+        // Each shard is its own process with its own client.commands, so reload all of them
+        let newName;
+        let shardCount = 1;
+        if (client.shard) {
+            const results = await client.shard.broadcastEval(
+                (shardClient, { name }) => shardClient.reloadCommand(name),
+                { context: { name: commandName } }
+            );
+            newName = results[0];
+            shardCount = results.length;
         } else {
-            await client.guilds.cache.get(ENV.DEV_GUILD_ID).commands.create(newCommand.commandData);
+            newName = await client.reloadCommand(commandName);
         }
-        client.utils.Embed(interaction, 'Green', `${client.customEmojis.reactions.Yes} Command Reloaded`, '', {
-            flags: MessageFlags.Ephemeral,
-        });
+
+        // Register only this command with Discord (create overwrites a command with the same name)
+        const newCommand = client.commands.get(newName);
+        await client.application.commands.create(newCommand.commandData, global ? undefined : ENV.DEV_GUILD_ID);
+
+        client.utils.Embed(
+            interaction,
+            'Green',
+            `${client.customEmojis.reactions.Yes} Command Reloaded`,
+            `\`${newCommand.commandData.name}\` reloaded on ${shardCount} shard(s) and registered ${global ? 'globally' : 'to the developer guild'}.`
+        );
     } catch (error) {
-        console.error(error);
+        client.utils.LogData('Reload', `${commandName}: ${error.stack ?? error.message}`, 'error');
         client.utils.Embed(
             interaction,
             'Red',
             client.utils.Translate('errors.title', interaction.locale),
-            `There was an error while reloading command \`${commandName}\`:\n\`${error.message}\``,
-            { flags: MessageFlags.Ephemeral }
+            `There was an error while reloading command \`${commandName}\`:\n\`${error.message}\``
         );
     }
 }

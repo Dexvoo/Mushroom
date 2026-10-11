@@ -9,6 +9,7 @@ import { Database_Connect } from './database.js';
 import { Shutdown } from './shutdown.js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 const client = new Client({
     intents: [
@@ -38,14 +39,18 @@ process.on('uncaughtException', (error) => {
     process.exit(1);
 });
 
-const featuresPath = path.join(process.cwd(), 'src/features');
-const features = fs.readdirSync(featuresPath);
+// Resolved from this file rather than process.cwd() so the bot can be started from any directory
+const featuresPath = fileURLToPath(new URL('../features', import.meta.url));
+const features = fs.readdirSync(featuresPath, { withFileTypes: true }).filter((entry) => entry.isDirectory());
 client.utils.Log('Loading Commands/Events');
 for (const feature of features) {
-    const featurePath = path.join(featuresPath, feature);
+    const featurePath = path.join(featuresPath, feature.name);
+    const commandsPath = path.join(featurePath, 'commands');
+    const eventsPath = path.join(featurePath, 'events');
 
-    await loadCommands(client, path.join(featurePath, 'commands'));
-    await loadEvents(client, path.join(featurePath, 'events'));
+    // Features don't need both folders, e.g. an events-only feature
+    if (fs.existsSync(commandsPath)) await loadCommands(client, commandsPath);
+    if (fs.existsSync(eventsPath)) await loadEvents(client, eventsPath);
 }
 
 if (!client.shard || client.shard.ids[0] === 0) {

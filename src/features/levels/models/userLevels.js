@@ -10,7 +10,7 @@ const { Schema, model } = mongoose;
  * @property {number} [level] - Current level
  *
  * @property {number} [totalMessages] - Total messages sent by user
- * @property {number} [totalVoice] - Total voice time in seconds
+ * @property {number} [totalVoice] - Total voice time in minutes
  * @property {number} [totalDrops] - Total drops claimed
  *
  * @property {number} [messageXP] - XP gained specifically from messages

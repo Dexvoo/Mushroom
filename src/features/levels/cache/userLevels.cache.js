@@ -22,7 +22,10 @@ class User_Levels_Cache {
      * @type {NodeCache}
      */
     cache;
+    /** @type {Set<string>} Keys with changes not yet written to the database */
     dirty;
+    /** @type {Promise<void> | null} */
+    flushing = null;
 
     constructor() {
         // 1 hour cache TTL
@@ -31,34 +34,77 @@ class User_Levels_Cache {
             checkperiod: 120,
         });
         this.dirty = new Set();
+
         setInterval(() => {
             this.flush();
         }, 30000);
     }
 
-    async flush() {
+    /**
+     * Stores changed user data and queues it for the next flush.
+     * Dirty entries never expire, so unsaved changes can't be lost to the TTL.
+     * @private
+     * @param {string} key
+     * @param {UserLevelsType} userData
+     */
+    markDirty(key, userData) {
+        this.cache.set(key, userData, 0);
+        this.dirty.add(key);
+    }
+
+    /**
+     * Writes all dirty users to the database in one bulk write.
+     * Concurrent calls share the in-progress flush.
+     * @returns {Promise<void>}
+     */
+    flush() {
+        if (!this.flushing) {
+            this.flushing = this._flush().finally(() => {
+                this.flushing = null;
+            });
+        }
+        return this.flushing;
+    }
+
+    /** @private */
+    async _flush() {
+        if (this.dirty.size === 0) return;
+
+        // Take the current dirty keys; changes made during the write re-mark their key
+        const keys = [...this.dirty];
+        this.dirty.clear();
+
+        const operations = [];
+        for (const key of keys) {
+            const data = this.cache.get(key);
+            if (!data) continue;
+
+            // eslint-disable-next-line no-unused-vars
+            const { _id, __v, guildId, userId, ...fields } = data;
+
+            operations.push({
+                updateOne: {
+                    filter: { guildId, userId },
+                    update: { $set: fields },
+                    upsert: true,
+                },
+            });
+        }
+
+        if (operations.length === 0) return;
+
         try {
-            for (const key of this.dirty) {
-                const data = this.cache.get(key);
+            await UserLevels.bulkWrite(operations, { ordered: false });
 
-                if (!data) continue;
-
-                const { guildId, userId } = data;
-
-                await UserLevels.findOneAndUpdate(
-                    { guildId, userId },
-                    { $set: data },
-                    {
-                        upsert: true,
-                        setDefaultsOnInsert: true,
-                    }
-                );
-
-                this.dirty.delete(key);
+            // Saved entries can expire normally again, unless they changed during the write
+            for (const key of keys) {
+                if (!this.dirty.has(key)) this.cache.ttl(key);
             }
 
-            LogData('User Levels Cache', 'Flushed dirty users to database', 'debug');
+            LogData('User Levels Cache', `Flushed ${operations.length} users to database`, 'debug');
         } catch (error) {
+            // Re-queue so the next flush retries them
+            for (const key of keys) this.dirty.add(key);
             LogData('User Levels Cache', `Failed to flush cache: ${error.message}`, 'error');
         }
     }
@@ -95,9 +141,10 @@ class User_Levels_Cache {
 
     /**
      * Gets user data from cache or database.
+     * Reading does not mark the user dirty; only changes do.
      * @param {string} guildId
      * @param {string} userId
-     * @returns {Promise<UserLevelsType>}
+     * @returns {Promise<UserLevelsType | null>} null if the database lookup failed
      */
     async get(guildId, userId) {
         try {
@@ -113,12 +160,12 @@ class User_Levels_Cache {
             }
 
             this.cache.set(key, userData);
-            this.dirty.add(key);
 
             return userData;
         } catch (error) {
+            // Returning a default here would let a later flush overwrite the user's real data
             LogData('User Levels Cache', `Failed to get user data for ${guildId}:${userId}: ${error.message}`, 'error');
-            return this.createDefault(guildId, userId);
+            return null;
         }
     }
 
@@ -135,18 +182,22 @@ class User_Levels_Cache {
             const data = this.cache.get(key);
             if (!data) return null;
 
+            // eslint-disable-next-line no-unused-vars
+            const { _id, __v, ...fields } = data;
+
             const updated = await UserLevels.findOneAndUpdate(
                 { guildId, userId },
-                { $set: data },
+                { $set: fields },
                 {
                     upsert: true,
-                    new: true,
+                    returnDocument: 'after',
                     lean: true,
                     setDefaultsOnInsert: true,
                 }
             );
 
             this.cache.set(key, updated);
+            this.dirty.delete(key);
 
             return updated;
         } catch (error) {
@@ -195,8 +246,7 @@ class User_Levels_Cache {
         }
 
         // Persist XP before level-up side effects so a failed reward/message can't lose it
-        this.cache.set(key, userData);
-        this.dirty.add(key);
+        this.markDirty(key, userData);
 
         if (leveledUp) {
             const rewards = await this.rewards(member, guildData, userData);
@@ -243,8 +293,7 @@ class User_Levels_Cache {
         }
 
         // Persist XP before level-up side effects so a failed reward/message can't lose it
-        this.cache.set(key, userData);
-        this.dirty.add(key);
+        this.markDirty(key, userData);
 
         if (leveledUp) {
             const rewards = await this.rewards(member, guildData, userData);
@@ -394,10 +443,11 @@ class User_Levels_Cache {
         const key = `${guildId}:${userId}`;
 
         const userData = await this.get(guildId, userId);
+        if (!userData) return null;
+
         userData.totalCommands += 1;
 
-        this.cache.set(key, userData);
-        this.dirty.add(key);
+        this.markDirty(key, userData);
         return userData;
     }
 
@@ -427,6 +477,11 @@ class User_Levels_Cache {
     invalidate(guildId, userId) {
         const key = `${guildId}:${userId}`;
 
+        if (this.dirty.has(key)) {
+            LogData('User Levels Cache', `Skipped invalidating ${guildId}:${userId}: unsaved changes`, 'warning');
+            return;
+        }
+
         this.cache.del(key);
         LogData('User Levels Cache', `Cache invalidated for ${guildId}:${userId}`, 'debug');
     }
@@ -453,10 +508,10 @@ class User_Levels_Cache {
                 .limit(limit)
                 .lean();
 
-            // Refresh cache with latest DB state
+            // Warm the cache, but never overwrite an entry that may hold newer, unsaved changes
             for (const user of topUsers) {
                 const key = `${guildId}:${user.userId}`;
-                this.cache.set(key, user);
+                if (!this.cache.has(key)) this.cache.set(key, user);
             }
 
             LogData('User Levels Cache', `Leaderboard refreshed for ${guildId} (${type})`, 'debug');

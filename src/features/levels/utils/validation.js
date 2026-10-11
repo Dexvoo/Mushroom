@@ -15,21 +15,23 @@ export async function ValidateXP(member, channelLevel) {
     const guildConfig = await Guild_Level_Cache.get(guild.id);
     if (!guildConfig?.enabled || !guildConfig.channelId) {
         if (guildConfig && !guildConfig.enabled) {
-            client.utils.LogData('XP Pre-Check', `Guild: ${guild.name} | Levels disabled.`, 'warning');
+            client.utils.LogData('XP Pre-Check', `Guild: ${guild.name} | Levels disabled.`, 'debug');
         }
         return null;
     }
 
+    // Check the configured level-up channel, not the channel the activity happened in
+    const levelUpChannel = guild.channels.cache.get(guildConfig.channelId);
     const botPermissions = [
         PermissionFlagsBits.ViewChannel,
         PermissionFlagsBits.SendMessages,
         PermissionFlagsBits.EmbedLinks,
     ];
-    const [hasPerms] = client.utils.PermissionCheck(channelLevel, botPermissions, client);
+    const [hasPerms] = levelUpChannel ? client.utils.PermissionCheck(levelUpChannel, botPermissions, client) : [false];
     if (!hasPerms) {
         client.utils.LogData(
             'XP Pre-Check',
-            `Guild: ${guild.name} | Missing permissions in level-up channel, disabling`,
+            `Guild: ${guild.name} | Level-up channel missing or lacking permissions, disabling`,
             'error'
         );
         await Guild_Level_Cache.setType(guild.id, 'enabled', false);
@@ -58,7 +60,7 @@ function isBlacklisted(member, channel, config) {
         client.utils.LogData(
             'XP Blacklist',
             `Guild: ${member.guild.name} | User: @${member.user.username} | Has blacklisted role`,
-            'info'
+            'debug'
         );
         return true;
     }
@@ -67,7 +69,7 @@ function isBlacklisted(member, channel, config) {
         client.utils.LogData(
             'XP Blacklist',
             `Guild: ${member.guild.name} | Channel: #${channel.name} | Is a blacklisted channel`,
-            'info'
+            'debug'
         );
         return true;
     }

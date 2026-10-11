@@ -8,6 +8,7 @@ import * as I18n from '../shared/utils/i18n.js';
 import * as MathUtils from '../shared/utils/math.js';
 import * as StringUtils from '../shared/utils/string.js';
 import { CooldownManager } from '../shared/cache/cooldowns.js';
+import { reloadCommand } from './baseCommands.js';
 
 class ModifiedClient extends Client {
     constructor(options) {
@@ -47,6 +48,16 @@ class ModifiedClient extends Client {
          * @type {CooldownManager}
          */
         this.cooldowns = new CooldownManager();
+    }
+
+    /**
+     * Reloads a command from disk on this shard. Exposed on the client so
+     * broadcastEval can call it on every shard.
+     * @param {string} commandName
+     * @returns {Promise<string>} The reloaded command's name
+     */
+    reloadCommand(commandName) {
+        return reloadCommand(this, commandName);
     }
 }
 

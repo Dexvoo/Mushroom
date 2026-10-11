@@ -1,4 +1,5 @@
 import { ShardingManager } from 'discord.js';
+import { fileURLToPath } from 'url';
 import { LogData, Log } from './shared/utils/logger.js';
 import { ENV } from './bootstrap/environment.js';
 
@@ -7,7 +8,7 @@ if (ENV.DEVELOPER_MODE) LogData('Developer Mode Enabled', 'The bot is running in
 
 const token = ENV.DEVELOPER_MODE ? ENV.BOT_TOKEN_DEV : ENV.BOT_TOKEN;
 
-const ShardManager = new ShardingManager('./src/bootstrap/client.js', {
+const ShardManager = new ShardingManager(fileURLToPath(new URL('./bootstrap/client.js', import.meta.url)), {
     token: token,
     totalShards: 'auto',
 });
