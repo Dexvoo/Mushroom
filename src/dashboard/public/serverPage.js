@@ -7,6 +7,7 @@ import { renderBotSettings } from './botSettings.js';
 import { renderAutoRoles } from './autoRoles.js';
 import { renderWelcome } from './welcome.js';
 import { renderTickets } from './tickets.js';
+import { streamsPage } from './streams.js';
 
 /**
  * Sidebar layout. Items with a `render` are live; the rest are planned and shown as "Soon".
@@ -39,9 +40,9 @@ export const SECTIONS = [
     {
         label: 'Notifications',
         items: [
-            { slug: 'twitch', label: 'Twitch' },
-            { slug: 'youtube', label: 'YouTube' },
-            { slug: 'kick', label: 'Kick' },
+            { slug: 'twitch', label: 'Twitch', render: streamsPage('twitch') },
+            { slug: 'youtube', label: 'YouTube', render: streamsPage('youtube') },
+            { slug: 'kick', label: 'Kick', render: streamsPage('kick') },
         ],
     },
     {

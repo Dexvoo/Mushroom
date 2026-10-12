@@ -141,3 +141,20 @@ test('dashboard rejects invalid ports and URLs', () => {
     assert.ok(errors.some((e) => e.startsWith('DASHBOARD_PORT must be a port number')));
     assert.ok(errors.some((e) => e.startsWith('DASHBOARD_URL must be a full URL')));
 });
+
+test('stream notification keys: each platform is off until both of its keys are set', () => {
+    const { env, warnings } = parseEnvironment({
+        ...base,
+        TWITCH_CLIENT_ID: 'id',
+        TWITCH_CLIENT_SECRET: 'secret',
+        KICK_CLIENT_ID: 'only-half',
+        YOUTUBE_API_KEY: 'key',
+    });
+    assert.deepEqual(env.STREAMS, {
+        TWITCH: { CLIENT_ID: 'id', CLIENT_SECRET: 'secret' },
+        KICK: null,
+        YOUTUBE_API_KEY: 'key',
+    });
+    assert.ok(warnings.some((warning) => warning.includes('KICK_CLIENT_SECRET')));
+    assert.deepEqual(parseEnvironment(base).env.STREAMS, { TWITCH: null, KICK: null, YOUTUBE_API_KEY: null });
+});

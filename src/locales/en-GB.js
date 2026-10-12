@@ -131,6 +131,23 @@ export default {
             not_set: 'Not set',
         },
 
+        streams: {
+            title: 'Stream Notifications',
+            added: 'Now following **{name}** on {platform}. Notifications will be posted in {channel}.',
+            removed: 'No longer following **{name}** on {platform}.',
+            not_followed: 'This server does not follow anyone by that name. See who it follows with `/streams list`.',
+            cannot_post: 'Ovx needs these permissions in {channel} first: `{perms}`',
+            not_configured: '{platform} notifications are not set up on this bot yet.',
+            limit: 'This server can follow up to {max} streamers. Unfollow one first.',
+            limit_premium: 'Premium servers can follow up to {premiumMax}.',
+            not_found: 'Could not find that {platform} channel. Check the name or link.',
+            duplicate: 'This server already follows that {platform} channel.',
+            platform_error: '{platform} could not be reached. Try again in a moment.',
+            usage: '{used} of {max} followed.',
+            none: 'This server does not follow anyone yet. Follow someone with `/streams add` or on the dashboard.',
+            no_ping: 'no ping',
+        },
+
         ping: {
             title: '🏓 Pong!',
             description: 'Latency: {ms}ms\nAPI Latency: {api}ms',

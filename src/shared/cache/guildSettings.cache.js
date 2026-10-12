@@ -62,12 +62,34 @@ class GuildSettingsCache {
      * @returns {GuildSettingsType}
      */
     createDefault(guildId) {
-        return { guildId, embedColour: null, bio: null };
+        return { guildId, embedColour: null, bio: null, premiumUntil: null };
+    }
+
+    /**
+     * Forgets a guild's cached settings, so the next read comes from the database (e.g. after another
+     * shard changed them).
+     * @param {string} guildId
+     */
+    invalidate(guildId) {
+        this.cache.del(guildId);
     }
 }
 
 const Guild_Settings_Cache = new GuildSettingsCache();
 export default Guild_Settings_Cache;
+
+/** Premium granted without an end date is stored as this date. */
+export const PREMIUM_FOREVER = new Date('9999-12-31T00:00:00Z');
+
+/**
+ * Whether a server has premium right now.
+ * @param {string} guildId
+ * @returns {Promise<boolean>}
+ */
+export async function isPremium(guildId) {
+    const { premiumUntil } = await Guild_Settings_Cache.get(guildId);
+    return Boolean(premiumUntil && new Date(premiumUntil).getTime() > Date.now());
+}
 
 /**
  * The colour for the bot's general (non-log) embeds in a server.

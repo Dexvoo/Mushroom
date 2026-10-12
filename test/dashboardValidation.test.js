@@ -8,6 +8,8 @@ import {
     validateWelcomeSettings,
     validateTicketSettings,
     parseButtonEmoji,
+    validateStreamAdd,
+    validateStreamUpdates,
     IMAGE_MAX_BYTES,
 } from '../src/dashboard/validation.js';
 
@@ -466,4 +468,48 @@ test('button emojis: one Unicode emoji, or one of this server’s custom emojis'
     for (const emoji of ['🎫🎫', 'abc', ':smile:', '<:other:900000000000000009>', '<script>', '1', 42]) {
         assert.equal(ok(emoji), false, String(emoji));
     }
+});
+
+// ---------- Stream notifications ----------
+
+test('following a streamer: platform, what to look up, a channel the bot can post in, and an optional ping', () => {
+    assert.deepEqual(
+        validateStreamAdd({ platform: 'twitch', query: ' shroud ', channelId: TEXT, roleId: 'everyone' }, guild),
+        {
+            settings: { platform: 'twitch', query: 'shroud', channelId: TEXT, roleId: 'everyone' },
+            errors: [],
+        }
+    );
+    const errorsFor = (input) =>
+        validateStreamAdd({ platform: 'twitch', query: 'x', channelId: TEXT, ...input }, guild).errors;
+    assert.equal(errorsFor({ platform: 'facebook' }).length, 1);
+    assert.equal(errorsFor({ query: '   ' }).length, 1);
+    assert.equal(errorsFor({ query: 'x'.repeat(101) }).length, 1);
+    assert.equal(errorsFor({ channelId: VOICE }).length, 1);
+    assert.equal(errorsFor({ roleId: OTHER_SERVER_ID }).length, 1);
+});
+
+test('stream settings: only followed streamers, each field checked', () => {
+    const ID = 'a'.repeat(24);
+    const existing = new Map([[ID, 'shroud']]);
+    const update = (overrides = {}) => ({
+        id: ID,
+        channelId: TEXT,
+        roleId: null,
+        liveMessage: ' Live! ',
+        videoMessage: null,
+        notifyLive: true,
+        notifyVideos: false,
+        ...overrides,
+    });
+
+    assert.deepEqual(validateStreamUpdates([update()], guild, existing).settings[0].liveMessage, 'Live!');
+    const errorsFor = (overrides) => validateStreamUpdates([update(overrides)], guild, existing).errors;
+    assert.match(errorsFor({ id: 'b'.repeat(24) })[0], /no longer followed/);
+    assert.equal(errorsFor({ channelId: VOICE }).length, 1);
+    assert.equal(errorsFor({ roleId: 'nope' }).length, 1);
+    assert.equal(errorsFor({ liveMessage: 'x'.repeat(501) }).length, 1);
+    assert.equal(errorsFor({ notifyLive: 'yes' }).length, 1);
+    assert.equal(errorsFor({ guildId: 'x' }).length, 1);
+    assert.equal(validateStreamUpdates([], guild, existing).errors.length, 1);
 });

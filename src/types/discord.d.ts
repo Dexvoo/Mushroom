@@ -10,5 +10,6 @@ declare module 'discord.js' {
         cooldowns: ModifiedClient['cooldowns'];
         reloadCommand(commandName: string): Promise<string>;
         dashboard(action: string, payload: unknown): Promise<unknown>;
+        invalidateGuildSettings(guildId: string): Promise<void>;
     }
 }

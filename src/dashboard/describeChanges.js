@@ -255,3 +255,47 @@ function describeTicketTypeChanges(before, after) {
     if (order(before) !== order(after)) changes.push('Reordered ticket types');
     return changes;
 }
+
+/**
+ * Changes to followed streamers.
+ * @param {any[]} before - subscriptionView list before the save
+ * @param {any[]} after - subscriptionView list after the save
+ * @param {NameLookup} names
+ * @returns {string[]}
+ */
+export function describeStreamChanges(before, after, names) {
+    const changes = [];
+    const platformName = { twitch: 'Twitch', youtube: 'YouTube', kick: 'Kick' };
+    const label = (subscription) => `${platformName[subscription.platform]} ${subscription.account.displayName}`;
+    const role = (roleId) => (roleId === 'everyone' ? '@everyone' : roleId ? names.role(roleId) : 'no ping');
+    const beforeById = new Map(before.map((subscription) => [subscription.id, subscription]));
+    const afterIds = new Set(after.map((subscription) => subscription.id));
+
+    for (const subscription of after) {
+        const was = beforeById.get(subscription.id);
+        if (!was) {
+            changes.push(`Followed ${label(subscription)} in ${names.channel(subscription.channelId)}`);
+            continue;
+        }
+        const name = label(subscription);
+        if (was.channelId !== subscription.channelId) {
+            changes.push(`${name}: channel ${names.channel(was.channelId)} → ${names.channel(subscription.channelId)}`);
+        }
+        if (was.roleId !== subscription.roleId)
+            changes.push(`${name}: ping ${role(was.roleId)} → ${role(subscription.roleId)}`);
+        if (was.notifyLive !== subscription.notifyLive) {
+            changes.push(`${name}: live notifications ${onOff(was.notifyLive)} → ${onOff(subscription.notifyLive)}`);
+        }
+        if (was.notifyVideos !== subscription.notifyVideos) {
+            changes.push(
+                `${name}: video notifications ${onOff(was.notifyVideos)} → ${onOff(subscription.notifyVideos)}`
+            );
+        }
+        if (was.liveMessage !== subscription.liveMessage) changes.push(`${name}: live message changed`);
+        if (was.videoMessage !== subscription.videoMessage) changes.push(`${name}: video message changed`);
+    }
+    for (const subscription of before) {
+        if (!afterIds.has(subscription.id)) changes.push(`Unfollowed ${label(subscription)}`);
+    }
+    return changes;
+}

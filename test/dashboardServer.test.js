@@ -40,7 +40,10 @@ const bridge = {
             return { ok: false, status: 404, error: 'Leaderboard not found' };
         if (action === 'access' && denyAccess)
             return { ok: false, status: 403, error: 'You need the Manage Server permission' };
-        if (action.startsWith('save') || action === 'resetSettings' || action === 'postTicketPanel') {
+        if (
+            action.startsWith('save') ||
+            ['resetSettings', 'postTicketPanel', 'addStream', 'removeStream'].includes(action)
+        ) {
             return { ok: true, data: { action, guildId }, changes: saveChanges };
         }
         return { ok: true, data: { action, guildId } };
@@ -473,6 +476,28 @@ test('ticket saves and panel posts go to the shard as the session user and are r
     assert.equal(panel.status, 200);
     const post = bridgeCalls.find((call) => call.action === 'postTicketPanel');
     assert.deepEqual(post.payload, { userId: USER_ID, channelId: '1' });
+});
+
+test('stream routes go to the shard as the session user, and odd IDs never reach it', async () => {
+    saveChanges = ['Followed Twitch shroud in #streams'];
+    const client = await login();
+    const id = 'a'.repeat(24);
+
+    assert.equal(
+        (await client.request(`/api/guilds/${GUILD_ID}/streams`, json({ platform: 'twitch' }, 'POST'))).status,
+        200
+    );
+    assert.equal(auditEntries[0].action, 'Updated stream notifications');
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/streams/twitch`, json([]))).status, 200);
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/streams/facebook`, json([]))).status, 404);
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/streams/${id}`, json({}, 'DELETE'))).status, 200);
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/streams/not-an-id`, json({}, 'DELETE'))).status, 404);
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/streams/${id}/test`, json({}, 'POST'))).status, 200);
+
+    const actions = bridgeCalls.map((call) => call.action);
+    for (const action of ['addStream', 'saveStreams', 'removeStream', 'testStream'])
+        assert.ok(actions.includes(action), action);
+    assert.ok(bridgeCalls.every((call) => !call.payload.userId || call.payload.userId === USER_ID));
 });
 
 test('only Bot Settings saves may be large (for images); other requests stay small', async () => {

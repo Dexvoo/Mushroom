@@ -927,3 +927,123 @@ function validateTicketTypes(input, guild, errors) {
     }
     return types;
 }
+
+/** Limits for stream notification messages. */
+export const STREAM_MESSAGE_MAX = 500;
+
+const STREAM_PLATFORM_NAMES = new Set(['twitch', 'youtube', 'kick']);
+const SUBSCRIPTION_ID = /^[a-f\d]{24}$/i;
+const STREAM_UPDATE_KEYS = new Set([
+    'id',
+    'channelId',
+    'roleId',
+    'liveMessage',
+    'videoMessage',
+    'notifyLive',
+    'notifyVideos',
+]);
+
+/**
+ * A role to ping: a role in the server, 'everyone', or null for no ping.
+ * @param {unknown} roleId
+ * @param {GuildContext} guild
+ */
+function validPingRole(roleId, guild) {
+    return (
+        roleId === null ||
+        roleId === 'everyone' ||
+        (typeof roleId === 'string' && SNOWFLAKE.test(roleId) && guild.roles.has(roleId))
+    );
+}
+
+/**
+ * Validates following a new streamer. The account itself is checked on the platform afterwards.
+ * Shape: { platform, query, channelId, roleId? }
+ * @param {unknown} input
+ * @param {GuildContext} guild
+ * @returns {{ settings: { platform?: string, query?: string, channelId?: string, roleId?: string | null }, errors: string[] }}
+ */
+export function validateStreamAdd(input, guild) {
+    const errors = [];
+    if (!isPlainObject(input)) return { settings: {}, errors: ['Settings must be an object'] };
+
+    const { platform, query, channelId, roleId = null } = input;
+    if (!STREAM_PLATFORM_NAMES.has(platform)) errors.push('Choose Twitch, YouTube or Kick');
+    if (typeof query !== 'string' || !query.trim() || query.trim().length > 100) {
+        errors.push('Enter a username, channel or link');
+    }
+    if (typeof channelId !== 'string' || !guild.textChannelIds.has(channelId)) {
+        errors.push('Choose a text channel the bot can post in');
+    }
+    if (!validPingRole(roleId, guild)) errors.push('The role to ping is not in this server');
+
+    return errors.length > 0
+        ? { settings: {}, errors }
+        : { settings: { platform, query: query.trim(), channelId, roleId }, errors };
+}
+
+/**
+ * Validates changes to followed streamers (each one sent is replaced as a whole).
+ * Shape: [{ id, channelId, roleId, liveMessage, videoMessage, notifyLive, notifyVideos }]
+ * @param {unknown} input
+ * @param {GuildContext} guild
+ * @param {Map<string, string>} existing - Subscription ID → display name, for this server and platform
+ * @returns {{ settings: Record<string, any>[], errors: string[] }}
+ */
+export function validateStreamUpdates(input, guild, existing) {
+    const errors = [];
+    if (!Array.isArray(input) || input.length === 0 || input.length > 100) {
+        return { settings: [], errors: ['Nothing to save'] };
+    }
+
+    const updates = [];
+    const seen = new Set();
+    for (const item of input) {
+        if (!isPlainObject(item) || Object.keys(item).some((key) => !STREAM_UPDATE_KEYS.has(key))) {
+            errors.push('Settings are not valid');
+            continue;
+        }
+        if (
+            typeof item.id !== 'string' ||
+            !SUBSCRIPTION_ID.test(item.id) ||
+            !existing.has(item.id) ||
+            seen.has(item.id)
+        ) {
+            errors.push('One of these streamers is no longer followed. Refresh the page.');
+            continue;
+        }
+        const label = existing.get(item.id);
+        const before = errors.length;
+
+        if (typeof item.channelId !== 'string' || !guild.textChannelIds.has(item.channelId)) {
+            errors.push(`${label}: choose a text channel the bot can post in`);
+        }
+        if (!validPingRole(item.roleId, guild)) errors.push(`${label}: the role to ping is not in this server`);
+        if (typeof item.notifyLive !== 'boolean' || typeof item.notifyVideos !== 'boolean') {
+            errors.push(`${label}: on/off settings must be true or false`);
+        }
+        const liveMessage = optionalText(item.liveMessage, STREAM_MESSAGE_MAX, `${label} live message`, errors);
+        const videoMessage = optionalText(item.videoMessage, STREAM_MESSAGE_MAX, `${label} video message`, errors);
+
+        if (errors.length > before) continue;
+        seen.add(item.id);
+        updates.push({
+            id: item.id,
+            channelId: item.channelId,
+            roleId: item.roleId,
+            liveMessage,
+            videoMessage,
+            notifyLive: item.notifyLive,
+            notifyVideos: item.notifyVideos,
+        });
+    }
+    return { settings: updates, errors };
+}
+
+/**
+ * A subscription ID from a URL.
+ * @param {unknown} id
+ */
+export function isSubscriptionId(id) {
+    return typeof id === 'string' && SUBSCRIPTION_ID.test(id);
+}

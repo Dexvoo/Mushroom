@@ -1630,6 +1630,50 @@ a.sidebar-link:hover {
     margin-top: 8px;
 }
 
+/* ---------- Stream notifications ---------- */
+
+.stream-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.stream-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.stream-name {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1 1 160px;
+}
+
+.stream-name a {
+    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 700;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.stream-name a:hover {
+    color: var(--accent-strong);
+}
+
+.stream-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 /* ---------- Web Logs ---------- */
 
 .section-header-actions {

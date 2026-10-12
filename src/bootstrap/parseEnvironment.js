@@ -15,6 +15,14 @@ const SNOWFLAKE = /^\d{17,20}$/;
  * @property {string | null} USER_LEVEL_CID - Dev log channel for level-ups
  * @property {string | null} VOTE_CID - Dev log channel for votes
  * @property {DashboardConfig | null} DASHBOARD - null when the dashboard is disabled
+ * @property {StreamsConfig} STREAMS - Keys for stream notifications; a platform without keys is switched off
+ */
+
+/**
+ * @typedef {Object} StreamsConfig
+ * @property {{ CLIENT_ID: string, CLIENT_SECRET: string } | null} TWITCH - From dev.twitch.tv/console
+ * @property {{ CLIENT_ID: string, CLIENT_SECRET: string } | null} KICK - From kick.com (Settings → Developer)
+ * @property {string | null} YOUTUBE_API_KEY - Optional: new videos work without it; live streams need it
  */
 
 /**
@@ -80,6 +88,26 @@ export function parseEnvironment(env) {
 
     const dashboard = optional('DASHBOARD_ENABLED') === 'true' ? parseDashboard() : null;
 
+    /**
+     * A client ID and secret pair; half a pair is a warning (the platform stays off).
+     * @param {string} label
+     * @param {string} prefix - e.g. TWITCH reads TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET
+     */
+    const clientPair = (label, prefix) => {
+        const id = optional(`${prefix}_CLIENT_ID`);
+        const secret = optional(`${prefix}_CLIENT_SECRET`);
+        if (id && secret) return { CLIENT_ID: id, CLIENT_SECRET: secret };
+        if (id || secret) {
+            warnings.push(`${label} notifications are off: set both ${prefix}_CLIENT_ID and ${prefix}_CLIENT_SECRET`);
+        }
+        return null;
+    };
+    const streams = {
+        TWITCH: clientPair('Twitch', 'TWITCH'),
+        KICK: clientPair('Kick', 'KICK'),
+        YOUTUBE_API_KEY: optional('YOUTUBE_API_KEY'),
+    };
+
     function parseDashboard() {
         const port = Number(optional('DASHBOARD_PORT') ?? 3000);
         if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -136,6 +164,7 @@ export function parseEnvironment(env) {
         VOTE_CID: snowflake('VOTE_CID'),
 
         DASHBOARD: dashboard,
+        STREAMS: streams,
     };
 
     return errors.length > 0 ? { env: null, errors, warnings } : { env: parsed, errors, warnings };

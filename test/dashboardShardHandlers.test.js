@@ -8,6 +8,7 @@ import Guild_Settings_Cache from '../src/shared/cache/guildSettings.cache.js';
 import Auto_Roles_Cache from '../src/features/autoRoles/cache/autoRoles.cache.js';
 import Welcome_Cache from '../src/features/welcome/cache/welcome.cache.js';
 import Ticket_Config_Cache from '../src/features/tickets/cache/ticketConfig.cache.js';
+import { StreamSubscription } from '../src/features/streams/models/streamSubscription.js';
 import { handle } from '../src/dashboard/shardHandlers.js';
 import { ALLOWED_SIZES } from '@discordjs/rest';
 
@@ -28,6 +29,7 @@ let welcome;
 let welcomeWrites;
 let tickets;
 let ticketWrites;
+let streams;
 let storedSettings;
 
 /** Image links throw on sizes Discord doesn't serve, like discord.js does. */
@@ -162,6 +164,16 @@ beforeEach(() => {
     tickets = Ticket_Config_Cache.createDefault(GUILD_ID);
     ticketWrites = [];
     Ticket_Config_Cache.get = async () => tickets;
+    streams = [];
+    StreamSubscription.find = (filter) => ({
+        sort: () => ({
+            lean: async () =>
+                streams.filter(
+                    (s) => s.guildId === filter.guildId && (!filter.platform || s.platform === filter.platform)
+                ),
+        }),
+    });
+    StreamSubscription.countDocuments = async (filter) => streams.filter((s) => s.guildId === filter.guildId).length;
     Ticket_Config_Cache.set = async (guildId, updates) => {
         ticketWrites.push(updates);
         tickets = { ...tickets, ...updates };
@@ -698,4 +710,114 @@ test('resetting tickets keeps the ticket counter and where the panel is', async 
     assert.equal('panel' in written, false, 'the panel message is kept');
     assert.equal(written['panel.title'], null);
     assert.ok(result.changes.includes('Tickets: on → off'));
+});
+
+// ---------- Stream notifications ----------
+
+const SUB_ID = 'a'.repeat(24);
+const streamDoc = (extra = {}) => ({
+    _id: SUB_ID,
+    guildId: GUILD_ID,
+    platform: 'youtube',
+    accountId: 'UC' + 'a'.repeat(22),
+    accountName: 'UC' + 'a'.repeat(22),
+    displayName: 'Mushroom TV',
+    url: 'https://www.youtube.com/channel/x',
+    channelId: TEXT,
+    roleId: null,
+    notifyLive: true,
+    notifyVideos: true,
+    ...extra,
+});
+
+test('the overview has the followed streamers, which platforms work, and the limit', async () => {
+    streams = [streamDoc()];
+    const result = await handle(makeClient(), 'guildOverview', { guildId: GUILD_ID, userId: MANAGER });
+    assert.equal(result.data.streams[0].account.displayName, 'Mushroom TV');
+    assert.deepEqual(result.data.streamLimit, { used: 1, max: 5, premium: false });
+    assert.equal(result.data.streamStatus.youtube, true);
+    assert.equal(result.data.limits.STREAMS.PREMIUM, 50);
+});
+
+test('following a streamer checks the input first, and explains platform problems', async () => {
+    const add = (settings) => handle(makeClient(), 'addStream', { guildId: GUILD_ID, userId: MANAGER, settings });
+    assert.equal((await add({ platform: 'twitch', query: '', channelId: TEXT })).status, 400);
+    assert.equal(
+        (await handle(makeClient(), 'addStream', { guildId: GUILD_ID, userId: MEMBER, settings: {} })).status,
+        403
+    );
+
+    // Twitch has no keys in the tests, so it's switched off
+    const off = await add({ platform: 'twitch', query: 'shroud', channelId: TEXT });
+    assert.match(off.error, /aren't set up/);
+
+    streams = Array.from({ length: 5 }, (_, i) => streamDoc({ _id: String(i).repeat(24) }));
+    const full = await add({ platform: 'youtube', query: 'UC' + 'b'.repeat(22), channelId: TEXT });
+    assert.match(full.error, /up to 5 streamers \(50 with premium\)/);
+});
+
+test('saving stream settings only touches this server and platform', async () => {
+    streams = [streamDoc()];
+    const writes = [];
+    StreamSubscription.bulkWrite = async (ops) => {
+        writes.push(...ops);
+        Object.assign(streams[0], ops[0].updateOne.update.$set);
+    };
+    const settings = [
+        {
+            id: SUB_ID,
+            channelId: TEXT,
+            roleId: ROLE,
+            liveMessage: null,
+            videoMessage: 'New!',
+            notifyLive: false,
+            notifyVideos: true,
+        },
+    ];
+    const result = await handle(makeClient(), 'saveStreams', {
+        guildId: GUILD_ID,
+        userId: MANAGER,
+        platform: 'youtube',
+        settings,
+    });
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(writes[0].updateOne.filter, { _id: SUB_ID, guildId: GUILD_ID, platform: 'youtube' });
+    assert.ok(result.changes.includes('YouTube Mushroom TV: ping no ping → @Regular'));
+
+    const otherPlatform = await handle(makeClient(), 'saveStreams', {
+        guildId: GUILD_ID,
+        userId: MANAGER,
+        platform: 'twitch',
+        settings,
+    });
+    assert.equal(otherPlatform.status, 400, 'a YouTube subscription cannot be saved through the Twitch page');
+});
+
+test('unfollowing and resetting a platform', async () => {
+    StreamSubscription.findOneAndDelete = (filter) => ({
+        lean: async () => (filter._id === SUB_ID && filter.guildId === GUILD_ID ? streamDoc() : null),
+    });
+    const removed = await handle(makeClient(), 'removeStream', {
+        guildId: GUILD_ID,
+        userId: MANAGER,
+        subscriptionId: SUB_ID,
+    });
+    assert.deepEqual(removed.changes, ['Unfollowed YouTube Mushroom TV']);
+    assert.equal(
+        (await handle(makeClient(), 'removeStream', { guildId: GUILD_ID, userId: MANAGER, subscriptionId: { $ne: 1 } }))
+            .status,
+        404
+    );
+
+    streams = [streamDoc()];
+    let deleted;
+    StreamSubscription.deleteMany = async (filter) => void (deleted = filter);
+    const reset = await handle(makeClient(), 'resetSettings', {
+        guildId: GUILD_ID,
+        userId: MANAGER,
+        section: 'youtube',
+    });
+    assert.deepEqual(deleted, { guildId: GUILD_ID, platform: 'youtube' });
+    assert.deepEqual(reset.changes, ['Unfollowed YouTube Mushroom TV']);
 });

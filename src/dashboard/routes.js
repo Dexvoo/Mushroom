@@ -6,6 +6,7 @@ import { LogData } from '../shared/utils/logger.js';
 const LEADERBOARD_TYPES = new Set(['level', 'totalMessages', 'totalVoice', 'totalCommands']);
 const PUBLIC_CACHE_MS = 60_000;
 const PUBLIC_CACHE_MAX = 500;
+const PUBLIC_STATS_MS = 5 * 60_000;
 
 // What the bot needs for its features (levels, logs, rewards); used in "Add to server" links
 const BOT_PERMISSIONS = new PermissionsBitField([
@@ -178,6 +179,56 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         })
     );
 
+    const STREAM_PLATFORMS = new Set(['twitch', 'youtube', 'kick']);
+    const SUBSCRIPTION_ID = /^[a-f\d]{24}$/i;
+
+    router.post('/guilds/:guildId/streams', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('addStream', req.params.guildId, {
+                userId: req.session.user.id,
+                settings: req.body,
+            });
+            if (result.ok) await recordAudit(req, 'Updated stream notifications', result.changes);
+            return result;
+        })
+    );
+
+    router.put('/guilds/:guildId/streams/:platform', requireLogin, validGuildId, (req, res) => {
+        if (!STREAM_PLATFORMS.has(req.params.platform)) return res.status(404).json({ error: 'Not found' });
+        return respond(res, async () => {
+            const result = await bridge.guild('saveStreams', req.params.guildId, {
+                userId: req.session.user.id,
+                platform: req.params.platform,
+                settings: req.body,
+            });
+            if (result.ok && result.changes?.length)
+                await recordAudit(req, 'Updated stream notifications', result.changes);
+            return result;
+        });
+    });
+
+    router.delete('/guilds/:guildId/streams/:subscriptionId', requireLogin, validGuildId, (req, res) => {
+        if (!SUBSCRIPTION_ID.test(req.params.subscriptionId)) return res.status(404).json({ error: 'Not found' });
+        return respond(res, async () => {
+            const result = await bridge.guild('removeStream', req.params.guildId, {
+                userId: req.session.user.id,
+                subscriptionId: req.params.subscriptionId,
+            });
+            if (result.ok) await recordAudit(req, 'Updated stream notifications', result.changes);
+            return result;
+        });
+    });
+
+    router.post('/guilds/:guildId/streams/:subscriptionId/test', requireLogin, validGuildId, (req, res) => {
+        if (!SUBSCRIPTION_ID.test(req.params.subscriptionId)) return res.status(404).json({ error: 'Not found' });
+        return respond(res, () =>
+            bridge.guild('testStream', req.params.guildId, {
+                userId: req.session.user.id,
+                subscriptionId: req.params.subscriptionId,
+            })
+        );
+    });
+
     const RESET_ACTIONS = {
         levels: 'Reset level settings',
         logging: 'Reset logging settings',
@@ -185,6 +236,9 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         'auto-roles': 'Reset auto roles',
         welcome: 'Reset welcome messages',
         tickets: 'Reset ticket settings',
+        twitch: 'Reset Twitch notifications',
+        youtube: 'Reset YouTube notifications',
+        kick: 'Reset Kick notifications',
     };
 
     router.post('/guilds/:guildId/reset/:section', requireLogin, validGuildId, (req, res) => {
@@ -271,6 +325,25 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         res.status(status).json(body);
     });
 
+    // Public: what the landing page shows. Totals are cached so visitors can't make every shard count
+    // its servers on each page load; the invite link is always sent, even while the shards are down.
+    let publicStats = { at: 0, guilds: null, members: null };
+    router.get('/public/stats', async (req, res) => {
+        if (Date.now() - publicStats.at >= PUBLIC_STATS_MS) {
+            try {
+                const shards = await bridge.stats();
+                publicStats = {
+                    at: Date.now(),
+                    guilds: shards.reduce((total, shard) => total + shard.guilds, 0),
+                    members: shards.reduce((total, shard) => total + shard.members, 0),
+                };
+            } catch {
+                // Keep showing the last totals (or none); try again on the next request
+            }
+        }
+        res.json({ guilds: publicStats.guilds, members: publicStats.members, inviteUrl: inviteUrl(applicationId) });
+    });
+
     router.get('/dev/stats', requireLogin, requireDeveloper(developerIds), async (req, res) => {
         try {
             const shards = await bridge.stats();
@@ -306,13 +379,13 @@ function leaderboardType(value) {
  * @param {string} applicationId
  * @param {string} guildId
  */
+/** Without a guildId, Discord asks which server to add the bot to. */
 function inviteUrl(applicationId, guildId) {
     const params = new URLSearchParams({
         client_id: applicationId,
         scope: [OAuth2Scopes.Bot, OAuth2Scopes.ApplicationsCommands].join(' '),
         permissions: BOT_PERMISSIONS,
-        guild_id: guildId,
-        disable_guild_select: 'true',
+        ...(guildId && { guild_id: guildId, disable_guild_select: 'true' }),
     });
     return `https://discord.com/oauth2/authorize?${params}`;
 }

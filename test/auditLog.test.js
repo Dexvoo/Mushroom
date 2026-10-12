@@ -7,6 +7,7 @@ import {
     describeAutoRoleChanges,
     describeWelcomeChanges,
     describeTicketChanges,
+    describeStreamChanges,
 } from '../src/dashboard/describeChanges.js';
 import { searchPattern, createMongoAuditStore, AUDIT_PAGE_SIZE } from '../src/dashboard/auditStore.js';
 import { AuditLog } from '../src/dashboard/models/auditLog.js';
@@ -306,4 +307,33 @@ test('describes ticket type changes, matched by ID', () => {
         'Removed ticket type: Old',
         'Reordered ticket types',
     ]);
+});
+
+test('describes stream notification changes', () => {
+    const sub = (id, extra = {}) => ({
+        id,
+        platform: 'twitch',
+        account: { displayName: id === 'a' ? 'shroud' : 'pokimane' },
+        channelId: 'c1',
+        roleId: null,
+        liveMessage: null,
+        videoMessage: null,
+        notifyLive: true,
+        notifyVideos: true,
+        ...extra,
+    });
+    assert.deepEqual(
+        describeStreamChanges(
+            [sub('a')],
+            [sub('a', { channelId: 'c2', roleId: 'everyone', liveMessage: 'Hi' }), sub('b')],
+            names
+        ),
+        [
+            'Twitch shroud: channel #general → #level-ups',
+            'Twitch shroud: ping no ping → @everyone',
+            'Twitch shroud: live message changed',
+            'Followed Twitch pokimane in #general',
+        ]
+    );
+    assert.deepEqual(describeStreamChanges([sub('a')], [], names), ['Unfollowed Twitch shroud']);
 });

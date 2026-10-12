@@ -78,6 +78,15 @@ class ModifiedClient extends Client {
         const { handle } = await import('../dashboard/shardHandlers.js');
         return handle(this, action, payload);
     }
+
+    /**
+     * Drops this shard's cached copy of a guild's settings (called on every shard when premium changes).
+     * @param {string} guildId
+     */
+    async invalidateGuildSettings(guildId) {
+        const { default: cache } = await import('../shared/cache/guildSettings.cache.js');
+        cache.invalidate(guildId);
+    }
 }
 
 export default ModifiedClient;

@@ -75,7 +75,7 @@ export async function api(path) {
 
 /**
  * Send JSON to the dashboard API (same-origin, so the browser adds the Origin header the server checks).
- * @param {'PUT' | 'POST'} method
+ * @param {'PUT' | 'POST' | 'DELETE'} method
  * @returns {Promise<{ status: number, data: any }>}
  */
 export async function apiSend(method, path, body) {

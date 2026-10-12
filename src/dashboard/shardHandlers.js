@@ -11,6 +11,16 @@ import { DEFAULT_MESSAGES } from '../features/welcome/utils/welcomeMessage.js';
 import Ticket_Config_Cache from '../features/tickets/cache/ticketConfig.cache.js';
 import { TICKET_DEFAULTS } from '../features/tickets/utils/components.js';
 import { postPanel } from '../features/tickets/utils/panel.js';
+import { StreamSubscription } from '../features/streams/models/streamSubscription.js';
+import {
+    addSubscription,
+    listSubscriptions,
+    platformStatus,
+    streamLimit,
+    STREAM_LIMITS,
+} from '../features/streams/utils/subscriptions.js';
+import { buildNotification, PLATFORMS, STREAM_DEFAULTS } from '../features/streams/utils/notification.js';
+import { post as postNotification } from '../features/streams/utils/poller.js';
 import {
     validateLevelSettings,
     validateLoggingSettings,
@@ -18,6 +28,10 @@ import {
     validateAutoRoleSettings,
     validateWelcomeSettings,
     validateTicketSettings,
+    validateStreamAdd,
+    validateStreamUpdates,
+    isSubscriptionId,
+    STREAM_MESSAGE_MAX,
     TICKET_LIMITS,
     TICKET_TYPE_LIMITS,
     WELCOME_LIMITS,
@@ -34,6 +48,7 @@ import {
     describeAutoRoleChanges,
     describeWelcomeChanges,
     describeTicketChanges,
+    describeStreamChanges,
 } from './describeChanges.js';
 import { levelsView, loggingView, autoRolesView, welcomeView, ticketsView, nameLookup } from './settingsViews.js';
 import { LogData } from '../shared/utils/logger.js';
@@ -84,6 +99,10 @@ const handlers = {
     saveWelcomeSettings,
     saveTicketSettings,
     postTicketPanel,
+    addStream,
+    saveStreams,
+    removeStream,
+    testStream,
     resetSettings,
     leaderboard,
     stats,
@@ -188,6 +207,10 @@ async function guildOverview(client, { guildId, userId }) {
         tickets: ticketsView(tickets, roleExists(guild)),
         ticketPanel: { channelId: tickets.panel?.channelId ?? null, posted: Boolean(tickets.panel?.messageId) },
         ticketDefaults: TICKET_DEFAULTS,
+        streams: await listSubscriptions(guild.id),
+        streamStatus: platformStatus(),
+        streamLimit: await streamLimit(guild.id),
+        streamDefaults: STREAM_DEFAULTS,
         emojis: guild.emojis.cache
             .filter((emoji) => emoji.available !== false)
             .map((emoji) => ({
@@ -214,6 +237,7 @@ async function guildOverview(client, { guildId, userId }) {
             WELCOME: WELCOME_LIMITS,
             TICKETS: TICKET_LIMITS,
             TICKET_TYPES: TICKET_TYPE_LIMITS,
+            STREAMS: { ...STREAM_LIMITS, MESSAGE_MAX: STREAM_MESSAGE_MAX },
         },
     });
 }
@@ -433,8 +457,133 @@ async function postTicketPanel(client, { guildId, userId, channelId }) {
     };
 }
 
+/** What to tell someone when following a streamer didn't work. */
+const ADD_STREAM_ERRORS = {
+    not_configured: (platform) => `${platform} notifications aren't set up on this bot yet.`,
+    limit: (platform, result) =>
+        `This server can follow up to ${result.max} streamers${result.premium ? '' : ` (${STREAM_LIMITS.PREMIUM} with premium)`}. Remove one first.`,
+    not_found: (platform) => `Couldn't find that ${platform} channel. Check the name or link.`,
+    duplicate: (platform) => `That ${platform} channel is already followed.`,
+    platform_error: (platform) => `${platform} couldn't be reached. Try again in a moment.`,
+};
+
+/**
+ * Follows a streamer (looked up on the platform).
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, settings: unknown }} payload
+ */
+async function addStream(client, { guildId, userId, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+
+    const { settings: valid, errors } = validateStreamAdd(settings, guildContext(guild));
+    if (errors.length > 0) return fail(400, 'Some settings are not valid', errors);
+
+    const result = /** @type {any} */ (await addSubscription(/** @type {any} */ ({ guildId: guild.id, ...valid })));
+    if (!result.ok) return fail(400, ADD_STREAM_ERRORS[result.reason](PLATFORMS[valid.platform].name, result));
+
+    return {
+        ok: true,
+        data: { subscription: result.subscription, limit: await streamLimit(guild.id) },
+        changes: describeStreamChanges([], [result.subscription], nameLookup(guild)),
+    };
+}
+
+/**
+ * Saves changes to the followed streamers on one platform.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, platform: unknown, settings: unknown }} payload
+ */
+async function saveStreams(client, { guildId, userId, platform, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+    if (typeof platform !== 'string' || !Object.hasOwn(PLATFORMS, platform)) return fail(400, 'Unknown platform');
+
+    const before = await listSubscriptions(guild.id, /** @type {any} */ (platform));
+    const existing = new Map(before.map((subscription) => [subscription.id, subscription.account.displayName]));
+    const { settings: updates, errors } = validateStreamUpdates(settings, guildContext(guild), existing);
+    if (errors.length > 0) return fail(400, 'Some settings are not valid', errors);
+
+    await StreamSubscription.bulkWrite(
+        /** @type {any} */ (updates).map(({ id, ...changes }) => ({
+            updateOne: { filter: { _id: id, guildId: guild.id, platform }, update: { $set: changes } },
+        }))
+    );
+    const after = await listSubscriptions(guild.id, /** @type {any} */ (platform));
+    return { ok: true, data: after, changes: describeStreamChanges(before, after, nameLookup(guild)) };
+}
+
+/**
+ * Unfollows a streamer.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, subscriptionId: unknown }} payload
+ */
+async function removeStream(client, { guildId, userId, subscriptionId }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+    if (!isSubscriptionId(subscriptionId)) return fail(404, 'That streamer is not followed');
+
+    const removed = await StreamSubscription.findOneAndDelete({ _id: subscriptionId, guildId: guild.id }).lean();
+    if (!removed) return fail(404, 'That streamer is not followed');
+
+    const { subscriptionView } = await import('../features/streams/utils/subscriptions.js');
+    return {
+        ok: true,
+        data: { limit: await streamLimit(guild.id) },
+        changes: describeStreamChanges([subscriptionView(removed)], [], nameLookup(guild)),
+    };
+}
+
+/**
+ * Posts an example notification, so people can see what it looks like (and that the bot can post there).
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, subscriptionId: unknown }} payload
+ */
+async function testStream(client, { guildId, userId, subscriptionId }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+    if (!isSubscriptionId(subscriptionId)) return fail(404, 'That streamer is not followed');
+
+    const subscription = await StreamSubscription.findOne({ _id: subscriptionId, guildId: guild.id }).lean();
+    if (!subscription) return fail(404, 'That streamer is not followed');
+
+    const kind = subscription.platform === 'youtube' && !subscription.notifyLive ? 'video' : 'live';
+    const example = {
+        id: 'test',
+        title: 'This is a test notification',
+        game: kind === 'live' && subscription.platform !== 'youtube' ? 'Just Chatting' : null,
+        viewers: kind === 'live' ? 123 : null,
+        startedAt: new Date(),
+        publishedAt: new Date(),
+        thumbnail: null,
+        url: subscription.url,
+    };
+    const sent = await postNotification(
+        client,
+        subscription,
+        buildNotification(kind, /** @type {any} */ (subscription), example)
+    );
+    return sent
+        ? ok({ sent: true })
+        : fail(400, "Couldn't post in that channel. Check Ovx can see it and send messages and embeds.");
+}
+
 /** Sections that can be reset to their defaults. Members' XP and levels are never touched. */
-const RESET_SECTIONS = new Set(['levels', 'logging', 'bot', 'auto-roles', 'welcome', 'tickets']);
+const RESET_SECTIONS = new Set([
+    'levels',
+    'logging',
+    'bot',
+    'auto-roles',
+    'welcome',
+    'tickets',
+    'twitch',
+    'youtube',
+    'kick',
+]);
 
 /**
  * Puts one settings section back to its defaults.
@@ -462,6 +611,12 @@ async function resetSettings(client, { guildId, userId, section }) {
         const off = Object.fromEntries(LOG_TYPES.map((type) => [type, { enabled: false, channelId: null }]));
         const after = loggingView(await Logs_Cache.set(guild.id, { ...off, ignoredChannels: [] }));
         return { ok: true, data: after, changes: describeLoggingChanges(before, after, names) };
+    }
+
+    if (Object.hasOwn(PLATFORMS, section)) {
+        const before = await listSubscriptions(guild.id, /** @type {any} */ (section));
+        await StreamSubscription.deleteMany({ guildId: guild.id, platform: /** @type {any} */ (section) });
+        return { ok: true, data: [], changes: describeStreamChanges(before, [], names) };
     }
 
     if (section === 'tickets') {
