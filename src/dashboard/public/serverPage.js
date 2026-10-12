@@ -9,6 +9,11 @@ import { renderWelcome } from './welcome.js';
 import { renderTickets } from './tickets.js';
 import { streamsPage } from './streams.js';
 import { renderModeration } from './moderation.js';
+import { renderGiveaways } from './giveaways.js';
+import { renderReactionRoles } from './reactionRoles.js';
+import { renderInviteBlocker } from './inviteBlocker.js';
+import { renderCustomEmbeds } from './customEmbeds.js';
+import { renderStarboard } from './starboard.js';
 
 /**
  * Sidebar layout. Items with a `render` are live; the rest are planned and shown as "Soon".
@@ -28,13 +33,14 @@ export const SECTIONS = [
         items: [
             { slug: 'moderation', label: 'Moderation', render: renderModeration },
             { slug: 'logging', label: 'Logging', render: renderLogging },
+            { slug: 'invite-blocker', label: 'Invite Blocker', render: renderInviteBlocker },
             { slug: 'tickets', label: 'Tickets', render: renderTickets },
         ],
     },
     {
         label: 'Roles',
         items: [
-            { slug: 'reaction-roles', label: 'Reaction Roles' },
+            { slug: 'reaction-roles', label: 'Reaction Roles', render: renderReactionRoles },
             { slug: 'auto-roles', label: 'Auto Roles', render: renderAutoRoles },
         ],
     },
@@ -51,8 +57,9 @@ export const SECTIONS = [
         items: [
             { slug: 'levels', label: 'Levels', render: renderLevels },
             { slug: 'welcome-messages', label: 'Welcome Messages', render: renderWelcome },
-            { slug: 'custom-embeds', label: 'Custom Embeds' },
-            { slug: 'starboard', label: 'Starboard' },
+            { slug: 'giveaways', label: 'Giveaways', render: renderGiveaways },
+            { slug: 'custom-embeds', label: 'Custom Embeds', render: renderCustomEmbeds },
+            { slug: 'starboard', label: 'Starboard', render: renderStarboard },
         ],
     },
 ];

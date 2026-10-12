@@ -2,7 +2,7 @@
 import { el } from './ui.js';
 import { field, chipPicker, textArea } from './forms.js';
 
-const BUTTON_COLOURS = [
+export const BUTTON_COLOURS = [
     ['primary', 'Blurple'],
     ['secondary', 'Grey'],
     ['success', 'Green'],
@@ -318,7 +318,7 @@ export function ticketTypesEditor({ types, overview, limits, onChange }) {
  * A small panel for choosing an emoji: type or paste any emoji, or click a common one or a server emoji.
  * @param {{ emojis: { id: string, name: string, animated: boolean, url: string }[], onPick: (emoji: string | null) => void }} options
  */
-function emojiPicker({ emojis, onPick }) {
+export function emojiPicker({ emojis, onPick }) {
     const input = el('input', {
         className: 'input emoji-input',
         type: 'text',

@@ -38,6 +38,12 @@ let dashboardServer = null;
 
 ShardManager.spawn()
     .then(async () => {
+        // The server count on Ovx's Top.gg page. Not from developer mode, which runs a different bot.
+        if (ENV.TOPGG_TOKEN && !ENV.DEVELOPER_MODE) {
+            const { startTopggStats } = await import('./features/votes/utils/topggStats.js');
+            startTopggStats({ manager: ShardManager, token: ENV.TOPGG_TOKEN, applicationId: ENV.APPLICATION_ID });
+        }
+
         if (!ENV.DASHBOARD) return;
         // Loaded only when enabled, so the bot doesn't pull in the web server otherwise
         const { startDashboard } = await import('./dashboard/server.js');

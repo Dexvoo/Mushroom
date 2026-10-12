@@ -14,7 +14,10 @@ export const description = 'Guild Message Update Logs';
 export async function execute(oldMessage, newMessage) {
     const { client, guild, channel, author } = newMessage;
 
-    if (author?.bot || !newMessage.inGuild()) return;
+    if (!author || author.bot || !newMessage.inGuild()) return;
+    // An uncached message's "update" is often Discord changing it quietly (a link preview loading, a pin):
+    // only a fresh edit is logged, since the old text can't be compared
+    if (oldMessage.partial && !(newMessage.editedTimestamp && Date.now() - newMessage.editedTimestamp < 60_000)) return;
 
     let oldContent = oldMessage.partial ? '*Unavailable (Uncached)*' : oldMessage.content;
     let newContent = newMessage.content;

@@ -2559,3 +2559,307 @@ body {
     content: '✕ ';
     font-weight: 700;
 }
+
+/* ---------- Giveaways ---------- */
+
+.stack {
+    display: grid;
+    gap: 8px;
+}
+
+.preset-row,
+.inline-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+}
+
+.form-errors {
+    margin: 0 0 14px;
+    padding: 10px 14px 10px 32px;
+    border-radius: 10px;
+    background: var(--danger-soft);
+    color: var(--danger-text);
+}
+
+.giveaway-list {
+    display: grid;
+    gap: 10px;
+}
+
+.giveaway-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-raised);
+}
+
+.giveaway-main {
+    flex: 1 1 260px;
+    min-width: 0;
+}
+
+.giveaway-title-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.giveaway-prize {
+    font-weight: 700;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+a.giveaway-prize:hover {
+    color: var(--accent-strong);
+}
+
+.giveaway-winners {
+    margin: 6px 0 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.giveaway-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.giveaway-scheduled {
+    background: color-mix(in srgb, #3b82f6 18%, transparent);
+    color: color-mix(in srgb, #1d4ed8 80%, var(--text));
+}
+
+.giveaway-ended,
+.giveaway-cancelled {
+    background: color-mix(in srgb, var(--muted) 15%, transparent);
+    color: var(--muted);
+}
+
+/* ---------- Reaction roles ---------- */
+
+.type-list {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.type-list:empty {
+    display: none;
+}
+
+.checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    cursor: pointer;
+}
+
+/* ---------- Custom embeds preview ---------- */
+
+.preview-embed-author,
+.preview-embed-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.preview-embed-author {
+    margin-bottom: 6px;
+}
+
+.preview-embed-footer {
+    margin-top: 8px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.preview-embed-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.preview-embed-link {
+    color: #00a8fc;
+}
+
+.preview-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.preview-field {
+    grid-column: 1 / -1;
+    min-width: 0;
+}
+
+.preview-field-inline {
+    grid-column: auto;
+}
+
+.preview-field-name {
+    margin-bottom: 2px;
+    font-weight: 700;
+}
+
+.preview-embed-image {
+    display: block;
+    max-width: 100%;
+    max-height: 300px;
+    margin-top: 10px;
+    border-radius: 6px;
+}
+
+.preview-image-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 64px;
+    padding: 8px;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    font-size: 0.8rem;
+    overflow-wrap: anywhere;
+    text-align: center;
+}
+
+.preview-embed-icon.preview-image-placeholder {
+    min-height: 0;
+    padding: 0;
+    font-size: 0;
+}
+
+.over-limit {
+    color: var(--danger-text);
+    font-weight: 700;
+}
+
+/* ---------- Discord formatting in previews (markdown.js) ---------- */
+
+.md-line {
+    min-height: 1.3em;
+}
+
+.md-h1,
+.md-h2,
+.md-h3 {
+    margin: 6px 0 2px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.md-h1 {
+    font-size: 1.5em;
+}
+
+.md-h2 {
+    font-size: 1.25em;
+}
+
+.md-h3 {
+    font-size: 1.05em;
+}
+
+.md-subtext {
+    color: var(--muted);
+    font-size: 0.8em;
+}
+
+.md-quote {
+    margin: 2px 0;
+    padding-left: 10px;
+    border-left: 4px solid color-mix(in srgb, var(--muted) 45%, transparent);
+}
+
+.md-li {
+    display: flex;
+    gap: 6px;
+}
+
+.md-bullet {
+    flex-shrink: 0;
+    color: var(--muted);
+}
+
+.md-code,
+.md-codeblock {
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--text) 10%, transparent);
+    font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+    font-size: 0.85em;
+}
+
+.md-code {
+    padding: 1px 4px;
+}
+
+.md-codeblock {
+    margin: 4px 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.md-link {
+    color: #00a8fc;
+    cursor: default;
+}
+
+.md-timestamp {
+    padding: 0 3px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+/* Hidden until hovered, like clicking a spoiler in Discord */
+.md-spoiler {
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--text) 75%, var(--surface));
+    color: transparent;
+    transition:
+        color 0.15s,
+        background-color 0.15s;
+}
+
+.md-spoiler * {
+    visibility: hidden;
+}
+
+.md-spoiler:hover {
+    background: color-mix(in srgb, var(--text) 12%, transparent);
+    color: inherit;
+}
+
+.md-spoiler:hover * {
+    visibility: visible;
+}
+
+/* ---------- Starboard ---------- */
+
+/* Anchors the emoji picker under its button */
+.emoji-field {
+    position: relative;
+}
+
+.emoji-field .emoji-picker {
+    top: 46px;
+    right: 0;
+    left: auto;
+}

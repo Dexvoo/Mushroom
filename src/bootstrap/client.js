@@ -22,10 +22,13 @@ const client = new Client({
         GatewayIntentBits.GuildVoiceStates, // Voice XP and voice logs
         GatewayIntentBits.GuildMessages, // Message XP and message logs
         GatewayIntentBits.MessageContent, // Message log content and XP length check (privileged)
+        GatewayIntentBits.GuildMessageReactions, // Starboard
     ],
     // Without this, Discord's "member left" event is dropped for members the bot hasn't cached (most members of
     // larger servers), so leave logs and goodbye messages would be missed. Handlers must check member.partial.
-    partials: [Partials.GuildMember],
+    // Message, Reaction and User: reactions on messages from before Ovx started (starboard) arrive as partials,
+    // and so do deletes and edits of uncached messages. Message handlers must check message.partial.
+    partials: [Partials.GuildMember, Partials.Message, Partials.Reaction, Partials.User],
 });
 
 // Registered before any startup work so failures during loading are caught too

@@ -18,6 +18,9 @@ export function stubEnvironment(overrides = {}) {
         'KICK_CLIENT_SECRET',
         'YOUTUBE_API_KEY',
         'GOOGLE_TRANSLATE_API_KEY',
+        'TOPGG_WEBHOOK_SECRET',
+        'TOPGG_TOKEN',
+        'BACKUP_CID',
     ]) {
         process.env[key] = '';
     }

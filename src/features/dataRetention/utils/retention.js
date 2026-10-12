@@ -11,6 +11,11 @@ import { StreamSubscription } from '../../streams/models/streamSubscription.js';
 import { Ticket } from '../../tickets/models/ticket.js';
 import { TicketConfig } from '../../tickets/models/ticketConfig.js';
 import { Welcome } from '../../welcome/models/welcome.js';
+import { Giveaway, GiveawayEntry, GiveawayConfig } from '../../giveaways/models/giveaway.js';
+import { ReactionRolePanel, LegacyReactionRoles } from '../../reactionRoles/models/reactionRolePanel.js';
+import { InviteConfig } from '../../inviteBlocker/models/inviteConfig.js';
+import { CustomMessage } from '../../customEmbeds/models/customMessage.js';
+import { StarboardConfig, StarboardPost } from '../../starboard/models/starboard.js';
 import { AuditLog } from '../../../dashboard/models/auditLog.js';
 import { LogData } from '../../../shared/utils/logger.js';
 
@@ -38,6 +43,15 @@ export const GUILD_DATA_MODELS = [
     Ticket,
     TicketConfig,
     Welcome,
+    Giveaway,
+    GiveawayEntry,
+    GiveawayConfig,
+    ReactionRolePanel,
+    LegacyReactionRoles,
+    InviteConfig,
+    CustomMessage,
+    StarboardConfig,
+    StarboardPost,
     AuditLog,
 ];
 

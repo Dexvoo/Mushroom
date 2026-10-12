@@ -4,6 +4,13 @@
  */
 export const HANDLED_COMPONENT_PREFIXES = Object.freeze([
     'ticket:', // features/tickets/events/ticketButtons.js
+    'giveaway:', // features/giveaways/events/giveawayButtons.js
+    'giveaway-enter.', // Enter buttons from the old Ovx bot, also answered by giveawayButtons.js
+    'expressions:', // features/expressions/events/listButtons.js
+    'rr:', // features/reactionRoles/events/roleButtons.js
+    'select-role.', // Reaction role dropdowns from the old Ovx bot, also answered by roleButtons.js
+    'vote:', // features/votes/events/remindButton.js
+    'help:', // features/utility/events/helpMenu.js
     'ovx-ticket-', // Ticket buttons from the old Ovx bot, still on panels in servers that used it
 ]);
 

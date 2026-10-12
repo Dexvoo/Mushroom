@@ -29,7 +29,7 @@ export function createShardBridge(manager) {
          * @param {string} action
          * @param {string} guildId - Must already be a valid snowflake
          * @param {object} [payload]
-         * @returns {Promise<{ ok: true, data: any, changes?: string[] } | { ok: false, status: number, error: string, details?: string[] }>}
+         * @returns {Promise<{ ok: true, data: any, changes?: string[], action?: string } | { ok: false, status: number, error: string, details?: string[] }>}
          */
         guild: (action, guildId, payload = {}) => run(action, { ...payload, guildId }, shardFor(guildId)),
 
@@ -42,6 +42,19 @@ export function createShardBridge(manager) {
             const results = await run('botGuilds', { guildIds });
             return new Set(results.flatMap((result) => (result.ok ? result.data : [])));
         },
+
+        /**
+         * Posts a Top.gg vote to the developer vote log. Any shard can post it, so the first one does.
+         * @param {string} userId
+         * @param {number} votes - Their total
+         */
+        logVote: (userId, votes) => run('logVote', { userId, votes }, 0),
+
+        /**
+         * Tells every shard someone voted, so their vote rewards start at once.
+         * @param {string} userId
+         */
+        voteReceived: (userId) => run('voteReceived', { userId }),
 
         /**
          * Stats from every shard, ordered by shard ID.

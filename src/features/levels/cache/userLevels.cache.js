@@ -1,4 +1,5 @@
 import { UserLevels } from '../../../features/levels/models/userLevels.js';
+import { voteXPMultiplier } from '../../votes/utils/votes.js';
 import NodeCache from 'node-cache';
 import { LogData } from '../../../shared/utils/logger.js';
 import { EmbedBuilder } from 'discord.js';
@@ -258,7 +259,9 @@ class User_Levels_Cache {
         if (!userData) return false;
 
         const roleMulti = await this.getCombinedRoleMultiplier(member, guildData);
-        const userXP = Math.floor(MessageXP() * roleMulti * guildData.xpMultiplier);
+        // Voted for Ovx on Top.gg in the last 12 hours: 10% more
+        const voteMulti = await voteXPMultiplier(member.id);
+        const userXP = Math.floor(MessageXP() * roleMulti * voteMulti * guildData.xpMultiplier);
 
         const { gained, leveledUp } = this.applyXP(userData, userXP, guildData.maxLevel);
 
@@ -292,7 +295,8 @@ class User_Levels_Cache {
         if (!userData) return false;
 
         const roleMulti = await this.getCombinedRoleMultiplier(member, guildData);
-        const userXP = Math.floor(VoiceXP(minutes) * roleMulti * guildData.xpMultiplier);
+        const voteMulti = await voteXPMultiplier(member.id);
+        const userXP = Math.floor(VoiceXP(minutes) * roleMulti * voteMulti * guildData.xpMultiplier);
 
         const { gained, leveledUp } = this.applyXP(userData, userXP, guildData.maxLevel);
 
@@ -441,6 +445,27 @@ class User_Levels_Cache {
         }
 
         return { added, removed, failed };
+    }
+
+    /**
+     * Sets a user's XP and level (a change made by a server admin) and saves it straight away, so the rank card
+     * and leaderboard show it at once.
+     * @param {string} guildId
+     * @param {string} userId
+     * @param {number} xp
+     * @param {number} level - Must match the XP (see utils/admin.js)
+     * @returns {Promise<UserLevelsType | null>} null if the user could not be loaded
+     */
+    async setXP(guildId, userId, xp, level) {
+        const userData = await this.get(guildId, userId);
+        if (!userData) return null;
+
+        if (level > userData.level) userData.lastLevelUpAt = new Date();
+        userData.xp = xp;
+        userData.level = level;
+
+        this.markDirty(`${guildId}:${userId}`, userData);
+        return this.save(guildId, userId);
     }
 
     /**

@@ -63,6 +63,27 @@ import {
     moderationView,
     nameLookup,
 } from './settingsViews.js';
+import { giveawayDashboard } from '../features/giveaways/utils/dashboard.js';
+import { reactionRolesDashboard } from '../features/reactionRoles/utils/dashboard.js';
+import { customEmbedsDashboard } from '../features/customEmbeds/utils/dashboard.js';
+import { CUSTOM_EMBED_LIMITS } from '../features/customEmbeds/utils/validation.js';
+import Invite_Config_Cache from '../features/inviteBlocker/cache/inviteConfig.cache.js';
+import Starboard_Config_Cache from '../features/starboard/cache/starboardConfig.cache.js';
+import {
+    starboardView,
+    validateStarboardSettings,
+    describeStarboardChanges,
+    STARBOARD_LIMITS,
+} from '../features/starboard/utils/settings.js';
+import {
+    inviteView,
+    validateInviteSettings,
+    describeInviteChanges,
+    INVITE_LIMITS,
+} from '../features/inviteBlocker/utils/settings.js';
+import { REACTION_ROLE_LIMITS } from '../features/reactionRoles/utils/validation.js';
+import { GIVEAWAY_LIMITS } from '../features/giveaways/utils/validation.js';
+import { votesEnabled, forgetVote } from '../features/votes/utils/votes.js';
 import { LogData } from '../shared/utils/logger.js';
 import { reportError } from '../shared/utils/errorReport.js';
 
@@ -111,6 +132,8 @@ const handlers = {
     saveBotSettings,
     saveAutoRoleSettings,
     saveModerationSettings,
+    saveInviteSettings,
+    saveStarboardSettings,
     saveWelcomeSettings,
     saveTicketSettings,
     postTicketPanel,
@@ -118,6 +141,11 @@ const handlers = {
     saveStreams,
     removeStream,
     testStream,
+    giveaways,
+    reactionRoles,
+    customEmbeds,
+    logVote,
+    voteReceived,
     resetSettings,
     leaderboard,
     stats,
@@ -226,6 +254,8 @@ async function guildOverview(client, { guildId, userId }) {
         ticketPanel: { channelId: tickets.panel?.channelId ?? null, posted: Boolean(tickets.panel?.messageId) },
         ticketDefaults: TICKET_DEFAULTS,
         moderation: moderationView(moderation),
+        inviteBlocker: inviteView(await Invite_Config_Cache.get(guild.id)),
+        starboard: starboardView(await Starboard_Config_Cache.get(guild.id)),
         streams: await listSubscriptions(guild.id),
         streamStatus: platformStatus(),
         streamLimit: await streamLimit(guild.id),
@@ -258,8 +288,79 @@ async function guildOverview(client, { guildId, userId }) {
             TICKET_TYPES: TICKET_TYPE_LIMITS,
             STREAMS: { ...STREAM_LIMITS, MESSAGE_MAX: STREAM_MESSAGE_MAX },
             WARN_ACTIONS: WARN_ACTION_LIMITS,
+            GIVEAWAYS: GIVEAWAY_LIMITS,
+            REACTION_ROLES: REACTION_ROLE_LIMITS,
+            INVITES: INVITE_LIMITS,
+            STARBOARD: STARBOARD_LIMITS,
+            CUSTOM_EMBEDS: CUSTOM_EMBED_LIMITS,
         },
+        votesEnabled: votesEnabled(),
     });
+}
+
+/**
+ * The Giveaways page: list, create, end, reroll, cancel and delete giveaways, and save its settings.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, op: string, giveawayId?: unknown, giveaway?: unknown, settings?: unknown, count?: unknown }} payload
+ */
+async function giveaways(client, { guildId, userId, ...payload }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const context = guildContext(access.guild);
+    return giveawayDashboard(access.guild, access.member, payload, {
+        textChannelIds: context.textChannelIds,
+        roleIds: new Set(context.roles.keys()),
+    });
+}
+
+/**
+ * The Reaction Roles page: list, save (which posts or updates the message) and delete panels.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, op: string, panelId?: unknown, panel?: unknown }} payload
+ */
+async function reactionRoles(client, { guildId, userId, ...payload }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    return reactionRolesDashboard(access.guild, payload, guildContext(access.guild));
+}
+
+/**
+ * The Custom Embeds page: list, save (which posts or updates the message) and delete custom messages.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, op: string, messageId?: unknown, message?: unknown }} payload
+ */
+async function customEmbeds(client, { guildId, userId, ...payload }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    return customEmbedsDashboard(access.guild, payload, guildContext(access.guild));
+}
+
+/**
+ * A vote arrived: this shard drops its cached vote status for them, so their XP bonus starts at once.
+ * @param {Client} client
+ * @param {{ userId: unknown }} payload
+ */
+async function voteReceived(client, { userId }) {
+    if (typeof userId !== 'string' || !SNOWFLAKE.test(userId)) return fail(400, 'Invalid user');
+    forgetVote(userId);
+    return ok(true);
+}
+
+/**
+ * Posts a Top.gg vote to the developer vote log channel. Run on one shard by the dashboard's webhook.
+ * @param {Client} client
+ * @param {{ userId: unknown, votes: unknown }} payload
+ */
+async function logVote(client, { userId, votes }) {
+    if (typeof userId !== 'string' || !SNOWFLAKE.test(userId)) return fail(400, 'Invalid user');
+    const embed = new EmbedBuilder()
+        .setColor('#b69cff')
+        .setTitle('New vote')
+        .setDescription(`<@${userId}> voted for Ovx on Top.gg ❤️`)
+        .setFooter({ text: `User ID: ${userId}${typeof votes === 'number' ? ` · ${votes} votes in total` : ''}` })
+        .setTimestamp();
+    await /** @type {any} */ (client).utils.DevEmbed('vote', client, embed);
+    return ok(true);
 }
 
 /**
@@ -403,6 +504,42 @@ async function saveModerationSettings(client, { guildId, userId, settings }) {
     const before = moderationView(await Moderation_Config_Cache.get(guild.id));
     const after = moderationView(await Moderation_Config_Cache.set(guild.id, valid));
     return { ok: true, data: after, changes: describeModerationChanges(before, after) };
+}
+
+/**
+ * Validates and saves the invite blocker's settings, through its cache so new messages are checked with them at once.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, settings: unknown }} payload
+ */
+async function saveInviteSettings(client, { guildId, userId, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+
+    const { settings: valid, errors } = validateInviteSettings(settings, guildContext(guild));
+    if (errors.length > 0) return fail(400, 'Some settings are not valid', errors);
+
+    const before = inviteView(await Invite_Config_Cache.get(guild.id));
+    const after = inviteView(await Invite_Config_Cache.set(guild.id, valid));
+    return { ok: true, data: after, changes: describeInviteChanges(before, after, nameLookup(guild)) };
+}
+
+/**
+ * Validates and saves the starboard settings, through its cache so reactions use them at once.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, settings: unknown }} payload
+ */
+async function saveStarboardSettings(client, { guildId, userId, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+
+    const { settings: valid, errors } = validateStarboardSettings(settings, guildContext(guild));
+    if (errors.length > 0) return fail(400, 'Some settings are not valid', errors);
+
+    const before = starboardView(await Starboard_Config_Cache.get(guild.id));
+    const after = starboardView(await Starboard_Config_Cache.set(guild.id, valid));
+    return { ok: true, data: after, changes: describeStarboardChanges(before, after, nameLookup(guild)) };
 }
 
 /**
@@ -690,6 +827,8 @@ const RESET_SECTIONS = new Set([
     'youtube',
     'kick',
     'moderation',
+    'invites',
+    'starboard',
 ]);
 
 /**
@@ -761,6 +900,18 @@ async function resetSettings(client, { guildId, userId, section }) {
         const before = moderationView(await Moderation_Config_Cache.get(guild.id));
         const after = moderationView(await Moderation_Config_Cache.set(guild.id, { warnActions: [] }));
         return { ok: true, data: after, changes: describeModerationChanges(before, after) };
+    }
+
+    if (section === 'starboard') {
+        const before = starboardView(await Starboard_Config_Cache.get(guild.id));
+        const after = starboardView(await Starboard_Config_Cache.reset(guild.id));
+        return { ok: true, data: after, changes: describeStarboardChanges(before, after, names) };
+    }
+
+    if (section === 'invites') {
+        const before = inviteView(await Invite_Config_Cache.get(guild.id));
+        const after = inviteView(await Invite_Config_Cache.reset(guild.id));
+        return { ok: true, data: after, changes: describeInviteChanges(before, after, names) };
     }
 
     if (section === 'auto-roles') {

@@ -412,7 +412,7 @@ export function validateBotSettings(input) {
  * @param {string[]} errors
  * @returns {string | null | undefined} null for empty, undefined if not valid
  */
-function cleanText(value, label, max, { multiline }, errors) {
+export function cleanText(value, label, max, { multiline }, errors) {
     if (value !== null && typeof value !== 'string') {
         errors.push(`${label} must be text`);
         return undefined;

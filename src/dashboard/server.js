@@ -11,6 +11,7 @@ import { createShardBridge } from './shardBridge.js';
 import { createMongoAuditStore } from './auditStore.js';
 import { createMongoCaseStore } from '../features/moderation/utils/cases.js';
 import { sameOrigin, requireJson } from './middleware.js';
+import { createTopggWebhook } from '../features/votes/utils/webhook.js';
 import { LogData } from '../shared/utils/logger.js';
 
 const COOKIE_NAME = 'ovx.sid';
@@ -35,7 +36,7 @@ const profileJson = express.json({ limit: '6mb' });
  *   sessionStore?: session.Store,
  *   auditStore?: import('./auditStore.js').AuditStore,
  *   caseStore?: ReturnType<typeof createMongoCaseStore>,
- *   rateLimits?: { auth?: number, api?: number, writes?: number },
+ *   rateLimits?: { auth?: number, api?: number, writes?: number, webhook?: number },
  * }} options
  */
 export function createDashboardApp({
@@ -61,7 +62,7 @@ export function createDashboardApp({
                     scriptSrc: ["'self'"],
                     styleSrc: ["'self'", 'https://fonts.googleapis.com'],
                     fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-                    imgSrc: ["'self'", 'data:', 'https://cdn.discordapp.com'],
+                    imgSrc: ["'self'", 'data:', 'https://cdn.discordapp.com', 'https://media.discordapp.net'],
                     connectSrc: ["'self'"],
                     frameAncestors: ["'none'"],
                     formAction: ["'self'"],
@@ -72,6 +73,29 @@ export function createDashboardApp({
             strictTransportSecurity: config.SECURE,
         })
     );
+
+    // Top.gg's vote webhook. Its servers call it directly, so it comes before the session and same-origin
+    // checks; the shared secret in its Authorization header is what proves the request is from Top.gg.
+    if (env.TOPGG_WEBHOOK_SECRET) {
+        app.post(
+            '/webhooks/topgg',
+            rateLimit({
+                windowMs: 60_000,
+                limit: rateLimits.webhook ?? 120,
+                standardHeaders: 'draft-8',
+                legacyHeaders: false,
+            }),
+            express.json({ limit: '8kb' }),
+            createTopggWebhook({
+                secret: env.TOPGG_WEBHOOK_SECRET,
+                applicationId: env.APPLICATION_ID,
+                logVote: async (userId, votes) => {
+                    await bridge.voteReceived?.(userId);
+                    await bridge.logVote(userId, votes);
+                },
+            })
+        );
+    }
 
     app.use(
         session({

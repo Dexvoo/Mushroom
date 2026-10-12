@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { PermissionsBitField, PermissionFlagsBits, OAuth2Scopes } from 'discord.js';
 import { requireLogin, requireDeveloper, validGuildId } from './middleware.js';
 import { LogData } from '../shared/utils/logger.js';
+import { inviteUrl } from '../shared/utils/invite.js';
 
 const LEADERBOARD_TYPES = new Set(['level', 'totalMessages', 'totalVoice', 'totalCommands']);
 const PUBLIC_CACHE_MS = 60_000;
@@ -9,24 +9,6 @@ const PUBLIC_CACHE_MAX = 500;
 const PUBLIC_STATS_MS = 5 * 60_000;
 const CASE_NUMBER = /^[1-9]\d{0,8}$/;
 const CASE_LABELS = { warn: 'Warning', ban: 'Ban', unban: 'Unban', kick: 'Kick', mute: 'Mute', unmute: 'Unmute' };
-
-// What the bot needs for its features; used in "Add to server" links. Server admins can untick any of them.
-const BOT_PERMISSIONS = new PermissionsBitField([
-    PermissionFlagsBits.ViewChannel,
-    PermissionFlagsBits.SendMessages,
-    PermissionFlagsBits.EmbedLinks,
-    PermissionFlagsBits.AttachFiles,
-    PermissionFlagsBits.ReadMessageHistory,
-    PermissionFlagsBits.ManageRoles, // Level rewards, auto roles, ticket access
-    PermissionFlagsBits.ViewAuditLog, // Who did what, in logs
-    PermissionFlagsBits.ManageChannels, // Ticket channels
-    PermissionFlagsBits.ManageMessages, // /moderation purge
-    PermissionFlagsBits.ManageNicknames, // /moderation nickname
-    PermissionFlagsBits.KickMembers,
-    PermissionFlagsBits.BanMembers,
-    PermissionFlagsBits.ModerateMembers, // /moderation mute
-    PermissionFlagsBits.ChangeNickname, // Bot Settings nickname
-]).bitfield.toString();
 
 /**
  * JSON API for the dashboard UI.
@@ -160,6 +142,29 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         })
     );
 
+    router.put('/guilds/:guildId/starboard', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('saveStarboardSettings', req.params.guildId, {
+                userId: req.session.user.id,
+                settings: req.body,
+            });
+            if (result.ok && result.changes?.length) await recordAudit(req, 'Updated the starboard', result.changes);
+            return result;
+        })
+    );
+
+    router.put('/guilds/:guildId/invite-blocker', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('saveInviteSettings', req.params.guildId, {
+                userId: req.session.user.id,
+                settings: req.body,
+            });
+            if (result.ok && result.changes?.length)
+                await recordAudit(req, 'Updated the invite blocker', result.changes);
+            return result;
+        })
+    );
+
     router.put('/guilds/:guildId/welcome', requireLogin, validGuildId, (req, res) =>
         respond(res, async () => {
             const result = await bridge.guild('saveWelcomeSettings', req.params.guildId, {
@@ -257,6 +262,108 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         );
     });
 
+    const GIVEAWAY_ID = /^[a-f\d]{24}$/i;
+    const GIVEAWAY_OPS = new Set(['end', 'reroll', 'cancel']);
+
+    /** Runs a giveaway action on the shard, recording a Web Logs entry when it changed something. */
+    const giveawayAction = (req, res, payload) =>
+        respond(res, async () => {
+            const result = await bridge.guild('giveaways', req.params.guildId, {
+                userId: req.session.user.id,
+                ...payload,
+            });
+            if (result.ok && result.action) {
+                LogData('Dashboard', `${result.action} in ${req.params.guildId} by ${req.session.user.id}`, 'info');
+                await recordAudit(req, result.action, result.changes);
+            }
+            return result;
+        });
+
+    router.get('/guilds/:guildId/giveaways', requireLogin, validGuildId, (req, res) =>
+        giveawayAction(req, res, { op: 'list' })
+    );
+
+    router.post('/guilds/:guildId/giveaways', requireLogin, validGuildId, (req, res) =>
+        giveawayAction(req, res, { op: 'create', giveaway: req.body })
+    );
+
+    router.put('/guilds/:guildId/giveaway-settings', requireLogin, validGuildId, (req, res) =>
+        giveawayAction(req, res, { op: 'settings', settings: req.body })
+    );
+
+    router.post('/guilds/:guildId/giveaways/:giveawayId/:op', requireLogin, validGuildId, (req, res) => {
+        const { giveawayId, op } = req.params;
+        if (!GIVEAWAY_ID.test(giveawayId) || !GIVEAWAY_OPS.has(op)) return res.status(404).json({ error: 'Not found' });
+        return giveawayAction(req, res, { op, giveawayId, count: req.body?.count });
+    });
+
+    router.delete('/guilds/:guildId/giveaways/:giveawayId', requireLogin, validGuildId, (req, res) => {
+        if (!GIVEAWAY_ID.test(req.params.giveawayId)) return res.status(404).json({ error: 'Not found' });
+        return giveawayAction(req, res, { op: 'delete', giveawayId: req.params.giveawayId });
+    });
+
+    const PANEL_ID = /^[a-f\d]{24}$/i;
+
+    /** Runs a reaction roles action on the shard, recording a Web Logs entry when it changed something. */
+    const reactionRolesAction = (req, res, payload) =>
+        respond(res, async () => {
+            const result = await bridge.guild('reactionRoles', req.params.guildId, {
+                userId: req.session.user.id,
+                ...payload,
+            });
+            if (result.ok && result.action) await recordAudit(req, result.action, result.changes);
+            return result;
+        });
+
+    router.get('/guilds/:guildId/reaction-roles', requireLogin, validGuildId, (req, res) =>
+        reactionRolesAction(req, res, { op: 'list' })
+    );
+
+    router.post('/guilds/:guildId/reaction-roles', requireLogin, validGuildId, (req, res) =>
+        reactionRolesAction(req, res, { op: 'save', panel: req.body })
+    );
+
+    router.put('/guilds/:guildId/reaction-roles/:panelId', requireLogin, validGuildId, (req, res) => {
+        if (!PANEL_ID.test(req.params.panelId)) return res.status(404).json({ error: 'Not found' });
+        return reactionRolesAction(req, res, { op: 'save', panelId: req.params.panelId, panel: req.body });
+    });
+
+    router.delete('/guilds/:guildId/reaction-roles/:panelId', requireLogin, validGuildId, (req, res) => {
+        if (!PANEL_ID.test(req.params.panelId)) return res.status(404).json({ error: 'Not found' });
+        return reactionRolesAction(req, res, { op: 'delete', panelId: req.params.panelId });
+    });
+
+    const MESSAGE_ID = /^[a-f\d]{24}$/i;
+
+    /** Runs a custom embeds action on the shard, recording a Web Logs entry when it changed something. */
+    const customEmbedsAction = (req, res, payload) =>
+        respond(res, async () => {
+            const result = await bridge.guild('customEmbeds', req.params.guildId, {
+                userId: req.session.user.id,
+                ...payload,
+            });
+            if (result.ok && result.action) await recordAudit(req, result.action, result.changes);
+            return result;
+        });
+
+    router.get('/guilds/:guildId/custom-embeds', requireLogin, validGuildId, (req, res) =>
+        customEmbedsAction(req, res, { op: 'list' })
+    );
+
+    router.post('/guilds/:guildId/custom-embeds', requireLogin, validGuildId, (req, res) =>
+        customEmbedsAction(req, res, { op: 'save', message: req.body })
+    );
+
+    router.put('/guilds/:guildId/custom-embeds/:messageId', requireLogin, validGuildId, (req, res) => {
+        if (!MESSAGE_ID.test(req.params.messageId)) return res.status(404).json({ error: 'Not found' });
+        return customEmbedsAction(req, res, { op: 'save', messageId: req.params.messageId, message: req.body });
+    });
+
+    router.delete('/guilds/:guildId/custom-embeds/:messageId', requireLogin, validGuildId, (req, res) => {
+        if (!MESSAGE_ID.test(req.params.messageId)) return res.status(404).json({ error: 'Not found' });
+        return customEmbedsAction(req, res, { op: 'delete', messageId: req.params.messageId });
+    });
+
     const RESET_ACTIONS = {
         levels: 'Reset level settings',
         logging: 'Reset logging settings',
@@ -268,6 +375,8 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         youtube: 'Reset YouTube notifications',
         kick: 'Reset Kick notifications',
         moderation: 'Reset automatic moderation',
+        invites: 'Reset the invite blocker',
+        starboard: 'Reset the starboard',
     };
 
     router.post('/guilds/:guildId/reset/:section', requireLogin, validGuildId, (req, res) => {
@@ -442,19 +551,4 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
 /** @param {unknown} value */
 function leaderboardType(value) {
     return typeof value === 'string' && LEADERBOARD_TYPES.has(value) ? value : 'level';
-}
-
-/**
- * @param {string} applicationId
- * @param {string} guildId
- */
-/** Without a guildId, Discord asks which server to add the bot to. */
-function inviteUrl(applicationId, guildId) {
-    const params = new URLSearchParams({
-        client_id: applicationId,
-        scope: [OAuth2Scopes.Bot, OAuth2Scopes.ApplicationsCommands].join(' '),
-        permissions: BOT_PERMISSIONS,
-        ...(guildId && { guild_id: guildId, disable_guild_select: 'true' }),
-    });
-    return `https://discord.com/oauth2/authorize?${params}`;
 }

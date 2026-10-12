@@ -18,6 +18,18 @@ const SNOWFLAKE = /^\d{17,20}$/;
  * @property {DashboardConfig | null} DASHBOARD - null when the dashboard is disabled
  * @property {StreamsConfig} STREAMS - Keys for stream notifications; a platform without keys is switched off
  * @property {string | null} TRANSLATE_API_KEY - Google Cloud Translation API key; translating is off without it
+ * @property {string | null} TOPGG_WEBHOOK_SECRET - The Authorization set for Top.gg vote webhooks (needs the dashboard)
+ * @property {string | null} TOPGG_TOKEN - Top.gg API token, for posting the server count
+ * @property {BackupsConfig} BACKUPS - Daily database backups
+ */
+
+/**
+ * @typedef {Object} BackupsConfig
+ * @property {boolean} ENABLED - Daily backups run (off in developer mode unless BACKUPS_ENABLED is 'true')
+ * @property {string} DIR - Folder for backup files, relative to the project folder
+ * @property {number} KEEP - How many backup files to keep there
+ * @property {number} HOUR - Hour of the day (UTC) the daily backup runs
+ * @property {string | null} CHANNEL_ID - Private channel each backup is also uploaded to
  */
 
 /**
@@ -110,6 +122,24 @@ export function parseEnvironment(env) {
         YOUTUBE_API_KEY: optional('YOUTUBE_API_KEY'),
     };
 
+    const backupKeep = Number(optional('BACKUP_KEEP') ?? 14);
+    if (!Number.isInteger(backupKeep) || backupKeep < 1 || backupKeep > 365) {
+        errors.push(`BACKUP_KEEP must be a number from 1 to 365, got "${env.BACKUP_KEEP}"`);
+    }
+    const backupHour = Number(optional('BACKUP_HOUR') ?? 4);
+    if (!Number.isInteger(backupHour) || backupHour < 0 || backupHour > 23) {
+        errors.push(`BACKUP_HOUR must be an hour from 0 to 23, got "${env.BACKUP_HOUR}"`);
+    }
+    const backupsSetting = optional('BACKUPS_ENABLED');
+    const backups = {
+        // On by default, except in developer mode (which usually runs a second copy of the bot)
+        ENABLED: backupsSetting ? backupsSetting === 'true' : !developerMode,
+        DIR: optional('BACKUP_DIR') ?? 'backups',
+        KEEP: backupKeep,
+        HOUR: backupHour,
+        CHANNEL_ID: snowflake('BACKUP_CID'),
+    };
+
     function parseDashboard() {
         const port = Number(optional('DASHBOARD_PORT') ?? 3000);
         if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -169,6 +199,9 @@ export function parseEnvironment(env) {
         DASHBOARD: dashboard,
         STREAMS: streams,
         TRANSLATE_API_KEY: optional('GOOGLE_TRANSLATE_API_KEY'),
+        TOPGG_WEBHOOK_SECRET: optional('TOPGG_WEBHOOK_SECRET'),
+        TOPGG_TOKEN: optional('TOPGG_TOKEN'),
+        BACKUPS: backups,
     };
 
     return errors.length > 0 ? { env: null, errors, warnings } : { env: parsed, errors, warnings };

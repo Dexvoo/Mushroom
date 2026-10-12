@@ -113,6 +113,9 @@ export const LEGAL_PAGES = {
                         'Stream alerts: the public Twitch, YouTube or Kick channels a server follows, with their names, pictures and latest stream or video',
                         "Web Logs: when someone changes a server's settings on the dashboard, their user ID, username, display name, avatar and what they changed",
                         'Premium: whether a server or user has premium, and until when',
+                        "Starboard: for each message that reaches the starboard, its ID, channel and author's user ID, how many stars it has, and the ID of its starboard post. The message's text is not stored: the starboard post shows it from the original",
+                        'Giveaways: the prize, channel, host, requirements and winners, and for each person who enters, their user ID, how many entries they have and when they entered',
+                        'Top.gg votes: if you vote for Ovx on Top.gg, your user ID, how many times you have voted and when you last voted. This gives 10% extra XP and bonus giveaway entries for 12 hours after voting. If you turn on vote reminders, Ovx also stores that, and when it last reminded you',
                     ],
                 ],
             },
@@ -170,6 +173,7 @@ export const LEGAL_PAGES = {
                     [
                         'Discord, which Ovx runs on and which handles premium payments',
                         'Twitch, YouTube and Kick, which Ovx asks for public information about the channels a server follows. No information about you is sent to them',
+                        'Top.gg, which tells Ovx when you vote for it there. Ovx sends nothing about you to Top.gg',
                         'Google, which translates the text you ask Ovx to translate',
                         'Our hosting and database providers, which store the data for us',
                         'Where the law requires it',
@@ -181,6 +185,9 @@ export const LEGAL_PAGES = {
                 body: [
                     [
                         'Web Logs are deleted automatically after 90 days',
+                        'Backups: a private copy of the database is made every day and kept for 14 days, so anything deleted is gone from the backups 14 days later. Login sessions are never included',
+                        'Giveaways and their entries are deleted 30 days after they end or are cancelled, or sooner if server staff delete them',
+                        'Top.gg vote records are kept so your vote count carries on. Contact us to have yours deleted',
                         'Login sessions end when you log out, or after 7 days without use',
                         'Moderation cases are kept until server staff delete them on the dashboard, or the server leaves Ovx (below)',
                         "Settings, levels, tickets and stream alerts are kept while Ovx is in the server. Resetting a section on the dashboard removes its settings, but not members' levels or moderation cases",

@@ -1,4 +1,4 @@
-import { getLogChannel, findAuditLogExecutor } from './logChannel.js';
+import { getLogChannel, findAuditLogEntry, moderationDetails } from './logChannel.js';
 
 /**
  * Posts a server log (server settings, emojis, stickers) with whoever made the change, if the audit log says.
@@ -17,18 +17,23 @@ export async function postServerLog(guild, { titleKey, colour, description, audi
     const logChannel = await getLogChannel(guild, 'server');
     if (!logChannel) return;
 
-    const executor = await findAuditLogExecutor(
+    const entry = await findAuditLogEntry(
         guild,
         auditType,
-        (entry) => entry.targetId === targetId && Date.now() - entry.createdTimestamp < 10_000
+        (item) => item.targetId === targetId && Date.now() - item.createdTimestamp < 10_000
     );
+    const executor = entry?.executor ?? null;
 
     const { client } = guild;
+    // Done with /emoji or /sticker: Discord records Ovx, so the member who used the command is named too
+    const viaOvx = executor?.id === client.user?.id ? moderationDetails(entry, client.user.id) : null;
+    const byLine = viaOvx && viaOvx.moderator !== executor.toString() ? `\n-# By ${viaOvx.moderator}` : '';
+
     await client.utils.Embed(
         logChannel,
         colour,
         client.utils.Translate(`logs.server.${titleKey}`, guild.preferredLocale),
-        description,
+        description + byLine,
         {
             timestamp: true,
             footer: { text: executor ? `${footer} | UID: ${executor.id}` : footer },
