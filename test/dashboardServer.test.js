@@ -40,7 +40,7 @@ const bridge = {
             return { ok: false, status: 404, error: 'Leaderboard not found' };
         if (action === 'access' && denyAccess)
             return { ok: false, status: 403, error: 'You need the Manage Server permission' };
-        if (action.startsWith('save') || action === 'resetSettings') {
+        if (action.startsWith('save') || action === 'resetSettings' || action === 'postTicketPanel') {
             return { ok: true, data: { action, guildId }, changes: saveChanges };
         }
         return { ok: true, data: { action, guildId } };
@@ -455,6 +455,24 @@ test('welcome saves go to the shard as the session user and are recorded', async
     const save = bridgeCalls.find((call) => call.action === 'saveWelcomeSettings');
     assert.deepEqual(save.payload, { userId: USER_ID, settings: body });
     assert.equal(auditEntries[0].action, 'Updated welcome messages');
+});
+
+test('ticket saves and panel posts go to the shard as the session user and are recorded', async () => {
+    saveChanges = ['Tickets: off → on'];
+    const client = await login();
+
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/tickets`, json({ enabled: true }))).status, 200);
+    const save = bridgeCalls.find((call) => call.action === 'saveTicketSettings');
+    assert.deepEqual(save.payload, { userId: USER_ID, settings: { enabled: true } });
+    assert.equal(auditEntries[0].action, 'Updated ticket settings');
+
+    const panel = await client.request(
+        `/api/guilds/${GUILD_ID}/tickets/panel`,
+        json({ channelId: '1', userId: DEV_ID }, 'POST')
+    );
+    assert.equal(panel.status, 200);
+    const post = bridgeCalls.find((call) => call.action === 'postTicketPanel');
+    assert.deepEqual(post.payload, { userId: USER_ID, channelId: '1' });
 });
 
 test('only Bot Settings saves may be large (for images); other requests stay small', async () => {

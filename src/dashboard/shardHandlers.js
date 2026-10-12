@@ -8,12 +8,18 @@ import Guild_Settings_Cache from '../shared/cache/guildSettings.cache.js';
 import Auto_Roles_Cache from '../features/autoRoles/cache/autoRoles.cache.js';
 import Welcome_Cache from '../features/welcome/cache/welcome.cache.js';
 import { DEFAULT_MESSAGES } from '../features/welcome/utils/welcomeMessage.js';
+import Ticket_Config_Cache from '../features/tickets/cache/ticketConfig.cache.js';
+import { TICKET_DEFAULTS } from '../features/tickets/utils/components.js';
+import { postPanel } from '../features/tickets/utils/panel.js';
 import {
     validateLevelSettings,
     validateLoggingSettings,
     validateBotSettings,
     validateAutoRoleSettings,
     validateWelcomeSettings,
+    validateTicketSettings,
+    TICKET_LIMITS,
+    TICKET_TYPE_LIMITS,
     WELCOME_LIMITS,
     AUTO_ROLES_MAX,
     LIMITS,
@@ -27,8 +33,9 @@ import {
     describeBotChanges,
     describeAutoRoleChanges,
     describeWelcomeChanges,
+    describeTicketChanges,
 } from './describeChanges.js';
-import { levelsView, loggingView, autoRolesView, welcomeView, nameLookup } from './settingsViews.js';
+import { levelsView, loggingView, autoRolesView, welcomeView, ticketsView, nameLookup } from './settingsViews.js';
 import { LogData } from '../shared/utils/logger.js';
 
 /**
@@ -55,6 +62,17 @@ const POST_EMBED_PERMISSIONS = [
     PermissionFlagsBits.EmbedLinks,
 ];
 
+/** What the bot needs in a category to open tickets in it (see features/tickets/utils/access.js). */
+const TICKET_CATEGORY_PERMISSIONS = [
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.ManageChannels,
+    PermissionFlagsBits.ManageRoles,
+    PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.EmbedLinks,
+    PermissionFlagsBits.AttachFiles,
+    PermissionFlagsBits.ReadMessageHistory,
+];
+
 const handlers = {
     botGuilds,
     access,
@@ -64,6 +82,8 @@ const handlers = {
     saveBotSettings,
     saveAutoRoleSettings,
     saveWelcomeSettings,
+    saveTicketSettings,
+    postTicketPanel,
     resetSettings,
     leaderboard,
     stats,
@@ -117,12 +137,13 @@ async function guildOverview(client, { guildId, userId }) {
     if (!access.ok) return access;
     const { guild } = access;
 
-    const [config, logsConfig, botSettings, autoRoles, welcome] = await Promise.all([
+    const [config, logsConfig, botSettings, autoRoles, welcome, tickets] = await Promise.all([
         Guild_Level_Cache.get(guild.id),
         Logs_Cache.get(guild.id),
         Guild_Settings_Cache.get(guild.id),
         Auto_Roles_Cache.get(guild.id),
         Welcome_Cache.get(guild.id),
+        Ticket_Config_Cache.get(guild.id),
     ]);
     const me = guild.members.me;
 
@@ -164,8 +185,36 @@ async function guildOverview(client, { guildId, userId }) {
         autoRoles: autoRolesView(autoRoles, roleExists(guild)),
         welcome: welcomeView(welcome),
         welcomeDefaults: DEFAULT_MESSAGES,
+        tickets: ticketsView(tickets, roleExists(guild)),
+        ticketPanel: { channelId: tickets.panel?.channelId ?? null, posted: Boolean(tickets.panel?.messageId) },
+        ticketDefaults: TICKET_DEFAULTS,
+        emojis: guild.emojis.cache
+            .filter((emoji) => emoji.available !== false)
+            .map((emoji) => ({
+                id: emoji.id,
+                name: emoji.name,
+                animated: Boolean(emoji.animated),
+                url: emoji.imageURL({ size: 64 }),
+            })),
+        categories: guild.channels.cache
+            .filter((channel) => channel.type === ChannelType.GuildCategory)
+            .sort((a, b) => a.rawPosition - b.rawPosition)
+            .map((category) => ({
+                id: category.id,
+                name: category.name,
+                botCanUse: me.permissionsIn(category).has(TICKET_CATEGORY_PERMISSIONS),
+            })),
         botPermissions: { manageRoles: me.permissions.has(PermissionFlagsBits.ManageRoles) },
-        limits: { ...LIMITS, NICKNAME_MAX, BIO_MAX, IMAGE_MAX_BYTES, AUTO_ROLES_MAX, WELCOME: WELCOME_LIMITS },
+        limits: {
+            ...LIMITS,
+            NICKNAME_MAX,
+            BIO_MAX,
+            IMAGE_MAX_BYTES,
+            AUTO_ROLES_MAX,
+            WELCOME: WELCOME_LIMITS,
+            TICKETS: TICKET_LIMITS,
+            TICKET_TYPES: TICKET_TYPE_LIMITS,
+        },
     });
 }
 
@@ -331,8 +380,61 @@ async function saveWelcomeSettings(client, { guildId, userId, settings }) {
     return { ok: true, data: after, changes: describeWelcomeChanges(before, after, nameLookup(guild)) };
 }
 
+/**
+ * Validates and saves the ticket settings.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, settings: unknown }} payload
+ */
+async function saveTicketSettings(client, { guildId, userId, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+
+    const current = await Ticket_Config_Cache.get(guild.id);
+    const { settings: valid, errors } = validateTicketSettings(settings, guildContext(guild), current);
+    if (errors.length > 0) return fail(400, 'Some settings are not valid', errors);
+
+    const exists = roleExists(guild);
+    const before = ticketsView(current, exists);
+    const after = ticketsView(await Ticket_Config_Cache.set(guild.id, valid), exists);
+    return { ok: true, data: after, changes: describeTicketChanges(before, after, nameLookup(guild)) };
+}
+
+/**
+ * Posts the "Create Ticket" panel in a channel, or updates the one already there.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, channelId: unknown }} payload
+ */
+async function postTicketPanel(client, { guildId, userId, channelId }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+
+    if (typeof channelId !== 'string' || !guildContext(guild).textChannelIds.has(channelId)) {
+        return fail(400, 'Choose a text channel the bot can post in');
+    }
+    const result = /** @type {any} */ (await postPanel(guild, channelId));
+    if (!result.ok) {
+        return fail(
+            400,
+            result.reason === 'bot_permissions'
+                ? `Ovx is missing permissions in that channel: ${result.missing.join(', ')}`
+                : 'Choose a text channel the bot can post in'
+        );
+    }
+
+    const channelName = nameLookup(guild).channel(channelId);
+    return {
+        ok: true,
+        data: { channelId, posted: true, messageUrl: result.messageUrl },
+        changes: [
+            result.updated ? `Updated the ticket panel in ${channelName}` : `Posted the ticket panel in ${channelName}`,
+        ],
+    };
+}
+
 /** Sections that can be reset to their defaults. Members' XP and levels are never touched. */
-const RESET_SECTIONS = new Set(['levels', 'logging', 'bot', 'auto-roles', 'welcome']);
+const RESET_SECTIONS = new Set(['levels', 'logging', 'bot', 'auto-roles', 'welcome', 'tickets']);
 
 /**
  * Puts one settings section back to its defaults.
@@ -360,6 +462,27 @@ async function resetSettings(client, { guildId, userId, section }) {
         const off = Object.fromEntries(LOG_TYPES.map((type) => [type, { enabled: false, channelId: null }]));
         const after = loggingView(await Logs_Cache.set(guild.id, { ...off, ignoredChannels: [] }));
         return { ok: true, data: after, changes: describeLoggingChanges(before, after, names) };
+    }
+
+    if (section === 'tickets') {
+        const exists = roleExists(guild);
+        const before = ticketsView(await Ticket_Config_Cache.get(guild.id), exists);
+        // Ticket numbers keep counting, and the panel stays where it is so posting it again updates it
+        const defaults = Ticket_Config_Cache.createDefault(guild.id);
+        const { panel } = defaults;
+        delete defaults.guildId;
+        delete defaults.lastTicketNumber;
+        delete defaults.panel;
+        const after = ticketsView(
+            await Ticket_Config_Cache.set(guild.id, {
+                ...defaults,
+                'panel.title': panel.title,
+                'panel.description': panel.description,
+                'panel.buttonLabel': panel.buttonLabel,
+            }),
+            exists
+        );
+        return { ok: true, data: after, changes: describeTicketChanges(before, after, names) };
     }
 
     if (section === 'welcome') {
@@ -544,6 +667,12 @@ function guildContext(guild) {
                 .map((role) => [role.id, { position: role.position, managed: role.managed }])
         ),
         botHighestRolePosition: me.roles.highest.position,
+        emojiIds: new Set(guild.emojis.cache.map((emoji) => emoji.id)),
+        categoryIds: new Set(
+            guild.channels.cache
+                .filter((channel) => channel.type === ChannelType.GuildCategory)
+                .map((channel) => channel.id)
+        ),
     };
 }
 

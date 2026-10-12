@@ -303,6 +303,10 @@ export function createSettingsState({ saved, onSave, onReset }) {
         get saved() {
             return savedValue;
         },
+        /** Whether there are unsaved changes */
+        get dirty() {
+            return isDirty();
+        },
         changed: update,
         /** Replace the saved settings (and drop any unsaved changes), e.g. after a reset */
         replaceSaved(value) {

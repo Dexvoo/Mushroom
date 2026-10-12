@@ -23,8 +23,8 @@ export async function canManage(interaction) {
 }
 
 /**
- * A private error reply.
- * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
+ * A private error reply (also for buttons).
+ * @param {import('discord.js').RepliableInteraction<'cached'>} interaction
  * @param {string} message
  */
 export function replyError(interaction, message) {

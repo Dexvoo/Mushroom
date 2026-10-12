@@ -174,3 +174,84 @@ export function describeWelcomeChanges(before, after, names) {
     }
     return changes;
 }
+
+/**
+ * @param {any} before - ticketsView before the save
+ * @param {any} after - ticketsView after the save
+ * @param {NameLookup} names
+ * @returns {string[]}
+ */
+export function describeTicketChanges(before, after, names) {
+    const changes = [];
+    const category = (id) => (id ? names.channel(id).replace(/^#/, '') : 'none');
+    const toggles = [
+        ['enabled', 'Tickets'],
+        ['pingStaff', 'Ping staff on new tickets'],
+        ['ownerCanClose', 'Members can close their own tickets'],
+        ['dmTranscript', 'DM transcripts to members'],
+    ];
+
+    for (const [key, label] of toggles) {
+        if (before[key] !== after[key]) changes.push(`${label}: ${onOff(before[key])} → ${onOff(after[key])}`);
+    }
+    if (before.categoryId !== after.categoryId) {
+        changes.push(`Ticket category: ${category(before.categoryId)} → ${category(after.categoryId)}`);
+    }
+    if (before.transcriptChannelId !== after.transcriptChannelId) {
+        changes.push(
+            `Transcript channel: ${names.channel(before.transcriptChannelId)} → ${names.channel(after.transcriptChannelId)}`
+        );
+    }
+    if (before.maxOpenPerUser !== after.maxOpenPerUser) {
+        changes.push(`Open tickets per member: ${before.maxOpenPerUser} → ${after.maxOpenPerUser}`);
+    }
+    if (before.openMessage !== after.openMessage) {
+        changes.push(after.openMessage ? 'Ticket message changed' : 'Ticket message reset to the default');
+    }
+    for (const [key, label] of [
+        ['title', 'Panel title'],
+        ['description', 'Panel text'],
+        ['buttonLabel', 'Panel button label'],
+    ]) {
+        if (before.panel[key] !== after.panel[key]) {
+            changes.push(after.panel[key] ? `${label} changed` : `${label} reset to the default`);
+        }
+    }
+    changes.push(...listChanges('Staff role', before.staffRoleIds, after.staffRoleIds, names.role));
+    changes.push(...describeTicketTypeChanges(before.ticketTypes ?? [], after.ticketTypes ?? []));
+    return changes;
+}
+
+/**
+ * Ticket types are matched by ID, so renaming one counts as a change, not a removal.
+ * @param {any[]} before
+ * @param {any[]} after
+ */
+function describeTicketTypeChanges(before, after) {
+    const changes = [];
+    const beforeById = new Map(before.map((type) => [type.id, type]));
+    const afterIds = new Set(after.map((type) => type.id));
+
+    for (const type of after) {
+        const was = beforeById.get(type.id);
+        if (!was) changes.push(`Added ticket type: ${type.label}`);
+        else if (JSON.stringify(was) !== JSON.stringify(type)) {
+            changes.push(
+                was.label === type.label
+                    ? `Changed ticket type: ${type.label}`
+                    : `Changed ticket type: ${was.label} → ${type.label}`
+            );
+        }
+    }
+    for (const type of before) {
+        if (!afterIds.has(type.id)) changes.push(`Removed ticket type: ${type.label}`);
+    }
+
+    const order = (types) =>
+        types
+            .filter((type) => beforeById.has(type.id) && afterIds.has(type.id))
+            .map((type) => type.id)
+            .join();
+    if (order(before) !== order(after)) changes.push('Reordered ticket types');
+    return changes;
+}

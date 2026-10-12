@@ -6,6 +6,8 @@ import {
     validateBotSettings,
     validateAutoRoleSettings,
     validateWelcomeSettings,
+    validateTicketSettings,
+    parseButtonEmoji,
     IMAGE_MAX_BYTES,
 } from '../src/dashboard/validation.js';
 
@@ -338,4 +340,130 @@ test('welcome: text limits, types and unknown keys', () => {
     assert.equal(errorsFor({ ping: '@everyone' }).length, 1);
     assert.equal(validateWelcomeSettings({ hello: {} }, guild).errors.length, 1);
     assert.equal(validateWelcomeSettings({ welcome: 'on' }, guild).errors.length, 1);
+});
+
+// ---------- Tickets ----------
+
+const CATEGORY = '100000000000000009';
+const ticketGuild = { ...guild, categoryIds: new Set([CATEGORY]) };
+const validateTickets = (input, current = { categoryId: null }) => validateTicketSettings(input, ticketGuild, current);
+
+test('tickets: valid settings map onto the config, panel text as dotted keys', () => {
+    assert.deepEqual(
+        validateTickets({
+            enabled: true,
+            categoryId: CATEGORY,
+            transcriptChannelId: TEXT,
+            staffRoleIds: [ROLE_HIGH, ROLE_HIGH, ROLE_BOT],
+            maxOpenPerUser: 2,
+            openMessage: '  Hi!  ',
+            panel: { title: '  Need   help? ', description: 'Line one\nLine two', buttonLabel: '' },
+        }),
+        {
+            settings: {
+                enabled: true,
+                categoryId: CATEGORY,
+                transcriptChannelId: TEXT,
+                staffRoleIds: [ROLE_HIGH, ROLE_BOT],
+                maxOpenPerUser: 2,
+                openMessage: 'Hi!',
+                'panel.title': 'Need help?',
+                'panel.description': 'Line one\nLine two',
+                'panel.buttonLabel': null,
+            },
+            errors: [],
+        }
+    );
+});
+
+test('tickets: need a category to be on (new or already saved)', () => {
+    assert.match(validateTickets({ enabled: true }).errors[0], /category/);
+    assert.equal(validateTickets({ enabled: true }, { categoryId: CATEGORY }).errors.length, 0);
+    assert.match(validateTickets({ categoryId: TEXT }).errors[0], /category/, 'a text channel is not a category');
+});
+
+test('tickets: limits and unknown keys', () => {
+    const errorsFor = (input) => validateTickets(input).errors;
+    assert.equal(errorsFor({ maxOpenPerUser: 6 }).length, 1);
+    assert.equal(errorsFor({ maxOpenPerUser: 0 }).length, 1);
+    assert.equal(errorsFor({ staffRoleIds: Array(11).fill(ROLE_LOW) }).length, 1);
+    assert.equal(errorsFor({ staffRoleIds: [OTHER_SERVER_ID] }).length, 1);
+    assert.equal(errorsFor({ transcriptChannelId: VOICE }).length, 1);
+    assert.equal(errorsFor({ panel: { buttonLabel: 'x'.repeat(81) } }).length, 1);
+    assert.equal(errorsFor({ panel: { channelId: TEXT } }).length, 1, 'the panel channel is set by posting it');
+    assert.equal(errorsFor({ lastTicketNumber: 0 }).length, 1, 'the counter cannot be changed');
+    assert.equal(errorsFor({ pingStaff: 'yes' }).length, 1);
+});
+
+// ---------- Ticket types ----------
+
+const EMOJI_ID = '800000000000000001';
+const typeGuild = { ...ticketGuild, emojiIds: new Set([EMOJI_ID]) };
+const ticketType = (overrides = {}) => ({
+    id: 'support1',
+    label: '  Ticket   Support ',
+    emoji: '🎫',
+    style: 'primary',
+    description: 'Questions',
+    channelPrefix: ' Unban Requests! ',
+    categoryId: CATEGORY,
+    staffRoleIds: [ROLE_LOW],
+    allowedRoleIds: [],
+    openMessage: null,
+    ...overrides,
+});
+const validateTypes = (types) => validateTicketSettings({ ticketTypes: types }, typeGuild, { categoryId: null });
+
+test('ticket types: valid types are cleaned up (label spacing, channel name)', () => {
+    const { settings, errors } = validateTypes([ticketType()]);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(settings.ticketTypes[0], {
+        id: 'support1',
+        label: 'Ticket Support',
+        emoji: '🎫',
+        style: 'primary',
+        description: 'Questions',
+        channelPrefix: 'unban-requests',
+        categoryId: CATEGORY,
+        staffRoleIds: [ROLE_LOW],
+        allowedRoleIds: [],
+        openMessage: null,
+    });
+});
+
+test('ticket types: at most 10, unique IDs, and every field checked', () => {
+    const errorsFor = (overrides) => validateTypes([ticketType(overrides)]).errors;
+    assert.equal(validateTypes(Array.from({ length: 11 }, (_, i) => ticketType({ id: `t${i}` }))).errors.length, 1);
+    assert.equal(validateTypes([ticketType(), ticketType()]).errors.length, 1, 'duplicate IDs');
+    assert.equal(errorsFor({ id: 'Bad ID!' }).length, 1);
+    assert.equal(errorsFor({ label: '   ' }).length, 1);
+    assert.equal(errorsFor({ label: 'x'.repeat(81) }).length, 1);
+    assert.equal(errorsFor({ style: 'pink' }).length, 1);
+    assert.equal(errorsFor({ channelPrefix: '!!!' }).length, 1);
+    assert.equal(errorsFor({ categoryId: TEXT }).length, 1);
+    assert.equal(errorsFor({ staffRoleIds: [OTHER_SERVER_ID] }).length, 1);
+    assert.equal(errorsFor({ allowedRoleIds: 'everyone' }).length, 1);
+    assert.equal(errorsFor({ extra: true }).length, 1);
+    assert.equal(errorsFor({ description: 'x'.repeat(101) }).length, 1);
+});
+
+test('button emojis: one Unicode emoji, or one of this server’s custom emojis', () => {
+    const ok = (value) => parseButtonEmoji(value, typeGuild.emojiIds).ok;
+    for (const emoji of [
+        '🎫',
+        '🛠️',
+        '❤️',
+        '👍🏽',
+        '🇬🇧',
+        '1️⃣',
+        `<:mushroom:${EMOJI_ID}>`,
+        `<a:spin:${EMOJI_ID}>`,
+        null,
+        '',
+    ]) {
+        assert.equal(ok(emoji), true, String(emoji));
+    }
+    for (const emoji of ['🎫🎫', 'abc', ':smile:', '<:other:900000000000000009>', '<script>', '1', 42]) {
+        assert.equal(ok(emoji), false, String(emoji));
+    }
 });

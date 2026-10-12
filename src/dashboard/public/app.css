@@ -1432,6 +1432,204 @@ a.sidebar-link:hover {
     flex-shrink: 0;
 }
 
+/* ---------- Ticket types ---------- */
+
+.ticket-types {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.type-card {
+    position: relative;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-raised);
+}
+
+.type-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.type-label {
+    flex: 1 1 180px;
+    min-width: 0;
+}
+
+.type-colour.select {
+    flex: 0 0 120px;
+    width: 120px;
+    min-width: 0;
+}
+
+.type-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.icon-button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.icon-button:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--text);
+}
+
+.icon-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.emoji-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 38px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.emoji-button:hover {
+    border-color: var(--accent);
+}
+
+.emoji-placeholder {
+    color: var(--muted);
+    font-size: 1rem;
+}
+
+.emoji-image {
+    width: 1.3em;
+    height: 1.3em;
+    object-fit: contain;
+    vertical-align: -0.25em;
+}
+
+.emoji-picker {
+    position: absolute;
+    z-index: 15;
+    top: 56px;
+    left: 12px;
+    width: min(340px, calc(100% - 24px));
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: 0 12px 32px rgb(0 0 0 / 25%);
+}
+
+.emoji-picker-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.emoji-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.emoji-picker-heading {
+    margin: 8px 0 4px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+    gap: 2px;
+    max-height: 170px;
+    overflow-y: auto;
+}
+
+.emoji-choice {
+    height: 34px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 1.25rem;
+    cursor: pointer;
+}
+
+.emoji-choice:hover {
+    background: var(--accent-soft);
+}
+
+.type-details {
+    margin-top: 10px;
+}
+
+.type-details summary {
+    color: var(--accent-strong);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.type-details[open] summary {
+    margin-bottom: 6px;
+}
+
+.ticket-types-add .select {
+    width: auto;
+}
+
+/* Panel preview: buttons in Discord's colours */
+.preview-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.preview-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    background: #5865f2;
+    color: #ffffff;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.preview-button-secondary {
+    background: #4e5058;
+}
+
+.preview-button-success {
+    background: #248046;
+}
+
+.preview-button-danger {
+    background: #da373c;
+}
+
+.preview-embed-list {
+    margin-top: 8px;
+}
+
 /* ---------- Web Logs ---------- */
 
 .section-header-actions {

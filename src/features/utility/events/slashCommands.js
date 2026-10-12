@@ -1,5 +1,6 @@
 import { MessageFlags, Events } from 'discord.js';
 import User_Level_Cache from '../../levels/cache/userLevels.cache.js';
+import { isHandledComponent } from '../../../shared/constants/componentIds.js';
 
 export const name = Events.InteractionCreate;
 export const once = false;
@@ -24,6 +25,8 @@ export async function execute(interaction) {
         return;
     }
 
+    // Buttons that a feature handles itself (e.g. tickets) are left to it
+    if (interaction.isMessageComponent() && isHandledComponent(interaction.customId)) return;
     if (interaction.isMessageComponent())
         return client.utils.Embed(
             interaction,

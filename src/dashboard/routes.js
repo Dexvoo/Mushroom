@@ -149,12 +149,42 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         })
     );
 
+    router.put('/guilds/:guildId/tickets', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('saveTicketSettings', req.params.guildId, {
+                userId: req.session.user.id,
+                settings: req.body,
+            });
+            if (result.ok && result.changes?.length) {
+                LogData(
+                    'Dashboard',
+                    `Ticket settings saved for ${req.params.guildId} by ${req.session.user.id}`,
+                    'info'
+                );
+                await recordAudit(req, 'Updated ticket settings', result.changes);
+            }
+            return result;
+        })
+    );
+
+    router.post('/guilds/:guildId/tickets/panel', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('postTicketPanel', req.params.guildId, {
+                userId: req.session.user.id,
+                channelId: req.body?.channelId,
+            });
+            if (result.ok) await recordAudit(req, 'Updated ticket settings', result.changes);
+            return result;
+        })
+    );
+
     const RESET_ACTIONS = {
         levels: 'Reset level settings',
         logging: 'Reset logging settings',
         bot: 'Reset bot settings',
         'auto-roles': 'Reset auto roles',
         welcome: 'Reset welcome messages',
+        tickets: 'Reset ticket settings',
     };
 
     router.post('/guilds/:guildId/reset/:section', requireLogin, validGuildId, (req, res) => {

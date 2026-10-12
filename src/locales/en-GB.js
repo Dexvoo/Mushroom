@@ -210,6 +210,68 @@ export default {
         },
     },
 
+    tickets: {
+        title: 'Tickets',
+        error: 'Something went wrong with that ticket action. Try again, and if it keeps happening let a server admin know.',
+        none: 'None',
+
+        // Opening
+        created: 'Your ticket is ready: {channel}',
+        disabled: 'Tickets are not set up in this server. Ask a server admin to set them up.',
+        no_category:
+            'The ticket category is missing. Ask a server admin to choose one on the dashboard or with `/ticket setup`.',
+        bot_permissions:
+            'Ovx is missing permissions in the ticket category: `{perms}`. Ask a server admin to fix this.',
+        limit: 'You already have {limit} open ticket(s). Close one before opening another.',
+        busy: 'Your ticket is already being created.',
+        unknown_type: 'This kind of ticket no longer exists. Ask a server admin to update the ticket panel.',
+        not_allowed: 'You do not have a role that can open this kind of ticket.',
+
+        // In a ticket
+        not_ticket: 'This is not an open ticket.',
+        staff_only: 'Only staff can do that.',
+        cannot_close: 'You cannot close this ticket. Ask a staff member to close it.',
+        close_confirm: 'Close this ticket? A transcript will be saved and this channel deleted.',
+        close_cancelled: 'The ticket was left open.',
+        closing: 'Closing the ticket and saving a transcript…',
+        closed: 'Ticket closed by {user}. This channel will be deleted in {seconds} seconds.',
+        already_closing: 'This ticket is already being closed.',
+        transcript_failed: 'The transcript could not be saved, so the ticket was left open. {detail}',
+        locked: 'Ticket locked by {user}. {owner} can still read it but cannot send messages.',
+        unlocked: 'Ticket unlocked by {user}.',
+        already_locked: 'This ticket is already locked.',
+        not_locked: 'This ticket is not locked.',
+        claimed: '{user} is handling this ticket.',
+        unclaimed: '{user} is no longer handling this ticket.',
+        claimed_by_other: 'This ticket is already claimed by {user}.',
+        added: '{user} was added to the ticket by {by}.',
+        removed: '{user} was removed from the ticket by {by}.',
+        already_added: '{user} can already see this ticket.',
+        not_added: '{user} was not added to this ticket.',
+        not_member: '{user} is not in this server.',
+        cannot_add_bot: 'Bots cannot be added to tickets.',
+        cannot_remove_owner: 'The person who opened the ticket cannot be removed. Lock it instead.',
+        bad_name: 'That name has no letters or numbers Discord allows in channel names.',
+        renamed: 'Ticket renamed to {name}.',
+
+        // Setup
+        currently_off: 'Tickets are currently off. Turn them on with `/ticket setup enabled:True`.',
+        panel_posted: 'The ticket panel was posted: {url}',
+        panel_updated: 'The ticket panel was updated: {url}',
+        panel_no_channel: 'Choose a text channel to post the panel in.',
+        panel_bot_permissions: 'Ovx needs these permissions in {channel} first: `{perms}`',
+        setup_on: 'Tickets are on. Post the "Create Ticket" message with `/ticket panel`.',
+        setup_off: 'Tickets are off. Open tickets stay open, but no new ones can be created.',
+        setup_needs_category: 'Choose a category for new tickets first.',
+        setup_category_permissions: 'Ovx needs these permissions in {channel} first: `{perms}`',
+        setup_transcript_permissions: 'Ovx needs these permissions in {channel} first: `{perms}`',
+        setup_everyone: 'The everyone role cannot be a staff role, since everyone would see every ticket.',
+        setup_staff_full: 'You can have at most {max} staff roles. Remove one on the dashboard first.',
+        field_category: 'Category',
+        field_transcripts: 'Transcripts',
+        field_staff: 'Staff roles',
+    },
+
     levels: {
         level_up_default: '{user} leveled up to **{level}**!',
         rewards_added: 'Added Rewards',

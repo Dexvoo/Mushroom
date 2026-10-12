@@ -39,6 +39,8 @@ const LEVEL_SETTING_KEYS = new Set([
  * @property {Set<string>} channelIds - All channels (for the XP blacklist, which includes voice)
  * @property {Map<string, { position: number, managed: boolean }>} roles - Excluding the everyone role
  * @property {number} botHighestRolePosition
+ * @property {Set<string>} [categoryIds] - Categories the bot can create ticket channels in
+ * @property {Set<string>} [emojiIds] - The server's custom emojis
  */
 
 /**
@@ -640,4 +642,288 @@ function optionalText(value, max, label, errors) {
         return undefined;
     }
     return trimmed || null;
+}
+
+/** Limits for ticket settings (Discord's own limits for the panel embed and button). */
+export const TICKET_LIMITS = Object.freeze({
+    STAFF_ROLES_MAX: 10,
+    MAX_OPEN_MIN: 1,
+    MAX_OPEN_MAX: 5,
+    OPEN_MESSAGE_MAX: 1000,
+    PANEL_TITLE_MAX: 256,
+    PANEL_DESCRIPTION_MAX: 2000,
+    BUTTON_LABEL_MAX: 80,
+});
+
+const TICKET_SETTING_KEYS = new Set([
+    'enabled',
+    'categoryId',
+    'transcriptChannelId',
+    'staffRoleIds',
+    'pingStaff',
+    'maxOpenPerUser',
+    'ownerCanClose',
+    'dmTranscript',
+    'openMessage',
+    'panel',
+    'ticketTypes',
+]);
+/** @type {Readonly<Record<string, [number, string]>>} */
+const TICKET_PANEL_LIMITS = Object.freeze({
+    title: [TICKET_LIMITS.PANEL_TITLE_MAX, 'Panel title'],
+    description: [TICKET_LIMITS.PANEL_DESCRIPTION_MAX, 'Panel text'],
+    buttonLabel: [TICKET_LIMITS.BUTTON_LABEL_MAX, 'Button label'],
+});
+const TICKET_TOGGLES = ['enabled', 'pingStaff', 'ownerCanClose', 'dmTranscript'];
+
+/**
+ * Validates ticket settings. Fields left out are unchanged.
+ * The panel's channel isn't set here: posting the panel sets it (see shardHandlers.js postTicketPanel).
+ *
+ * @param {unknown} input - Parsed request body
+ * @param {GuildContext} guild
+ * @param {{ categoryId: string | null }} current - The saved settings, for "needs a category to be on"
+ * @returns {{ settings: Record<string, any>, errors: string[] }} Keys map straight onto the config (panel.* dotted)
+ */
+export function validateTicketSettings(input, guild, current) {
+    const errors = [];
+    const settings = {};
+
+    if (!isPlainObject(input)) return { settings, errors: ['Settings must be an object'] };
+    for (const key of Object.keys(input)) {
+        if (!TICKET_SETTING_KEYS.has(key)) errors.push(`Unknown setting "${key}"`);
+    }
+    if (Object.keys(input).length === 0) errors.push('No settings to save');
+    if (errors.length > 0) return { settings, errors };
+
+    const has = (key) => Object.prototype.hasOwnProperty.call(input, key);
+
+    for (const key of TICKET_TOGGLES) {
+        if (!has(key)) continue;
+        if (typeof input[key] === 'boolean') settings[key] = input[key];
+        else errors.push(`${key} must be true or false`);
+    }
+
+    if (has('categoryId')) {
+        const { categoryId } = input;
+        if (categoryId === null) settings.categoryId = null;
+        else if (typeof categoryId === 'string' && guild.categoryIds?.has(categoryId)) settings.categoryId = categoryId;
+        else errors.push('Ticket category: choose a category in this server');
+    }
+
+    if (has('transcriptChannelId')) {
+        const channelId = input.transcriptChannelId;
+        if (channelId === null) settings.transcriptChannelId = null;
+        else if (typeof channelId === 'string' && guild.textChannelIds.has(channelId)) {
+            settings.transcriptChannelId = channelId;
+        } else errors.push('Transcript channel: choose a text channel the bot can post in');
+    }
+
+    if (has('staffRoleIds')) {
+        const { staffRoleIds } = input;
+        if (!Array.isArray(staffRoleIds) || staffRoleIds.length > TICKET_LIMITS.STAFF_ROLES_MAX) {
+            errors.push(`Staff roles: up to ${TICKET_LIMITS.STAFF_ROLES_MAX} roles`);
+        } else if (!staffRoleIds.every((id) => typeof id === 'string' && SNOWFLAKE.test(id) && guild.roles.has(id))) {
+            errors.push('Staff roles: one or more roles are not in this server');
+        } else settings.staffRoleIds = [...new Set(staffRoleIds)];
+    }
+
+    if (has('maxOpenPerUser')) {
+        const max = integerInRange(input.maxOpenPerUser, TICKET_LIMITS.MAX_OPEN_MIN, TICKET_LIMITS.MAX_OPEN_MAX);
+        if (max === null) {
+            errors.push(
+                `Open tickets per member: a whole number from ${TICKET_LIMITS.MAX_OPEN_MIN} to ${TICKET_LIMITS.MAX_OPEN_MAX}`
+            );
+        } else settings.maxOpenPerUser = max;
+    }
+
+    if (has('openMessage')) {
+        const message = optionalText(input.openMessage, TICKET_LIMITS.OPEN_MESSAGE_MAX, 'Ticket message', errors);
+        if (message !== undefined) settings.openMessage = message;
+    }
+
+    if (has('panel')) {
+        const { panel } = input;
+        if (!isPlainObject(panel) || Object.keys(panel).some((key) => !Object.hasOwn(TICKET_PANEL_LIMITS, key))) {
+            errors.push('Panel: settings are not valid');
+        } else {
+            for (const [key, [max, label]] of Object.entries(TICKET_PANEL_LIMITS)) {
+                if (!Object.prototype.hasOwnProperty.call(panel, key)) continue;
+                const value = optionalText(panel[key], max, label, errors);
+                if (value === undefined) continue;
+                // The title and button label are one line
+                settings[`panel.${key}`] = key === 'description' || value === null ? value : collapseSpaces(value);
+            }
+        }
+    }
+
+    if (has('ticketTypes')) {
+        const types = validateTicketTypes(input.ticketTypes, guild, errors);
+        if (types) settings.ticketTypes = types;
+    }
+
+    const categoryAfter = settings.categoryId !== undefined ? settings.categoryId : current.categoryId;
+    if (settings.enabled && !categoryAfter) errors.push('Choose a ticket category before turning tickets on');
+
+    return { settings, errors };
+}
+
+/**
+ * @param {string} text
+ */
+function collapseSpaces(text) {
+    return text.split(/\s+/).join(' ');
+}
+
+/** Limits for ticket types. Ten buttons fit on two rows of a panel. */
+export const TICKET_TYPE_LIMITS = Object.freeze({
+    TYPES_MAX: 10,
+    LABEL_MAX: 80,
+    DESCRIPTION_MAX: 100,
+    PREFIX_MAX: 20,
+    ROLES_MAX: 10,
+});
+
+const TICKET_TYPE_KEYS = new Set([
+    'id',
+    'label',
+    'emoji',
+    'style',
+    'description',
+    'channelPrefix',
+    'categoryId',
+    'staffRoleIds',
+    'allowedRoleIds',
+    'openMessage',
+]);
+const BUTTON_STYLES = new Set(['primary', 'secondary', 'success', 'danger']);
+const TYPE_ID = /^[a-z\d]{1,16}$/;
+const CUSTOM_EMOJI = /^<a?:\w{2,32}:(\d{17,20})>$/;
+const EMOJI_PARTS = /^[\p{Extended_Pictographic}\p{Emoji_Component}]+$/u;
+const KEYCAP = String.fromCharCode(0x20e3);
+const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
+/**
+ * Checks a button emoji: one Unicode emoji, or a custom emoji from this server (the bot can only use those).
+ * @param {unknown} value
+ * @param {Set<string> | undefined} emojiIds - The server's custom emojis
+ * @returns {{ ok: true, emoji: string | null } | { ok: false }}
+ */
+export function parseButtonEmoji(value, emojiIds) {
+    if (value === null || value === '') return { ok: true, emoji: null };
+    if (typeof value !== 'string') return { ok: false };
+    const text = value.trim();
+
+    const custom = CUSTOM_EMOJI.exec(text);
+    if (custom) return emojiIds?.has(custom[1]) ? { ok: true, emoji: text } : { ok: false };
+
+    const isEmoji =
+        text.length <= 32 &&
+        EMOJI_PARTS.test(text) &&
+        (/\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(text) || text.includes(KEYCAP)) &&
+        [...graphemes.segment(text)].length === 1;
+    return isEmoji ? { ok: true, emoji: text } : { ok: false };
+}
+
+/**
+ * Validates the list of ticket types (the whole list is replaced).
+ * @param {unknown} input
+ * @param {GuildContext} guild
+ * @param {string[]} errors
+ * @returns {Record<string, any>[] | null}
+ */
+function validateTicketTypes(input, guild, errors) {
+    if (!Array.isArray(input) || input.length > TICKET_TYPE_LIMITS.TYPES_MAX) {
+        errors.push(`Ticket types: up to ${TICKET_TYPE_LIMITS.TYPES_MAX}`);
+        return null;
+    }
+
+    const types = [];
+    const ids = new Set();
+    for (const [index, type] of input.entries()) {
+        const before = errors.length;
+        const name = typeof type?.label === 'string' && type.label.trim() ? `"${type.label.trim()}"` : `${index + 1}`;
+        const label = `Ticket type ${name}`;
+
+        if (!isPlainObject(type) || Object.keys(type).some((key) => !TICKET_TYPE_KEYS.has(key))) {
+            errors.push(`${label}: settings are not valid`);
+            continue;
+        }
+        if (typeof type.id !== 'string' || !TYPE_ID.test(type.id) || ids.has(type.id)) {
+            errors.push(`${label}: not valid, refresh the page and try again`);
+            continue;
+        }
+
+        const buttonLabel = typeof type.label === 'string' ? type.label.trim().split(/\s+/).join(' ') : '';
+        if (!buttonLabel || buttonLabel.length > TICKET_TYPE_LIMITS.LABEL_MAX) {
+            errors.push(`${label}: the button label must be 1 to ${TICKET_TYPE_LIMITS.LABEL_MAX} characters`);
+        }
+
+        const emoji = parseButtonEmoji(type.emoji, guild.emojiIds);
+        if (!emoji.ok) errors.push(`${label}: the emoji must be a single emoji, or one of this server's emojis`);
+
+        if (!BUTTON_STYLES.has(type.style)) errors.push(`${label}: choose a button colour`);
+
+        const description = optionalText(
+            type.description,
+            TICKET_TYPE_LIMITS.DESCRIPTION_MAX,
+            `${label} description`,
+            errors
+        );
+        const openMessage = optionalText(type.openMessage, TICKET_LIMITS.OPEN_MESSAGE_MAX, `${label} message`, errors);
+
+        // Channel names: lowercase letters, numbers and dashes
+        let channelPrefix = null;
+        if (type.channelPrefix !== null && type.channelPrefix !== undefined && type.channelPrefix !== '') {
+            channelPrefix =
+                typeof type.channelPrefix === 'string'
+                    ? type.channelPrefix
+                          .trim()
+                          .toLowerCase()
+                          .replace(/\s+/g, '-')
+                          .replace(/[^a-z\d-]/g, '')
+                          .replace(/^-+|-+$/g, '')
+                    : '';
+            if (!channelPrefix || channelPrefix.length > TICKET_TYPE_LIMITS.PREFIX_MAX) {
+                errors.push(
+                    `${label}: the channel name must be 1 to ${TICKET_TYPE_LIMITS.PREFIX_MAX} letters, numbers or dashes`
+                );
+            }
+        }
+
+        const categoryId = type.categoryId ?? null;
+        if (categoryId !== null && (typeof categoryId !== 'string' || !guild.categoryIds?.has(categoryId))) {
+            errors.push(`${label}: choose a category in this server`);
+        }
+
+        const roleList = (value, what) => {
+            if (!Array.isArray(value) || value.length > TICKET_TYPE_LIMITS.ROLES_MAX) {
+                errors.push(`${label}: up to ${TICKET_TYPE_LIMITS.ROLES_MAX} ${what}`);
+                return [];
+            }
+            if (!value.every((id) => typeof id === 'string' && SNOWFLAKE.test(id) && guild.roles.has(id))) {
+                errors.push(`${label}: one or more ${what} are not in this server`);
+                return [];
+            }
+            return [...new Set(value)];
+        };
+        const staffRoleIds = roleList(type.staffRoleIds ?? [], 'staff roles');
+        const allowedRoleIds = roleList(type.allowedRoleIds ?? [], 'roles that can open it');
+
+        if (errors.length > before) continue;
+        ids.add(type.id);
+        types.push({
+            id: type.id,
+            label: buttonLabel,
+            emoji: emoji.ok ? emoji.emoji : null,
+            style: type.style,
+            description,
+            channelPrefix,
+            categoryId,
+            staffRoleIds,
+            allowedRoleIds,
+            openMessage,
+        });
+    }
+    return types;
 }

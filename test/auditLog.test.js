@@ -6,6 +6,7 @@ import {
     describeBotChanges,
     describeAutoRoleChanges,
     describeWelcomeChanges,
+    describeTicketChanges,
 } from '../src/dashboard/describeChanges.js';
 import { searchPattern, createMongoAuditStore, AUDIT_PAGE_SIZE } from '../src/dashboard/auditStore.js';
 import { AuditLog } from '../src/dashboard/models/auditLog.js';
@@ -243,5 +244,66 @@ test('describes welcome and goodbye changes', () => {
         'Welcome embed: off → on',
         'Welcome embed title changed',
         'Goodbye message reset to the default',
+    ]);
+});
+
+test('describes ticket setting changes', () => {
+    const base = {
+        enabled: false,
+        categoryId: null,
+        transcriptChannelId: null,
+        staffRoleIds: [],
+        pingStaff: true,
+        maxOpenPerUser: 1,
+        ownerCanClose: true,
+        dmTranscript: true,
+        openMessage: null,
+        panel: { title: null, description: null, buttonLabel: null },
+    };
+    const after = {
+        ...base,
+        enabled: true,
+        categoryId: 'c3',
+        transcriptChannelId: 'c1',
+        staffRoleIds: ['r1'],
+        maxOpenPerUser: 2,
+        panel: { ...base.panel, title: 'Help' },
+    };
+    assert.deepEqual(describeTicketChanges(base, after, names), [
+        'Tickets: off → on',
+        'Ticket category: none → mod-logs',
+        'Transcript channel: none → #general',
+        'Open tickets per member: 1 → 2',
+        'Panel title changed',
+        'Added staff role: @Regular',
+    ]);
+});
+
+test('describes ticket type changes, matched by ID', () => {
+    const base = {
+        enabled: true,
+        categoryId: null,
+        transcriptChannelId: null,
+        staffRoleIds: [],
+        pingStaff: true,
+        maxOpenPerUser: 1,
+        ownerCanClose: true,
+        dmTranscript: true,
+        openMessage: null,
+        panel: { title: null, description: null, buttonLabel: null },
+    };
+    const type = (id, label, extra = {}) => ({ id, label, emoji: null, style: 'primary', ...extra });
+    const before = { ...base, ticketTypes: [type('a', 'Support'), type('b', 'Bugs'), type('c', 'Old')] };
+    const after = {
+        ...base,
+        ticketTypes: [type('b', 'Bug Reports'), type('a', 'Support', { emoji: '🎫' }), type('d', 'Unban')],
+    };
+
+    assert.deepEqual(describeTicketChanges(before, after, names), [
+        'Changed ticket type: Bugs → Bug Reports',
+        'Changed ticket type: Support',
+        'Added ticket type: Unban',
+        'Removed ticket type: Old',
+        'Reordered ticket types',
     ]);
 });

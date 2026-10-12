@@ -7,6 +7,7 @@ import Logs_Cache from '../src/features/logging/cache/logs.cache.js';
 import Guild_Settings_Cache from '../src/shared/cache/guildSettings.cache.js';
 import Auto_Roles_Cache from '../src/features/autoRoles/cache/autoRoles.cache.js';
 import Welcome_Cache from '../src/features/welcome/cache/welcome.cache.js';
+import Ticket_Config_Cache from '../src/features/tickets/cache/ticketConfig.cache.js';
 import { handle } from '../src/dashboard/shardHandlers.js';
 import { ALLOWED_SIZES } from '@discordjs/rest';
 
@@ -16,6 +17,7 @@ const MEMBER = '300000000000000002';
 const STRANGER = '300000000000000003';
 const TEXT = '500000000000000001';
 const ROLE = '600000000000000001';
+const EMOJI = '800000000000000001';
 
 let config;
 let saved;
@@ -24,6 +26,8 @@ let autoRoles;
 let autoRoleWrites;
 let welcome;
 let welcomeWrites;
+let tickets;
+let ticketWrites;
 let storedSettings;
 
 /** Image links throw on sizes Discord doesn't serve, like discord.js does. */
@@ -86,6 +90,19 @@ function makeClient({ canChangeNickname = true, editMe, me = {} } = {}) {
         memberCount: 3,
         iconURL: () => null,
         channels: { cache: new Collection([[TEXT, channel]]) },
+        emojis: {
+            cache: new Collection([
+                [
+                    EMOJI,
+                    {
+                        id: EMOJI,
+                        name: 'mushroom',
+                        animated: false,
+                        imageURL: () => 'https://cdn.discordapp.com/emojis/1.webp',
+                    },
+                ],
+            ]),
+        },
         roles: {
             cache: new Collection([
                 [GUILD_ID, { id: GUILD_ID, name: '@everyone', position: 0, managed: false, hexColor: '#000000' }],
@@ -142,6 +159,14 @@ beforeEach(() => {
     welcome = Welcome_Cache.createDefault(GUILD_ID);
     welcomeWrites = [];
     Welcome_Cache.get = async () => welcome;
+    tickets = Ticket_Config_Cache.createDefault(GUILD_ID);
+    ticketWrites = [];
+    Ticket_Config_Cache.get = async () => tickets;
+    Ticket_Config_Cache.set = async (guildId, updates) => {
+        ticketWrites.push(updates);
+        tickets = { ...tickets, ...updates };
+        return tickets;
+    };
     Welcome_Cache.set = async (guildId, updates) => {
         welcomeWrites.push(updates);
         welcome = { ...welcome, ...updates };
@@ -613,4 +638,64 @@ test('resetting welcome messages switches both off and clears them', async () =>
         title: null,
     });
     assert.ok(result.changes.includes('Goodbye messages: on → off'));
+});
+
+// ---------- Tickets ----------
+
+test('the overview has the ticket settings, the default texts and where the panel is', async () => {
+    tickets = {
+        ...tickets,
+        staffRoleIds: [ROLE, '600000000000000099'],
+        panel: { ...tickets.panel, channelId: TEXT, messageId: 'm' },
+    };
+    const result = await handle(makeClient(), 'guildOverview', { guildId: GUILD_ID, userId: MANAGER });
+    assert.deepEqual(result.data.tickets.staffRoleIds, [ROLE], 'deleted roles are dropped');
+    assert.deepEqual(result.data.ticketPanel, { channelId: TEXT, posted: true });
+    assert.match(result.data.ticketDefaults.buttonLabel, /Ticket/);
+    assert.deepEqual(result.data.categories, []);
+});
+
+test('saving ticket settings validates, writes through the cache and describes the change', async () => {
+    const save = (userId, settings) =>
+        handle(makeClient(), 'saveTicketSettings', { guildId: GUILD_ID, userId, settings });
+
+    assert.equal((await save(MEMBER, { pingStaff: false })).status, 403);
+    assert.equal((await save(MANAGER, { enabled: true })).status, 400, 'needs a category first');
+    assert.equal(ticketWrites.length, 0);
+
+    const result = await save(MANAGER, { pingStaff: false, staffRoleIds: [ROLE] });
+    assert.equal(result.ok, true);
+    assert.deepEqual(ticketWrites, [{ pingStaff: false, staffRoleIds: [ROLE] }]);
+    assert.deepEqual(result.changes, ['Ping staff on new tickets: on → off', 'Added staff role: @Regular']);
+});
+
+test('posting the ticket panel needs Manage Server and a channel the bot can post in', async () => {
+    const post = (userId, channelId) =>
+        handle(makeClient(), 'postTicketPanel', { guildId: GUILD_ID, userId, channelId });
+    assert.equal((await post(MEMBER, TEXT)).status, 403);
+    assert.equal((await post(MANAGER, '500000000000000099')).status, 400);
+    assert.equal((await post(MANAGER, { $ne: null })).status, 400);
+});
+
+test('resetting tickets keeps the ticket counter and where the panel is', async () => {
+    tickets = {
+        ...tickets,
+        enabled: true,
+        categoryId: 'c',
+        lastTicketNumber: 42,
+        panel: { ...tickets.panel, channelId: TEXT, messageId: 'm', title: 'Help' },
+    };
+    const result = await handle(makeClient(), 'resetSettings', {
+        guildId: GUILD_ID,
+        userId: MANAGER,
+        section: 'tickets',
+    });
+
+    assert.equal(result.ok, true);
+    const [written] = ticketWrites;
+    assert.equal(written.enabled, false);
+    assert.equal('lastTicketNumber' in written, false);
+    assert.equal('panel' in written, false, 'the panel message is kept');
+    assert.equal(written['panel.title'], null);
+    assert.ok(result.changes.includes('Tickets: on → off'));
 });
