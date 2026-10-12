@@ -445,6 +445,18 @@ test('auto role saves go to the shard as the session user and are recorded', asy
     assert.equal(auditEntries[0].action, 'Updated auto roles');
 });
 
+test('welcome saves go to the shard as the session user and are recorded', async () => {
+    saveChanges = ['Welcome messages: off → on'];
+    const client = await login();
+    const body = { welcome: { enabled: true, channelId: null, message: null, embed: false, title: null } };
+    const response = await client.request(`/api/guilds/${GUILD_ID}/welcome`, json(body));
+
+    assert.equal(response.status, 200);
+    const save = bridgeCalls.find((call) => call.action === 'saveWelcomeSettings');
+    assert.deepEqual(save.payload, { userId: USER_ID, settings: body });
+    assert.equal(auditEntries[0].action, 'Updated welcome messages');
+});
+
 test('only Bot Settings saves may be large (for images); other requests stay small', async () => {
     const client = await login();
     const big = { nickname: 'x', avatar: 'a'.repeat(100_000) };

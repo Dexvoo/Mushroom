@@ -72,3 +72,18 @@ export function autoRolesView(config, roleExists = () => true) {
         botRoleIds: (config.botRoleIds ?? []).filter(roleExists),
     };
 }
+
+/**
+ * The welcome and goodbye settings the dashboard can see and edit.
+ * @param {import('../features/welcome/models/welcome.js').WelcomeType} config
+ */
+export function welcomeView(config) {
+    const message = (value) => ({
+        enabled: Boolean(value?.enabled),
+        channelId: value?.channelId ?? null,
+        message: value?.message ?? null,
+        embed: Boolean(value?.embed),
+        title: value?.title ?? null,
+    });
+    return { welcome: message(config.welcome), goodbye: message(config.goodbye) };
+}

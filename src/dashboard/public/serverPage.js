@@ -5,6 +5,7 @@ import { renderLogging } from './logging.js';
 import { renderWebLogs } from './webLogs.js';
 import { renderBotSettings } from './botSettings.js';
 import { renderAutoRoles } from './autoRoles.js';
+import { renderWelcome } from './welcome.js';
 
 /**
  * Sidebar layout. Items with a `render` are live; the rest are planned and shown as "Soon".
@@ -45,7 +46,7 @@ export const SECTIONS = [
         label: 'Utility',
         items: [
             { slug: 'levels', label: 'Levels', render: renderLevels },
-            { slug: 'welcome-messages', label: 'Welcome Messages' },
+            { slug: 'welcome-messages', label: 'Welcome Messages', render: renderWelcome },
             { slug: 'custom-embeds', label: 'Custom Embeds' },
             { slug: 'starboard', label: 'Starboard' },
         ],

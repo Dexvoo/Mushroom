@@ -6,11 +6,15 @@ import Logs_Cache from '../features/logging/cache/logs.cache.js';
 import { LOG_TYPES } from '../features/logging/models/logging.js';
 import Guild_Settings_Cache from '../shared/cache/guildSettings.cache.js';
 import Auto_Roles_Cache from '../features/autoRoles/cache/autoRoles.cache.js';
+import Welcome_Cache from '../features/welcome/cache/welcome.cache.js';
+import { DEFAULT_MESSAGES } from '../features/welcome/utils/welcomeMessage.js';
 import {
     validateLevelSettings,
     validateLoggingSettings,
     validateBotSettings,
     validateAutoRoleSettings,
+    validateWelcomeSettings,
+    WELCOME_LIMITS,
     AUTO_ROLES_MAX,
     LIMITS,
     NICKNAME_MAX,
@@ -22,8 +26,9 @@ import {
     describeLoggingChanges,
     describeBotChanges,
     describeAutoRoleChanges,
+    describeWelcomeChanges,
 } from './describeChanges.js';
-import { levelsView, loggingView, autoRolesView, nameLookup } from './settingsViews.js';
+import { levelsView, loggingView, autoRolesView, welcomeView, nameLookup } from './settingsViews.js';
 import { LogData } from '../shared/utils/logger.js';
 
 /**
@@ -58,6 +63,7 @@ const handlers = {
     saveLoggingSettings,
     saveBotSettings,
     saveAutoRoleSettings,
+    saveWelcomeSettings,
     resetSettings,
     leaderboard,
     stats,
@@ -111,11 +117,12 @@ async function guildOverview(client, { guildId, userId }) {
     if (!access.ok) return access;
     const { guild } = access;
 
-    const [config, logsConfig, botSettings, autoRoles] = await Promise.all([
+    const [config, logsConfig, botSettings, autoRoles, welcome] = await Promise.all([
         Guild_Level_Cache.get(guild.id),
         Logs_Cache.get(guild.id),
         Guild_Settings_Cache.get(guild.id),
         Auto_Roles_Cache.get(guild.id),
+        Welcome_Cache.get(guild.id),
     ]);
     const me = guild.members.me;
 
@@ -155,8 +162,10 @@ async function guildOverview(client, { guildId, userId }) {
         logging: loggingView(logsConfig),
         bot: botView(guild, botSettings),
         autoRoles: autoRolesView(autoRoles, roleExists(guild)),
+        welcome: welcomeView(welcome),
+        welcomeDefaults: DEFAULT_MESSAGES,
         botPermissions: { manageRoles: me.permissions.has(PermissionFlagsBits.ManageRoles) },
-        limits: { ...LIMITS, NICKNAME_MAX, BIO_MAX, IMAGE_MAX_BYTES, AUTO_ROLES_MAX },
+        limits: { ...LIMITS, NICKNAME_MAX, BIO_MAX, IMAGE_MAX_BYTES, AUTO_ROLES_MAX, WELCOME: WELCOME_LIMITS },
     });
 }
 
@@ -304,8 +313,26 @@ async function saveAutoRoleSettings(client, { guildId, userId, settings }) {
     return { ok: true, data: after, changes: describeAutoRoleChanges(before, after, nameLookup(guild)) };
 }
 
+/**
+ * Validates and saves the welcome and goodbye messages.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, settings: unknown }} payload
+ */
+async function saveWelcomeSettings(client, { guildId, userId, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+
+    const { settings: valid, errors } = validateWelcomeSettings(settings, guildContext(guild));
+    if (errors.length > 0) return fail(400, 'Some settings are not valid', errors);
+
+    const before = welcomeView(await Welcome_Cache.get(guild.id));
+    const after = welcomeView(await Welcome_Cache.set(guild.id, valid));
+    return { ok: true, data: after, changes: describeWelcomeChanges(before, after, nameLookup(guild)) };
+}
+
 /** Sections that can be reset to their defaults. Members' XP and levels are never touched. */
-const RESET_SECTIONS = new Set(['levels', 'logging', 'bot', 'auto-roles']);
+const RESET_SECTIONS = new Set(['levels', 'logging', 'bot', 'auto-roles', 'welcome']);
 
 /**
  * Puts one settings section back to its defaults.
@@ -333,6 +360,15 @@ async function resetSettings(client, { guildId, userId, section }) {
         const off = Object.fromEntries(LOG_TYPES.map((type) => [type, { enabled: false, channelId: null }]));
         const after = loggingView(await Logs_Cache.set(guild.id, { ...off, ignoredChannels: [] }));
         return { ok: true, data: after, changes: describeLoggingChanges(before, after, names) };
+    }
+
+    if (section === 'welcome') {
+        const before = welcomeView(await Welcome_Cache.get(guild.id));
+        const defaults = Welcome_Cache.createDefault(guild.id);
+        const after = welcomeView(
+            await Welcome_Cache.set(guild.id, { welcome: defaults.welcome, goodbye: defaults.goodbye })
+        );
+        return { ok: true, data: after, changes: describeWelcomeChanges(before, after, names) };
     }
 
     if (section === 'auto-roles') {

@@ -18,8 +18,9 @@ export async function execute(member) {
     const logChannel = await getLogChannel(guild, 'leave');
     if (!logChannel) return;
 
-    const longTimestamp = `${client.utils.Timestamp(member.joinedAt, 'F')}`;
-    const shortTimestamp = `${client.utils.Timestamp(member.joinedAt, 'R')}`;
+    // Members the bot hadn't cached arrive partial: no join date or roles, just the user
+    const longTimestamp = member.joinedAt ? client.utils.Timestamp(member.joinedAt, 'F') : 'Unknown';
+    const shortTimestamp = member.joinedAt ? client.utils.Timestamp(member.joinedAt, 'R') : 'unknown';
     const rolesList = member.roles?.cache
         ?.filter((role) => role.name !== '@everyone')
         .map((role) => role)

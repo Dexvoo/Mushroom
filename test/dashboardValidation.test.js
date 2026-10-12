@@ -5,6 +5,7 @@ import {
     validateLoggingSettings,
     validateBotSettings,
     validateAutoRoleSettings,
+    validateWelcomeSettings,
     IMAGE_MAX_BYTES,
 } from '../src/dashboard/validation.js';
 
@@ -295,4 +296,46 @@ test('auto roles: rejects unknown keys and wrong types', () => {
     assert.equal(validateAutoRoleSettings({ enabled: 'yes' }, guild).errors.length, 1);
     assert.equal(validateAutoRoleSettings({}, guild).errors.length, 1);
     assert.equal(validateAutoRoleSettings(null, guild).errors.length, 1);
+});
+
+// ---------- Welcome and goodbye ----------
+
+const welcomeMessage = (overrides = {}) => ({
+    enabled: true,
+    channelId: TEXT,
+    message: '  Hi {user}  ',
+    embed: false,
+    title: '',
+    ...overrides,
+});
+
+test('welcome: a valid message is trimmed, and empty text becomes the default (null)', () => {
+    assert.deepEqual(validateWelcomeSettings({ welcome: welcomeMessage() }, guild), {
+        settings: { welcome: { enabled: true, channelId: TEXT, message: 'Hi {user}', embed: false, title: null } },
+        errors: [],
+    });
+    assert.equal(
+        validateWelcomeSettings({ goodbye: welcomeMessage({ message: '' }) }, guild).settings.goodbye.message,
+        null
+    );
+});
+
+test('welcome: needs a channel the bot can post in before it can be on', () => {
+    const errorsFor = (overrides) => validateWelcomeSettings({ welcome: welcomeMessage(overrides) }, guild).errors;
+    assert.match(errorsFor({ channelId: null })[0], /choose a channel/);
+    assert.equal(errorsFor({ channelId: null, enabled: false }).length, 0);
+    assert.match(errorsFor({ channelId: VOICE })[0], /text channel/);
+    assert.match(errorsFor({ channelId: OTHER_SERVER_ID })[0], /text channel/);
+});
+
+test('welcome: text limits, types and unknown keys', () => {
+    const errorsFor = (overrides) => validateWelcomeSettings({ welcome: welcomeMessage(overrides) }, guild).errors;
+    assert.equal(errorsFor({ message: 'x'.repeat(1500) }).length, 0);
+    assert.match(errorsFor({ message: 'x'.repeat(1501) })[0], /at most 1500/);
+    assert.match(errorsFor({ title: 'x'.repeat(201) })[0], /at most 200/);
+    assert.equal(errorsFor({ embed: 'yes' }).length, 1);
+    assert.equal(errorsFor({ message: 5 }).length, 1);
+    assert.equal(errorsFor({ ping: '@everyone' }).length, 1);
+    assert.equal(validateWelcomeSettings({ hello: {} }, guild).errors.length, 1);
+    assert.equal(validateWelcomeSettings({ welcome: 'on' }, guild).errors.length, 1);
 });

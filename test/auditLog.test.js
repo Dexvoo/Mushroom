@@ -5,6 +5,7 @@ import {
     describeLoggingChanges,
     describeBotChanges,
     describeAutoRoleChanges,
+    describeWelcomeChanges,
 } from '../src/dashboard/describeChanges.js';
 import { searchPattern, createMongoAuditStore, AUDIT_PAGE_SIZE } from '../src/dashboard/auditStore.js';
 import { AuditLog } from '../src/dashboard/models/auditLog.js';
@@ -225,5 +226,22 @@ test('describes auto role changes', () => {
         'Added role for new members: @Legend',
         'Removed role for new members: @Regular',
         'Added role for new bots: @Regular',
+    ]);
+});
+
+test('describes welcome and goodbye changes', () => {
+    const off = { enabled: false, channelId: null, message: null, embed: false, title: null };
+    const before = { welcome: off, goodbye: { ...off, message: 'Bye' } };
+    const after = {
+        welcome: { enabled: true, channelId: 'c1', message: 'Hi', embed: true, title: 'Welcome' },
+        goodbye: off,
+    };
+    assert.deepEqual(describeWelcomeChanges(before, after, names), [
+        'Welcome messages: off → on',
+        'Welcome channel: none → #general',
+        'Welcome message changed',
+        'Welcome embed: off → on',
+        'Welcome embed title changed',
+        'Goodbye message reset to the default',
     ]);
 });

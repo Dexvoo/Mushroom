@@ -1320,6 +1320,118 @@ a.sidebar-link:hover {
     margin-top: 4px;
 }
 
+/* ---------- Welcome & Goodbye ---------- */
+
+.placeholder-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.placeholder-chip {
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface-raised);
+    color: var(--text);
+    font: inherit;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.placeholder-chip:hover {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.preview-label {
+    margin: 18px 0 8px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+/* Shaped like a message in Discord */
+.preview-message {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-raised);
+}
+
+.preview-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.preview-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+}
+
+.preview-author {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.preview-name {
+    font-weight: 700;
+}
+
+.preview-text,
+.preview-embed-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.preview-mention {
+    padding: 0 3px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent-strong);
+    font-weight: 600;
+}
+
+.preview-embed {
+    display: flex;
+    gap: 12px;
+    max-width: 440px;
+    padding: 10px 14px;
+    border-left: 4px solid;
+    border-radius: 4px;
+    background: var(--surface);
+    font-size: 0.92rem;
+}
+
+.preview-embed-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.preview-embed-title {
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+.preview-embed-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
 /* ---------- Web Logs ---------- */
 
 .section-header-actions {

@@ -1,4 +1,4 @@
-import { GatewayIntentBits } from 'discord.js';
+import { GatewayIntentBits, Partials } from 'discord.js';
 import loadCommands from '../core/baseCommands.js';
 import loadEvents from '../core/baseEvents.js';
 import refreshCommands from '../core/baseRefresh.js';
@@ -22,6 +22,9 @@ const client = new Client({
         GatewayIntentBits.GuildMessages, // Message XP and message logs
         GatewayIntentBits.MessageContent, // Message log content and XP length check (privileged)
     ],
+    // Without this, Discord's "member left" event is dropped for members the bot hasn't cached (most members of
+    // larger servers), so leave logs and goodbye messages would be missed. Handlers must check member.partial.
+    partials: [Partials.GuildMember],
 });
 
 // Registered before any startup work so failures during loading are caught too

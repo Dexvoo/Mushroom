@@ -145,3 +145,32 @@ export function describeAutoRoleChanges(before, after, names) {
         ...listChanges('Role for new bots', before.botRoleIds, after.botRoleIds, names.role),
     ];
 }
+
+/**
+ * @param {any} before - welcomeView before the save
+ * @param {any} after - welcomeView after the save
+ * @param {NameLookup} names
+ * @returns {string[]}
+ */
+export function describeWelcomeChanges(before, after, names) {
+    const changes = [];
+    for (const [kind, label] of [
+        ['welcome', 'Welcome'],
+        ['goodbye', 'Goodbye'],
+    ]) {
+        const was = before[kind];
+        const now = after[kind];
+        if (was.enabled !== now.enabled)
+            changes.push(`${label} messages: ${onOff(was.enabled)} → ${onOff(now.enabled)}`);
+        if (was.channelId !== now.channelId) {
+            changes.push(`${label} channel: ${names.channel(was.channelId)} → ${names.channel(now.channelId)}`);
+        }
+        if (was.message !== now.message) {
+            changes.push(now.message ? `${label} message changed` : `${label} message reset to the default`);
+        }
+        if (was.embed !== now.embed) changes.push(`${label} embed: ${onOff(was.embed)} → ${onOff(now.embed)}`);
+        if (was.title !== now.title)
+            changes.push(now.title ? `${label} embed title changed` : `${label} embed title removed`);
+    }
+    return changes;
+}

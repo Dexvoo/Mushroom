@@ -6,6 +6,7 @@ import User_Levels_Cache from '../src/features/levels/cache/userLevels.cache.js'
 import Logs_Cache from '../src/features/logging/cache/logs.cache.js';
 import Guild_Settings_Cache from '../src/shared/cache/guildSettings.cache.js';
 import Auto_Roles_Cache from '../src/features/autoRoles/cache/autoRoles.cache.js';
+import Welcome_Cache from '../src/features/welcome/cache/welcome.cache.js';
 import { handle } from '../src/dashboard/shardHandlers.js';
 import { ALLOWED_SIZES } from '@discordjs/rest';
 
@@ -21,6 +22,8 @@ let saved;
 let botSettings;
 let autoRoles;
 let autoRoleWrites;
+let welcome;
+let welcomeWrites;
 let storedSettings;
 
 /** Image links throw on sizes Discord doesn't serve, like discord.js does. */
@@ -136,6 +139,14 @@ beforeEach(() => {
     autoRoles = { guildId: GUILD_ID, enabled: false, humanRoleIds: [], botRoleIds: [] };
     autoRoleWrites = [];
     Auto_Roles_Cache.get = async () => autoRoles;
+    welcome = Welcome_Cache.createDefault(GUILD_ID);
+    welcomeWrites = [];
+    Welcome_Cache.get = async () => welcome;
+    Welcome_Cache.set = async (guildId, updates) => {
+        welcomeWrites.push(updates);
+        welcome = { ...welcome, ...updates };
+        return welcome;
+    };
     Auto_Roles_Cache.set = async (guildId, updates) => {
         autoRoleWrites.push(updates);
         autoRoles = { ...autoRoles, ...updates };
@@ -556,4 +567,50 @@ test('resetting auto roles switches them off and clears both lists', async () =>
     });
     assert.deepEqual(autoRoleWrites, [{ enabled: false, humanRoleIds: [], botRoleIds: [] }]);
     assert.deepEqual(result.data, { enabled: false, humanRoleIds: [], botRoleIds: [] });
+});
+
+// ---------- Welcome and goodbye ----------
+
+test('the overview has the welcome settings and the default texts', async () => {
+    const result = await handle(makeClient(), 'guildOverview', { guildId: GUILD_ID, userId: MANAGER });
+    assert.equal(result.data.welcome.welcome.enabled, false);
+    assert.match(result.data.welcomeDefaults.welcome, /\{user\}/);
+    assert.equal(result.data.limits.WELCOME.MESSAGE_MAX, 1500);
+});
+
+test('saving welcome settings validates, writes through the cache and describes the change', async () => {
+    const save = (userId, settings) =>
+        handle(makeClient(), 'saveWelcomeSettings', { guildId: GUILD_ID, userId, settings });
+    const message = { enabled: true, channelId: TEXT, message: 'Hi {user}', embed: false, title: null };
+
+    assert.equal((await save(MEMBER, { welcome: message })).status, 403);
+    assert.equal((await save(MANAGER, { welcome: { ...message, channelId: '500000000000000099' } })).status, 400);
+    assert.equal(welcomeWrites.length, 0);
+
+    const result = await save(MANAGER, { welcome: message });
+    assert.equal(result.ok, true);
+    assert.deepEqual(welcomeWrites, [{ welcome: message }]);
+    assert.deepEqual(result.changes, [
+        'Welcome messages: off → on',
+        'Welcome channel: none → #general',
+        'Welcome message changed',
+    ]);
+});
+
+test('resetting welcome messages switches both off and clears them', async () => {
+    welcome = { ...welcome, goodbye: { enabled: true, channelId: TEXT, message: 'Bye', embed: true, title: 'x' } };
+    const result = await handle(makeClient(), 'resetSettings', {
+        guildId: GUILD_ID,
+        userId: MANAGER,
+        section: 'welcome',
+    });
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.data.goodbye, {
+        enabled: false,
+        channelId: null,
+        message: null,
+        embed: false,
+        title: null,
+    });
+    assert.ok(result.changes.includes('Goodbye messages: on → off'));
 });

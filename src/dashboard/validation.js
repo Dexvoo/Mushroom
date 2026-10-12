@@ -554,3 +554,90 @@ function validateGivableRoles(input, guild, label, errors) {
     }
     return roleIds;
 }
+
+/** Limits for welcome and goodbye messages (leaving room for placeholders to grow). */
+export const WELCOME_LIMITS = Object.freeze({ MESSAGE_MAX: 1500, TITLE_MAX: 200 });
+
+const WELCOME_KINDS = ['welcome', 'goodbye'];
+const WELCOME_MESSAGE_KEYS = new Set(['enabled', 'channelId', 'message', 'embed', 'title']);
+
+/**
+ * Validates welcome and goodbye message settings. Each one sent is replaced as a whole.
+ * Shape: { welcome?: Message, goodbye?: Message }
+ * Message: { enabled: boolean, channelId: string | null, message: string | null, embed: boolean, title: string | null }
+ *
+ * @param {unknown} input - Parsed request body
+ * @param {GuildContext} guild - textChannelIds are the channels the bot can post embeds in
+ * @returns {{ settings: Record<string, any>, errors: string[] }}
+ */
+export function validateWelcomeSettings(input, guild) {
+    const errors = [];
+    const settings = {};
+
+    if (!isPlainObject(input)) return { settings, errors: ['Settings must be an object'] };
+    for (const key of Object.keys(input)) {
+        if (!WELCOME_KINDS.includes(key)) errors.push(`Unknown setting "${key}"`);
+    }
+    if (Object.keys(input).length === 0) errors.push('No settings to save');
+    if (errors.length > 0) return { settings, errors };
+
+    for (const kind of WELCOME_KINDS) {
+        if (!Object.prototype.hasOwnProperty.call(input, kind)) continue;
+        const label = kind === 'welcome' ? 'Welcome message' : 'Goodbye message';
+        const value = input[kind];
+
+        if (!isPlainObject(value)) {
+            errors.push(`${label}: settings are not valid`);
+            continue;
+        }
+        const unknown = Object.keys(value).find((key) => !WELCOME_MESSAGE_KEYS.has(key));
+        if (unknown) {
+            errors.push(`${label}: unknown setting "${unknown}"`);
+            continue;
+        }
+        if (typeof value.enabled !== 'boolean' || typeof value.embed !== 'boolean') {
+            errors.push(`${label}: on/off settings must be true or false`);
+            continue;
+        }
+
+        const { channelId } = value;
+        if (channelId !== null && (typeof channelId !== 'string' || !guild.textChannelIds.has(channelId))) {
+            errors.push(`${label}: the channel must be a text channel in this server that the bot can post in`);
+            continue;
+        }
+        if (value.enabled && !channelId) {
+            errors.push(`${label}: choose a channel before turning it on`);
+            continue;
+        }
+
+        const message = optionalText(value.message, WELCOME_LIMITS.MESSAGE_MAX, `${label}`, errors);
+        const title = optionalText(value.title, WELCOME_LIMITS.TITLE_MAX, `${label} title`, errors);
+        if (message === undefined || title === undefined) continue;
+
+        settings[kind] = { enabled: value.enabled, channelId, message, embed: value.embed, title };
+    }
+
+    return { settings, errors };
+}
+
+/**
+ * Optional multi-line text: trimmed, empty becomes null.
+ * @param {unknown} value
+ * @param {number} max
+ * @param {string} label
+ * @param {string[]} errors
+ * @returns {string | null | undefined} undefined if not valid
+ */
+function optionalText(value, max, label, errors) {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== 'string') {
+        errors.push(`${label} must be text`);
+        return undefined;
+    }
+    const trimmed = value.trim();
+    if (trimmed.length > max) {
+        errors.push(`${label} can be at most ${max} characters`);
+        return undefined;
+    }
+    return trimmed || null;
+}

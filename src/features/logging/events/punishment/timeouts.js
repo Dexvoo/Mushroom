@@ -14,6 +14,8 @@ export async function execute(oldMember, newMember) {
     const { client, guild, user } = newMember;
 
     if (!guild) return;
+    // A member the bot hadn't cached has no "before" to compare, so any update would look like a new timeout
+    if (oldMember.partial) return;
     if (oldMember.communicationDisabledUntilTimestamp === newMember.communicationDisabledUntilTimestamp) return;
 
     const logChannel = await getLogChannel(guild, 'punishment');

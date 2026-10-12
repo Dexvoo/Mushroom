@@ -101,6 +101,36 @@ export default {
             missing_manage_roles: 'Ovx needs the Manage Roles permission to give roles.',
         },
 
+        welcome: {
+            label_welcome: 'Welcome Message',
+            label_goodbye: 'Goodbye Message',
+
+            channel_set: '{label}s will be posted in {channel}.',
+            cannot_post: 'Ovx needs these permissions in {channel} first: `{perms}`',
+            currently_off: 'This message is currently off. Turn it on with `{command}`.',
+            needs_channel: 'Choose a channel first with `{command}`.',
+            enabled_welcome: 'A welcome message will be posted in {channel} when people join.',
+            disabled_welcome: 'Welcome messages are off. Your settings are kept for when you turn them back on.',
+            enabled_goodbye: 'A goodbye message will be posted in {channel} when people leave.',
+            disabled_goodbye: 'Goodbye messages are off. Your settings are kept for when you turn them back on.',
+
+            message_set: 'Message saved. See how it looks with `{command}`.',
+            message_reset: 'The message is back to the default. See how it looks with `{command}`.',
+            embed_on: 'The message will be sent inside an embed. See how it looks with `{command}`.',
+            embed_off: 'The message will be sent as plain text. See how it looks with `{command}`.',
+
+            test_note: 'Preview with you as the member. Only you can see this.',
+            test_off: 'This message is not being posted yet: set a channel and turn it on with `{command}`.',
+
+            field_enabled: 'On',
+            field_channel: 'Channel',
+            field_embed: 'Embed',
+            field_title: 'Embed title',
+            field_message: 'Message',
+            field_message_default: 'Message (default)',
+            not_set: 'Not set',
+        },
+
         ping: {
             title: '🏓 Pong!',
             description: 'Latency: {ms}ms\nAPI Latency: {api}ms',
