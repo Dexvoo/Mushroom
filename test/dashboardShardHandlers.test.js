@@ -5,6 +5,7 @@ import Guild_Level_Cache from '../src/features/levels/cache/guildLevels.cache.js
 import User_Levels_Cache from '../src/features/levels/cache/userLevels.cache.js';
 import Logs_Cache from '../src/features/logging/cache/logs.cache.js';
 import Guild_Settings_Cache from '../src/shared/cache/guildSettings.cache.js';
+import Auto_Roles_Cache from '../src/features/autoRoles/cache/autoRoles.cache.js';
 import { handle } from '../src/dashboard/shardHandlers.js';
 import { ALLOWED_SIZES } from '@discordjs/rest';
 
@@ -18,6 +19,8 @@ const ROLE = '600000000000000001';
 let config;
 let saved;
 let botSettings;
+let autoRoles;
+let autoRoleWrites;
 let storedSettings;
 
 /** Image links throw on sizes Discord doesn't serve, like discord.js does. */
@@ -130,6 +133,14 @@ beforeEach(() => {
     botSettings = { guildId: GUILD_ID, bio: null, embedColour: null };
     storedSettings = [];
     Guild_Settings_Cache.get = async () => botSettings;
+    autoRoles = { guildId: GUILD_ID, enabled: false, humanRoleIds: [], botRoleIds: [] };
+    autoRoleWrites = [];
+    Auto_Roles_Cache.get = async () => autoRoles;
+    Auto_Roles_Cache.set = async (guildId, updates) => {
+        autoRoleWrites.push(updates);
+        autoRoles = { ...autoRoles, ...updates };
+        return autoRoles;
+    };
     Guild_Settings_Cache.set = async (guildId, updates) => {
         storedSettings.push(updates);
         botSettings = { ...botSettings, ...updates };
@@ -511,4 +522,38 @@ test('a bug in an action comes back as an error result instead of looking like t
     assert.equal(result.status, 500);
     assert.match(result.error, /Something went wrong/);
     assert.doesNotMatch(result.error, /Invalid size/, 'internal details stay in the console');
+});
+
+// ---------- Auto roles ----------
+
+test('the overview has the auto roles, without roles that were deleted', async () => {
+    autoRoles = { guildId: GUILD_ID, enabled: true, humanRoleIds: [ROLE, '600000000000000099'], botRoleIds: [] };
+    const result = await handle(makeClient(), 'guildOverview', { guildId: GUILD_ID, userId: MANAGER });
+    assert.deepEqual(result.data.autoRoles, { enabled: true, humanRoleIds: [ROLE], botRoleIds: [] });
+    assert.equal(result.data.botPermissions.manageRoles, true);
+});
+
+test('saving auto roles validates, writes through the cache and describes the change', async () => {
+    const save = (userId, settings) =>
+        handle(makeClient(), 'saveAutoRoleSettings', { guildId: GUILD_ID, userId, settings });
+
+    assert.equal((await save(MEMBER, { enabled: true })).status, 403);
+    assert.equal((await save(MANAGER, { humanRoleIds: [GUILD_ID] })).status, 400, 'not the everyone role');
+    assert.equal(autoRoleWrites.length, 0);
+
+    const result = await save(MANAGER, { enabled: true, humanRoleIds: [ROLE] });
+    assert.equal(result.ok, true);
+    assert.deepEqual(autoRoleWrites, [{ enabled: true, humanRoleIds: [ROLE] }]);
+    assert.deepEqual(result.changes, ['Auto roles: off → on', 'Added role for new members: @Regular']);
+});
+
+test('resetting auto roles switches them off and clears both lists', async () => {
+    autoRoles = { guildId: GUILD_ID, enabled: true, humanRoleIds: [ROLE], botRoleIds: [ROLE] };
+    const result = await handle(makeClient(), 'resetSettings', {
+        guildId: GUILD_ID,
+        userId: MANAGER,
+        section: 'auto-roles',
+    });
+    assert.deepEqual(autoRoleWrites, [{ enabled: false, humanRoleIds: [], botRoleIds: [] }]);
+    assert.deepEqual(result.data, { enabled: false, humanRoleIds: [], botRoleIds: [] });
 });

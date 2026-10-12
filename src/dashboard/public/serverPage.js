@@ -4,6 +4,7 @@ import { renderLevels } from './levels.js';
 import { renderLogging } from './logging.js';
 import { renderWebLogs } from './webLogs.js';
 import { renderBotSettings } from './botSettings.js';
+import { renderAutoRoles } from './autoRoles.js';
 
 /**
  * Sidebar layout. Items with a `render` are live; the rest are planned and shown as "Soon".
@@ -29,7 +30,7 @@ export const SECTIONS = [
         label: 'Roles',
         items: [
             { slug: 'reaction-roles', label: 'Reaction Roles' },
-            { slug: 'auto-roles', label: 'Auto Roles' },
+            { slug: 'auto-roles', label: 'Auto Roles', render: renderAutoRoles },
         ],
     },
     {

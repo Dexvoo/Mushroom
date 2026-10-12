@@ -434,6 +434,17 @@ test('resets go to the shard and are recorded in the Web Logs', async () => {
     assert.equal(proto.status, 404);
 });
 
+test('auto role saves go to the shard as the session user and are recorded', async () => {
+    saveChanges = ['Auto roles: off → on'];
+    const client = await login();
+    const response = await client.request(`/api/guilds/${GUILD_ID}/auto-roles`, json({ enabled: true }));
+
+    assert.equal(response.status, 200);
+    const save = bridgeCalls.find((call) => call.action === 'saveAutoRoleSettings');
+    assert.deepEqual(save.payload, { userId: USER_ID, settings: { enabled: true } });
+    assert.equal(auditEntries[0].action, 'Updated auto roles');
+});
+
 test('only Bot Settings saves may be large (for images); other requests stay small', async () => {
     const client = await login();
     const big = { nickname: 'x', avatar: 'a'.repeat(100_000) };

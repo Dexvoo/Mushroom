@@ -71,6 +71,36 @@ export default {
             enabled: 'The leveling system has been enabled.',
         },
 
+        autorole: {
+            title: 'Auto Roles',
+            list_title: 'Auto Roles',
+            members_field: 'New members get',
+            bots_field: 'New bots get',
+            none: 'No roles',
+            deleted_role: 'Deleted role',
+            cannot_give: "Ovx can't give this",
+
+            added_members: '{role} will be given to people who join.',
+            added_bots: '{role} will be given to bots that join.',
+            removed_members: '{role} will no longer be given to people who join.',
+            removed_bots: '{role} will no longer be given to bots that join.',
+            already_members: '{role} is already given to people who join.',
+            already_bots: '{role} is already given to bots that join.',
+            not_in_members: '{role} is not given to people who join.',
+            not_in_bots: '{role} is not given to bots that join.',
+            list_full: 'You can have at most {max} roles in each list.',
+
+            everyone: "Everyone already has the {role} role, so it can't be given.",
+            managed: "{role} is managed by an integration, so it can't be given out.",
+            too_high:
+                "{role} is at or above Ovx's highest role, so Ovx can't give it. Move Ovx's role higher in Server Settings → Roles.",
+
+            enabled: 'Roles will be given to people and bots when they join.',
+            disabled: 'Auto roles are off. The role lists are kept for when you turn them back on.',
+            currently_off: 'Auto roles are currently off. Turn them on with `/autorole toggle`.',
+            missing_manage_roles: 'Ovx needs the Manage Roles permission to give roles.',
+        },
+
         ping: {
             title: '🏓 Pong!',
             description: 'Latency: {ms}ms\nAPI Latency: {api}ms',

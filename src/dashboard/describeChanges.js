@@ -131,3 +131,17 @@ export function describeBotChanges(before, after) {
 }
 
 const imageChange = (before, after) => (!before ? 'added' : !after ? 'removed (back to the default)' : 'changed');
+
+/**
+ * @param {{ enabled: boolean, humanRoleIds: string[], botRoleIds: string[] }} before - autoRolesView before the save
+ * @param {{ enabled: boolean, humanRoleIds: string[], botRoleIds: string[] }} after - autoRolesView after the save
+ * @param {NameLookup} names
+ * @returns {string[]}
+ */
+export function describeAutoRoleChanges(before, after, names) {
+    return [
+        ...(before.enabled !== after.enabled ? [`Auto roles: ${onOff(before.enabled)} → ${onOff(after.enabled)}`] : []),
+        ...listChanges('Role for new members', before.humanRoleIds, after.humanRoleIds, names.role),
+        ...listChanges('Role for new bots', before.botRoleIds, after.botRoleIds, names.role),
+    ];
+}

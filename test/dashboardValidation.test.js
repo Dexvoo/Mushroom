@@ -4,6 +4,7 @@ import {
     validateLevelSettings,
     validateLoggingSettings,
     validateBotSettings,
+    validateAutoRoleSettings,
     IMAGE_MAX_BYTES,
 } from '../src/dashboard/validation.js';
 
@@ -265,4 +266,33 @@ test('embed colour: a hex colour (saved in lowercase) or null for the default', 
     for (const value of ['a78bfa', '#fff', 'red', '#a78bfa; background:url(x)', 123]) {
         assert.equal(validateBotSettings({ embedColour: value }).errors.length, 1, String(value));
     }
+});
+
+// ---------- Auto roles ----------
+
+test('auto roles: valid roles are kept once each, in order', () => {
+    assert.deepEqual(
+        validateAutoRoleSettings({ enabled: true, humanRoleIds: [ROLE_LOW, ROLE_LOW], botRoleIds: [] }, guild),
+        {
+            settings: { enabled: true, humanRoleIds: [ROLE_LOW], botRoleIds: [] },
+            errors: [],
+        }
+    );
+});
+
+test('auto roles: only roles the bot can give, at most 10, from this server', () => {
+    const errorsFor = (roleIds) => validateAutoRoleSettings({ humanRoleIds: roleIds }, guild).errors;
+    assert.match(errorsFor([ROLE_HIGH])[0], /above the bot's highest role/);
+    assert.match(errorsFor([ROLE_BOT])[0], /managed by an integration/);
+    assert.match(errorsFor([OTHER_SERVER_ID])[0], /not in this server/);
+    assert.match(errorsFor(Array(11).fill(ROLE_LOW))[0], /at most 10/);
+    assert.equal(errorsFor('nope').length, 1);
+    assert.equal(errorsFor([{ $gt: '' }]).length, 1);
+});
+
+test('auto roles: rejects unknown keys and wrong types', () => {
+    assert.equal(validateAutoRoleSettings({ roles: [] }, guild).errors.length, 1);
+    assert.equal(validateAutoRoleSettings({ enabled: 'yes' }, guild).errors.length, 1);
+    assert.equal(validateAutoRoleSettings({}, guild).errors.length, 1);
+    assert.equal(validateAutoRoleSettings(null, guild).errors.length, 1);
 });

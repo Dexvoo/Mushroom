@@ -5,17 +5,25 @@ import { ExpForLevel } from '../features/levels/utils/levels.js';
 import Logs_Cache from '../features/logging/cache/logs.cache.js';
 import { LOG_TYPES } from '../features/logging/models/logging.js';
 import Guild_Settings_Cache from '../shared/cache/guildSettings.cache.js';
+import Auto_Roles_Cache from '../features/autoRoles/cache/autoRoles.cache.js';
 import {
     validateLevelSettings,
     validateLoggingSettings,
     validateBotSettings,
+    validateAutoRoleSettings,
+    AUTO_ROLES_MAX,
     LIMITS,
     NICKNAME_MAX,
     BIO_MAX,
     IMAGE_MAX_BYTES,
 } from './validation.js';
-import { describeLevelChanges, describeLoggingChanges, describeBotChanges } from './describeChanges.js';
-import { levelsView, loggingView, nameLookup } from './settingsViews.js';
+import {
+    describeLevelChanges,
+    describeLoggingChanges,
+    describeBotChanges,
+    describeAutoRoleChanges,
+} from './describeChanges.js';
+import { levelsView, loggingView, autoRolesView, nameLookup } from './settingsViews.js';
 import { LogData } from '../shared/utils/logger.js';
 
 /**
@@ -49,6 +57,7 @@ const handlers = {
     saveLevelSettings,
     saveLoggingSettings,
     saveBotSettings,
+    saveAutoRoleSettings,
     resetSettings,
     leaderboard,
     stats,
@@ -102,10 +111,11 @@ async function guildOverview(client, { guildId, userId }) {
     if (!access.ok) return access;
     const { guild } = access;
 
-    const [config, logsConfig, botSettings] = await Promise.all([
+    const [config, logsConfig, botSettings, autoRoles] = await Promise.all([
         Guild_Level_Cache.get(guild.id),
         Logs_Cache.get(guild.id),
         Guild_Settings_Cache.get(guild.id),
+        Auto_Roles_Cache.get(guild.id),
     ]);
     const me = guild.members.me;
 
@@ -144,7 +154,9 @@ async function guildOverview(client, { guildId, userId }) {
         levels: levelsView(config),
         logging: loggingView(logsConfig),
         bot: botView(guild, botSettings),
-        limits: { ...LIMITS, NICKNAME_MAX, BIO_MAX, IMAGE_MAX_BYTES },
+        autoRoles: autoRolesView(autoRoles, roleExists(guild)),
+        botPermissions: { manageRoles: me.permissions.has(PermissionFlagsBits.ManageRoles) },
+        limits: { ...LIMITS, NICKNAME_MAX, BIO_MAX, IMAGE_MAX_BYTES, AUTO_ROLES_MAX },
     });
 }
 
@@ -273,8 +285,27 @@ function discordProfileError(error) {
     return 'Discord did not accept these changes. Try a different nickname or image.';
 }
 
+/**
+ * Validates and saves the roles given to new members.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, settings: unknown }} payload
+ */
+async function saveAutoRoleSettings(client, { guildId, userId, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+
+    const { settings: valid, errors } = validateAutoRoleSettings(settings, guildContext(guild));
+    if (errors.length > 0) return fail(400, 'Some settings are not valid', errors);
+
+    const exists = roleExists(guild);
+    const before = autoRolesView(await Auto_Roles_Cache.get(guild.id), exists);
+    const after = autoRolesView(await Auto_Roles_Cache.set(guild.id, valid), exists);
+    return { ok: true, data: after, changes: describeAutoRoleChanges(before, after, nameLookup(guild)) };
+}
+
 /** Sections that can be reset to their defaults. Members' XP and levels are never touched. */
-const RESET_SECTIONS = new Set(['levels', 'logging', 'bot']);
+const RESET_SECTIONS = new Set(['levels', 'logging', 'bot', 'auto-roles']);
 
 /**
  * Puts one settings section back to its defaults.
@@ -302,6 +333,16 @@ async function resetSettings(client, { guildId, userId, section }) {
         const off = Object.fromEntries(LOG_TYPES.map((type) => [type, { enabled: false, channelId: null }]));
         const after = loggingView(await Logs_Cache.set(guild.id, { ...off, ignoredChannels: [] }));
         return { ok: true, data: after, changes: describeLoggingChanges(before, after, names) };
+    }
+
+    if (section === 'auto-roles') {
+        const exists = roleExists(guild);
+        const before = autoRolesView(await Auto_Roles_Cache.get(guild.id), exists);
+        const after = autoRolesView(
+            await Auto_Roles_Cache.set(guild.id, { enabled: false, humanRoleIds: [], botRoleIds: [] }),
+            exists
+        );
+        return { ok: true, data: after, changes: describeAutoRoleChanges(before, after, names) };
     }
 
     return applyBotSettings(guild, member, {
@@ -439,6 +480,14 @@ function canPostEmbeds(channel, me) {
         (channel.type === ChannelType.GuildText || channel.type === ChannelType.GuildAnnouncement) &&
         me.permissionsIn(channel).has(POST_EMBED_PERMISSIONS)
     );
+}
+
+/**
+ * @param {import('discord.js').Guild} guild
+ * @returns {(roleId: string) => boolean}
+ */
+function roleExists(guild) {
+    return (roleId) => guild.roles.cache.has(roleId);
 }
 
 /**

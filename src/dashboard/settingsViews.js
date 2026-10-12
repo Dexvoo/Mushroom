@@ -59,3 +59,16 @@ export function levelsView(config) {
         },
     };
 }
+
+/**
+ * The auto role settings the dashboard can see and edit.
+ * @param {import('../features/autoRoles/models/autoRoles.js').AutoRolesType} config
+ * @param {(roleId: string) => boolean} [roleExists] - Drops deleted roles, so they can't block a save
+ */
+export function autoRolesView(config, roleExists = () => true) {
+    return {
+        enabled: Boolean(config.enabled),
+        humanRoleIds: (config.humanRoleIds ?? []).filter(roleExists),
+        botRoleIds: (config.botRoleIds ?? []).filter(roleExists),
+    };
+}

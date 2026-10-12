@@ -471,3 +471,86 @@ export function imageType(bytes) {
     if (starts([0x52, 0x49, 0x46, 0x46]) && starts([0x57, 0x45, 0x42, 0x50], 8)) return 'webp';
     return null;
 }
+
+/** Most roles each auto role list can have. */
+export const AUTO_ROLES_MAX = 10;
+
+const AUTO_ROLE_SETTING_KEYS = new Set(['enabled', 'humanRoleIds', 'botRoleIds']);
+
+/**
+ * Validates auto role settings. Fields left out are unchanged.
+ * Shape: { enabled?: boolean, humanRoleIds?: string[], botRoleIds?: string[] }
+ *
+ * @param {unknown} input - Parsed request body
+ * @param {GuildContext} guild
+ * @returns {{ settings: { enabled?: boolean, humanRoleIds?: string[], botRoleIds?: string[] }, errors: string[] }}
+ */
+export function validateAutoRoleSettings(input, guild) {
+    const errors = [];
+    const settings = {};
+
+    if (!isPlainObject(input)) return { settings, errors: ['Settings must be an object'] };
+
+    for (const key of Object.keys(input)) {
+        if (!AUTO_ROLE_SETTING_KEYS.has(key)) errors.push(`Unknown setting "${key}"`);
+    }
+    if (Object.keys(input).length === 0) errors.push('No settings to save');
+    if (errors.length > 0) return { settings, errors };
+
+    const has = (key) => Object.prototype.hasOwnProperty.call(input, key);
+
+    if (has('enabled')) {
+        if (typeof input.enabled === 'boolean') settings.enabled = input.enabled;
+        else errors.push('Enabled must be true or false');
+    }
+
+    for (const [key, label] of /** @type {const} */ ([
+        ['humanRoleIds', 'Roles for new members'],
+        ['botRoleIds', 'Roles for new bots'],
+    ])) {
+        if (!has(key)) continue;
+        const roleIds = validateGivableRoles(input[key], guild, label, errors);
+        if (roleIds) settings[key] = roleIds;
+    }
+
+    return { settings, errors };
+}
+
+/**
+ * A list of roles the bot will hand out: each must exist, not be managed by an integration,
+ * and be below the bot's highest role.
+ * @param {unknown} input
+ * @param {GuildContext} guild
+ * @param {string} label
+ * @param {string[]} errors
+ * @returns {string[] | null}
+ */
+function validateGivableRoles(input, guild, label, errors) {
+    if (!Array.isArray(input)) {
+        errors.push(`${label} must be a list`);
+        return null;
+    }
+    if (input.length > AUTO_ROLES_MAX) {
+        errors.push(`${label}: at most ${AUTO_ROLES_MAX} roles`);
+        return null;
+    }
+
+    const roleIds = [];
+    for (const id of input) {
+        const role = typeof id === 'string' && SNOWFLAKE.test(id) ? guild.roles.get(id) : undefined;
+        if (!role) {
+            errors.push(`${label}: one or more roles are not in this server`);
+            return null;
+        }
+        if (role.managed) {
+            errors.push(`${label}: a role managed by an integration can't be given out`);
+            return null;
+        }
+        if (role.position >= guild.botHighestRolePosition) {
+            errors.push(`${label}: a role is above the bot's highest role, so the bot can't give it`);
+            return null;
+        }
+        if (!roleIds.includes(id)) roleIds.push(id);
+    }
+    return roleIds;
+}

@@ -117,10 +117,25 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         })
     );
 
+    router.put('/guilds/:guildId/auto-roles', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('saveAutoRoleSettings', req.params.guildId, {
+                userId: req.session.user.id,
+                settings: req.body,
+            });
+            if (result.ok && result.changes?.length) {
+                LogData('Dashboard', `Auto roles saved for ${req.params.guildId} by ${req.session.user.id}`, 'info');
+                await recordAudit(req, 'Updated auto roles', result.changes);
+            }
+            return result;
+        })
+    );
+
     const RESET_ACTIONS = {
         levels: 'Reset level settings',
         logging: 'Reset logging settings',
         bot: 'Reset bot settings',
+        'auto-roles': 'Reset auto roles',
     };
 
     router.post('/guilds/:guildId/reset/:section', requireLogin, validGuildId, (req, res) => {

@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { describeLevelChanges, describeLoggingChanges, describeBotChanges } from '../src/dashboard/describeChanges.js';
+import {
+    describeLevelChanges,
+    describeLoggingChanges,
+    describeBotChanges,
+    describeAutoRoleChanges,
+} from '../src/dashboard/describeChanges.js';
 import { searchPattern, createMongoAuditStore, AUDIT_PAGE_SIZE } from '../src/dashboard/auditStore.js';
 import { AuditLog } from '../src/dashboard/models/auditLog.js';
 
@@ -210,4 +215,15 @@ test('describes avatar, banner, About Me and embed colour changes', () => {
         ]
     );
     assert.deepEqual(describeBotChanges(view({ customAvatar: 'a' }), view({ customAvatar: 'b' })), ['Avatar changed']);
+});
+
+test('describes auto role changes', () => {
+    const before = { enabled: false, humanRoleIds: ['r1'], botRoleIds: [] };
+    const after = { enabled: true, humanRoleIds: ['r2'], botRoleIds: ['r1'] };
+    assert.deepEqual(describeAutoRoleChanges(before, after, names), [
+        'Auto roles: off → on',
+        'Added role for new members: @Legend',
+        'Removed role for new members: @Regular',
+        'Added role for new bots: @Regular',
+    ]);
 });
