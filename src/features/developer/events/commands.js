@@ -47,6 +47,9 @@ export async function execute(interaction) {
 
 function buildCommandText(interaction) {
     const parts = [`/${interaction.commandName}`];
+    // Options a command marks as private (e.g. the text given to /translate) are never logged
+    /** @type {string[]} */
+    const privateOptions = interaction.client.commands.get(interaction.commandName)?.meta.privateOptions ?? [];
 
     /** @param {readonly import('discord.js').CommandInteractionOption[]} [options] */
     const processOptions = (options = []) => {
@@ -58,7 +61,7 @@ function buildCommandText(interaction) {
                 parts.push(opt.name);
                 processOptions(opt.options);
             } else {
-                parts.push(`${opt.name}:${opt.value}`);
+                parts.push(`${opt.name}:${privateOptions.includes(opt.name) ? '[hidden]' : opt.value}`);
             }
         }
     };

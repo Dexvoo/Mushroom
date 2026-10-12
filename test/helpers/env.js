@@ -10,13 +10,14 @@ export function stubEnvironment(overrides = {}) {
     process.env.BOT_TOKEN ??= 'test-token';
     process.env.BOT_APPLICATION_ID ??= '100000000000000000';
     process.env.DEFAULT_LANGUAGE = 'en-GB';
-    // Stream platforms start switched off, so real keys in a local .env never reach Twitch, Kick or YouTube
+    // Stream platforms and translation start switched off, so real keys in a local .env never reach their APIs
     for (const key of [
         'TWITCH_CLIENT_ID',
         'TWITCH_CLIENT_SECRET',
         'KICK_CLIENT_ID',
         'KICK_CLIENT_SECRET',
         'YOUTUBE_API_KEY',
+        'GOOGLE_TRANSLATE_API_KEY',
     ]) {
         process.env[key] = '';
     }

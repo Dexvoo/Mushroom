@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
+import { reportError } from '../shared/utils/errorReport.js';
 
 /**
  * @typedef {import('../core/extendedClient.js').default} Client
@@ -34,11 +35,11 @@ export default async function loadEvents(client, dir) {
                 try {
                     await event.execute(...args, client);
                 } catch (error) {
-                    client.utils.LogData(
-                        'Event Error',
-                        `${event.name} (${path.relative(process.cwd(), fullPath)})\n${error.stack ?? error.message}`,
-                        'error'
-                    );
+                    const where = `${event.name} (${path.relative(process.cwd(), fullPath)})`;
+                    client.utils.LogData('Event Error', `${where}\n${error.stack ?? error.message}`, 'error');
+                    // Most events carry the server they happened in (a member, message, channel…)
+                    const guild = args.find((arg) => arg?.guild)?.guild ?? null;
+                    reportError(client, { source: `Event: ${where}`, error, guild });
                 }
             };
 

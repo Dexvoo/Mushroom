@@ -69,7 +69,6 @@ function renderStreams(container, overview, platform) {
             if (code === 200) {
                 overview.streams = [...overview.streams.filter((s) => s.platform !== platform), ...data];
                 toast(`${info.name} notifications saved`);
-                render();
                 return { ok: true, saved: data.map(editable) };
             }
             return { ok: false, errors: data?.details ?? [data?.error ?? 'Could not save. Try again.'] };

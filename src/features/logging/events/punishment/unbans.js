@@ -20,7 +20,8 @@ export async function execute(ban) {
     const entry = await findAuditLogEntry(
         guild,
         AuditLogEvent.MemberBanRemove,
-        (entry) => entry.targetId === user.id && Date.now() - entry.createdTimestamp < 5000
+        (entry) => entry.targetId === user.id && Date.now() - entry.createdTimestamp < 5000,
+        { targetId: user.id }
     );
     // The reason shown is the original ban's, as before
     const { moderator } = moderationDetails(entry, client.user.id);

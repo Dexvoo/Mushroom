@@ -14,6 +14,20 @@ export default {
             title: '{guild} | {type} Leaderboard 🏆',
         },
 
+        translate: {
+            title: '{from} → {to}',
+            original: 'Original',
+            footer: 'Requested by @{user} · Translated by Google',
+            truncated: 'Only the first {count} characters were translated.',
+            same_language: 'This is already in {language}.',
+            no_text: 'That message has no text to translate.',
+            unknown_language: 'Ovx does not know the language "{language}". Pick one from the list.',
+            not_configured: 'Translating is not set up on this bot yet.',
+            limit: 'Ovx has reached its translation limit for now. Try again later.',
+            bad_language: 'Google cannot translate between those languages.',
+            failed: 'The translation failed. Try again in a moment.',
+        },
+
         dashboard: {
             title: 'Ovx Dashboard',
             description:

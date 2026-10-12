@@ -14,8 +14,10 @@ const SNOWFLAKE = /^\d{17,20}$/;
  * @property {string | null} LEAVE_GUILD_CID - Dev log channel for guild leaves
  * @property {string | null} USER_LEVEL_CID - Dev log channel for level-ups
  * @property {string | null} VOTE_CID - Dev log channel for votes
+ * @property {string | null} ERROR_CID - Dev log channel for errors (commands, events, dashboard actions, crashes)
  * @property {DashboardConfig | null} DASHBOARD - null when the dashboard is disabled
  * @property {StreamsConfig} STREAMS - Keys for stream notifications; a platform without keys is switched off
+ * @property {string | null} TRANSLATE_API_KEY - Google Cloud Translation API key; translating is off without it
  */
 
 /**
@@ -162,9 +164,11 @@ export function parseEnvironment(env) {
         LEAVE_GUILD_CID: snowflake('LEAVE_GUILD_CID'),
         USER_LEVEL_CID: snowflake('USER_LEVEL_CID'),
         VOTE_CID: snowflake('VOTE_CID'),
+        ERROR_CID: snowflake('ERROR_CID'),
 
         DASHBOARD: dashboard,
         STREAMS: streams,
+        TRANSLATE_API_KEY: optional('GOOGLE_TRANSLATE_API_KEY'),
     };
 
     return errors.length > 0 ? { env: null, errors, warnings } : { env: parsed, errors, warnings };

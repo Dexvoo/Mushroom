@@ -1,6 +1,7 @@
 import { MessageFlags, Events } from 'discord.js';
 import User_Level_Cache from '../../levels/cache/userLevels.cache.js';
 import { isHandledComponent } from '../../../shared/constants/componentIds.js';
+import { reportError } from '../../../shared/utils/errorReport.js';
 
 export const name = Events.InteractionCreate;
 export const once = false;
@@ -21,6 +22,12 @@ export async function execute(interaction) {
             await command.autocomplete(interaction, client);
         } catch (error) {
             client.utils.LogData(`Autocomplete Error: ${interaction.commandName}`, error.message, 'error');
+            reportError(client, {
+                source: `${commandLabel(interaction)} (autocomplete)`,
+                error,
+                guild,
+                user: interaction.user,
+            });
         }
         return;
     }
@@ -44,7 +51,8 @@ export async function execute(interaction) {
             { flags: MessageFlags.Ephemeral }
         );
 
-    if (interaction.isChatInputCommand()) {
+    // Slash commands, and message/user menu commands (right-click → Apps)
+    if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
         const command = client.commands.get(interaction.commandName);
         if (!command) {
             const msg = client.utils.Translate('errors.no_command', interaction.locale);
@@ -115,9 +123,9 @@ export async function execute(interaction) {
         try {
             await command.execute(interaction, client);
         } catch (error) {
-            // TODO: log errors with webhook to a private channel for better visibility and debugging, instead of just console logging.
-
             client.utils.LogData(`Command Error: ${interaction.commandName}`, error.stack ?? error.message, 'error');
+            // Also to the dev server's error channel (ERROR_CID), if set
+            reportError(client, { source: commandLabel(interaction), error, guild, user: interaction.user });
 
             /** @type {import('discord.js').InteractionReplyOptions} */
             const errorReply = {
@@ -150,7 +158,18 @@ export async function execute(interaction) {
 }
 
 /**
- * @param {import('discord.js').ChatInputCommandInteraction} interaction
+ * "/moderation ban": the command and subcommand, without option values. Menu commands are just their name.
+ * @param {import('discord.js').CommandInteraction | import('discord.js').AutocompleteInteraction} interaction
+ */
+function commandLabel(interaction) {
+    if (!interaction.isChatInputCommand() && !interaction.isAutocomplete()) return `"${interaction.commandName}" menu`;
+    const group = interaction.options.getSubcommandGroup(false);
+    const subcommand = interaction.options.getSubcommand(false);
+    return ['/' + interaction.commandName, group, subcommand].filter(Boolean).join(' ');
+}
+
+/**
+ * @param {import('discord.js').CommandInteraction} interaction
  * @param {import('../../../core/baseCommands.js').Command} command
  */
 function commandCooldown(interaction, command) {

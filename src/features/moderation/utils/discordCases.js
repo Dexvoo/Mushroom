@@ -17,7 +17,8 @@ export async function recordDiscordCase(guild, { type, action, user, durationMs 
     const entry = await findAuditLogEntry(
         guild,
         type,
-        (entry) => entry.targetId === user.id && Date.now() - entry.createdTimestamp < 5000 && match(entry)
+        (entry) => entry.targetId === user.id && Date.now() - entry.createdTimestamp < 5000 && match(entry),
+        { targetId: user.id }
     );
     const executor = entry?.executor;
     if (!executor || executor.id === guild.client.user.id) return false;

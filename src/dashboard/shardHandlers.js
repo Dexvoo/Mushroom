@@ -64,6 +64,7 @@ import {
     nameLookup,
 } from './settingsViews.js';
 import { LogData } from '../shared/utils/logger.js';
+import { reportError } from '../shared/utils/errorReport.js';
 
 /**
  * Dashboard actions that run inside a shard process (via client.dashboard()).
@@ -136,6 +137,8 @@ export async function handle(client, action, payload) {
         // Logged here, with the full stack, so a bug isn't mistaken for the shard being down:
         // the dashboard treats a request that throws as the bot being unreachable
         LogData('Dashboard', `${action} failed: ${error.stack ?? error.message}`, 'error');
+        const guild = typeof payload?.guildId === 'string' ? (client.guilds.cache.get(payload.guildId) ?? null) : null;
+        reportError(client, { source: `Dashboard: ${action}`, error, guild });
         return fail(500, 'Something went wrong. Try again, and if it keeps happening let the bot owner know.');
     }
 }

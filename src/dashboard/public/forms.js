@@ -230,6 +230,11 @@ window.addEventListener('beforeunload', (event) => {
 
 /**
  * Tracks a draft against the saved settings and shows a save bar while they differ.
+ *
+ * onReset is called whenever the draft is replaced by a new object: after the Reset button and after a
+ * successful save. The page must re-render then, reading `state.draft` again, or its inputs would keep
+ * editing the old draft and later changes would be lost. onSave should not re-render itself.
+ *
  * @template T
  * @param {{ saved: T, onSave: (draft: T) => Promise<{ ok: boolean, saved?: T, errors?: string[] }>, onReset: () => void }} options
  */
@@ -275,11 +280,13 @@ export function createSettingsState({ saved, onSave, onReset }) {
         saving = true;
         saveButton.disabled = true;
         saveButton.textContent = 'Saving…';
+        let draftReplaced = false;
         try {
             const result = await onSave(structuredClone(draft));
             if (result.ok) {
                 savedValue = structuredClone(result.saved ?? draft);
                 draft = structuredClone(savedValue);
+                draftReplaced = true;
                 showErrors();
             } else {
                 showErrors(result.errors ?? ['Could not save. Try again.']);
@@ -290,6 +297,8 @@ export function createSettingsState({ saved, onSave, onReset }) {
             saveButton.textContent = 'Save changes';
             update();
         }
+        // The page re-renders against the new draft object (see the note above)
+        if (draftReplaced) onReset();
     });
 
     unsavedCheck = isDirty;

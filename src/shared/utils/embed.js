@@ -105,7 +105,7 @@ async function Embed(target, colour, title, description, options = {}) {
 
 /**
  * Sends an embed log to the specified log channel based on the type of log.
- * @param {'command' | 'joinGuild' | 'leaveGuild' | 'userLevel' | 'vote' } type - types of logs
+ * @param {'command' | 'joinGuild' | 'leaveGuild' | 'userLevel' | 'vote' | 'error' } type - types of logs
  * @param {Client} client - discord client
  * @param {EmbedBuilder} embed - The embed to send
  */
@@ -129,6 +129,7 @@ async function DevEmbed(type, client, embed) {
         leaveGuild: ENV.LEAVE_GUILD_CID,
         userLevel: ENV.USER_LEVEL_CID,
         vote: ENV.VOTE_CID,
+        error: ENV.ERROR_CID,
     };
 
     const currentLogChannelId = typesOfLogs[type];

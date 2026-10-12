@@ -7,6 +7,7 @@ import { ENV } from './environment.js';
 import { checkVersion } from '../shared/utils/versionCheck.js';
 import { Database_Connect } from './database.js';
 import { Shutdown } from './shutdown.js';
+import { reportError } from '../shared/utils/errorReport.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -36,11 +37,14 @@ process.on('message', (/** @type {any} */ message) => {
 process.on('disconnect', () => Shutdown('MANAGER DISCONNECTED', client)); // Manager exited; don't run orphaned
 process.on('unhandledRejection', (reason) => {
     client.utils.LogData('Unhandled Rejection', reason instanceof Error ? reason.stack : String(reason), 'error');
+    reportError(client, { source: 'Unhandled promise rejection', error: reason });
 });
 process.on('uncaughtException', (error) => {
-    // State is unknown after an uncaught exception; exit and let the ShardingManager respawn this shard
+    // State is unknown after an uncaught exception; exit and let the ShardingManager respawn this shard.
+    // The report gets a few seconds to reach the dev server first.
     client.utils.LogData('Uncaught Exception', error.stack ?? error.message, 'error');
-    process.exit(1);
+    const report = reportError(client, { source: 'Crash (uncaught exception), shard restarting', error });
+    Promise.race([report, new Promise((resolve) => setTimeout(resolve, 3000))]).finally(() => process.exit(1));
 });
 
 // Resolved from this file rather than process.cwd() so the bot can be started from any directory

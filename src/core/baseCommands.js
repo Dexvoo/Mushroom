@@ -58,13 +58,14 @@ export async function reloadCommand(client, commandName) {
  * @property {boolean} developerOnly - Only usable by DEVELOPER_IDS; registered to the dev guild only
  * @property {bigint[]} botPermissions - Permissions the bot needs in the channel
  * @property {bigint[]} userPermissions - Permissions the user needs; also hides the command from users without them
+ * @property {string[]} [privateOptions] - Options whose values are left out of the developer command log
  */
 
 /**
  * @typedef {Object} Command
- * @property {import('discord.js').SlashCommandBuilder} commandData
+ * @property {import('discord.js').SlashCommandBuilder | import('discord.js').ContextMenuCommandBuilder} commandData - Slash or right-click menu command
  * @property {CommandMeta} meta
- * @property {(interaction: import('discord.js').ChatInputCommandInteraction, client: Client) => Promise<unknown>} execute
+ * @property {(interaction: any, client: Client) => Promise<unknown>} execute - Gets the slash or menu interaction
  * @property {(interaction: import('discord.js').AutocompleteInteraction, client: Client) => Promise<unknown>} [autocomplete]
  * @property {string} filePath - file:// URL of the command module
  */
@@ -133,7 +134,7 @@ export default async function loadCommands(client, dir) {
             client.commands.set(command.commandData.name, command);
             client.utils.LogData(
                 'Command',
-                `${command.commandData.name} | ${command.commandData.description}`,
+                `${command.commandData.name} | ${'description' in command.commandData ? command.commandData.description : 'Right-click menu'}`,
                 'success'
             );
         } catch (error) {

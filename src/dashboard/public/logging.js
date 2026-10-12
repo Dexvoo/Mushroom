@@ -30,7 +30,6 @@ export function renderLogging(container, overview) {
             if (status === 200) {
                 overview.logging = data;
                 toast('Logging settings saved');
-                render();
                 return { ok: true, saved: data };
             }
             return { ok: false, errors: data?.details ?? [data?.error ?? 'Could not save. Try again.'] };

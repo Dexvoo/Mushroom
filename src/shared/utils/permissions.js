@@ -1,19 +1,12 @@
 // discord.js's Client, not core/extendedClient.js: importing that here would be circular, and
 // our client extends this one, so instanceof still matches it
-import {
-    ChatInputCommandInteraction,
-    Client,
-    GuildMember,
-    GuildChannel,
-    ThreadChannel,
-    PermissionsBitField,
-} from 'discord.js';
+import { CommandInteraction, Client, GuildMember, GuildChannel, ThreadChannel, PermissionsBitField } from 'discord.js';
 import { LogData } from './logger.js';
 import { ENV } from '../../bootstrap/environment.js';
 /**
  * Checks if a user/bot has the required permissions in a channel
  *
- * @param {ChatInputCommandInteraction | import('discord.js').GuildBasedChannel} interaction - Interaction or Channel to check permissions in
+ * @param {CommandInteraction | import('discord.js').GuildBasedChannel} interaction - Interaction or Channel to check permissions in
  * @param {import('discord.js').PermissionResolvable[]} permissions - Permissions to check (flags or names)
  * @param {GuildMember | Client} member - GuildMember or Client to check permissions for
  * @returns {[boolean, string[][]?]} Array with boolean success flag and optional array of missing permission names
@@ -26,7 +19,7 @@ function PermissionCheck(interaction, permissions, member) {
     }
 
     let channel, guild;
-    if (interaction instanceof ChatInputCommandInteraction) {
+    if (interaction instanceof CommandInteraction) {
         channel = interaction.channel;
         guild = interaction.guild;
     } else if (interaction instanceof GuildChannel || interaction instanceof ThreadChannel) {

@@ -2,7 +2,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { TextChannel, GuildMember, PermissionsBitField, PermissionFlagsBits } from 'discord.js';
 import Logs_Cache from '../src/features/logging/cache/logs.cache.js';
-import { getLogChannel, findAuditLogExecutor } from '../src/features/logging/utils/logChannel.js';
+import { getLogChannel, findAuditLogExecutor, findAuditLogEntry } from '../src/features/logging/utils/logChannel.js';
 
 const ALL_NEEDED = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.EmbedLinks];
 
@@ -110,4 +110,51 @@ test('join and leave logs follow the member log settings until they are set up o
 
     // Other log types never borrow settings
     assert.equal(await getLogChannel(guild, 'server'), null);
+});
+
+test('listeners for the same event share one audit log fetch; other members get their own', async () => {
+    let fetches = 0;
+    const guild = {
+        id: '400000000000000009',
+        name: 'Test',
+        members: { me: { permissions: { has: () => true } } },
+        async fetchAuditLogs() {
+            fetches++;
+            return {
+                entries: [
+                    { targetId: 'a', reason: 'one' },
+                    { targetId: 'b', reason: 'two' },
+                ],
+            };
+        },
+    };
+    const lookup = (targetId) =>
+        findAuditLogEntry(guild, 20, (entry) => entry.targetId === targetId, { delayMs: 0, targetId });
+
+    const [logEntry, caseEntry] = await Promise.all([lookup('a'), lookup('a')]);
+    assert.equal(fetches, 1, 'the log and the case recorder asked once between them');
+    assert.equal(logEntry.reason, 'one');
+    assert.equal(caseEntry, logEntry);
+
+    assert.equal((await lookup('b')).reason, 'two');
+    assert.equal(fetches, 2, 'a different member is looked up separately');
+});
+
+test('a later event for the same member gets a fresh fetch, made after its own entry was written', async () => {
+    let fetches = 0;
+    const guild = {
+        id: '400000000000000010',
+        name: 'Test',
+        members: { me: { permissions: { has: () => true } } },
+        async fetchAuditLogs() {
+            fetches++;
+            return { entries: [{ targetId: 'a', id: fetches }] };
+        },
+    };
+    const lookup = () => findAuditLogEntry(guild, 20, (entry) => entry.targetId === 'a', { delayMs: 0, targetId: 'a' });
+
+    const first = await lookup();
+    const second = await lookup(); // e.g. kicked, rejoined and kicked again
+    assert.equal(fetches, 2);
+    assert.notEqual(first.id, second.id);
 });

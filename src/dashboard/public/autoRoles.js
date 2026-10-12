@@ -18,7 +18,6 @@ export function renderAutoRoles(container, overview) {
             if (status === 200) {
                 overview.autoRoles = data;
                 toast('Auto roles saved');
-                render();
                 return { ok: true, saved: data };
             }
             return { ok: false, errors: data?.details ?? [data?.error ?? 'Could not save. Try again.'] };

@@ -34,7 +34,6 @@ export function renderTickets(container, overview) {
             if (status === 200) {
                 overview.tickets = data;
                 toast('Ticket settings saved');
-                render();
                 return { ok: true, saved: data };
             }
             return { ok: false, errors: data?.details ?? [data?.error ?? 'Could not save. Try again.'] };

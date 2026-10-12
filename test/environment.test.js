@@ -158,3 +158,9 @@ test('stream notification keys: each platform is off until both of its keys are 
     assert.ok(warnings.some((warning) => warning.includes('KICK_CLIENT_SECRET')));
     assert.deepEqual(parseEnvironment(base).env.STREAMS, { TWITCH: null, KICK: null, YOUTUBE_API_KEY: null });
 });
+
+test('the error channel is optional and must be a channel ID', () => {
+    assert.equal(parseEnvironment(base).env.ERROR_CID, null);
+    assert.equal(parseEnvironment({ ...base, ERROR_CID: '500000000000000077' }).env.ERROR_CID, '500000000000000077');
+    assert.ok(parseEnvironment({ ...base, ERROR_CID: 'errors' }).errors.some((error) => error.includes('ERROR_CID')));
+});

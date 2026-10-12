@@ -20,7 +20,8 @@ export async function execute(member) {
     const entry = await findAuditLogEntry(
         guild,
         AuditLogEvent.MemberKick,
-        (entry) => entry.targetId === user.id && Date.now() - entry.createdTimestamp < 5000
+        (entry) => entry.targetId === user.id && Date.now() - entry.createdTimestamp < 5000,
+        { targetId: user.id }
     );
     if (!entry) return; // They left on their own (or it can't be told)
 

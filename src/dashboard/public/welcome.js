@@ -43,7 +43,6 @@ export function renderWelcome(container, overview) {
             if (status === 200) {
                 overview.welcome = data;
                 toast('Welcome messages saved');
-                render();
                 return { ok: true, saved: data };
             }
             return { ok: false, errors: data?.details ?? [data?.error ?? 'Could not save. Try again.'] };

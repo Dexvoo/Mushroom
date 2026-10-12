@@ -24,7 +24,8 @@ export async function execute(oldMember, newMember) {
     const entry = await findAuditLogEntry(
         guild,
         AuditLogEvent.MemberUpdate,
-        (entry) => entry.targetId === user.id && Date.now() - entry.createdTimestamp < 5000
+        (entry) => entry.targetId === user.id && Date.now() - entry.createdTimestamp < 5000,
+        { targetId: user.id }
     );
     const { moderator } = moderationDetails(entry, client.user.id);
     const footer = { text: `UID: ${user.id}` };

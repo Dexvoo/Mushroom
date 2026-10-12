@@ -213,7 +213,6 @@ export function renderModeration(container, overview) {
             if (code === 200) {
                 overview.moderation = data;
                 toast('Automatic actions saved');
-                renderSettings();
                 return { ok: true, saved: data };
             }
             return { ok: false, errors: data?.details ?? [data?.error ?? 'Could not save. Try again.'] };

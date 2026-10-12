@@ -75,22 +75,49 @@ export async function findAuditLogExecutor(guild, type, match, { delayMs = 1500 
     return (await findAuditLogEntry(guild, type, match, { delayMs }))?.executor ?? null;
 }
 
+/** "guildId:type:targetId" → a lookup still waiting to fetch, which listeners for the same event can join */
+const sharedLookups = new Map();
+
 /**
  * Like findAuditLogExecutor, but the whole entry (with its reason).
+ *
+ * Several listeners often react to the same event (a ban is logged and recorded as a case), so with a
+ * `targetId` they share one fetch instead of each asking Discord. They arrive within moments of each other,
+ * well inside the wait before fetching. A lookup can only be joined while it's still waiting, so any later
+ * event (another member's, or the same member kicked again) gets a fetch made after its own entry was written.
+ *
  * @param {import('discord.js').Guild} guild
  * @param {import('discord.js').AuditLogEvent} type
  * @param {(entry: import('discord.js').GuildAuditLogsEntry) => boolean} match
- * @param {{ delayMs?: number }} [options]
+ * @param {{ delayMs?: number, targetId?: string }} [options]
  * @returns {Promise<import('discord.js').GuildAuditLogsEntry | null>}
  */
-export async function findAuditLogEntry(guild, type, match, { delayMs = 1500 } = {}) {
+export async function findAuditLogEntry(guild, type, match, { delayMs = 1500, targetId } = {}) {
     if (!guild.members.me?.permissions.has(PermissionFlagsBits.ViewAuditLog)) return null;
 
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    const key = targetId ? `${guild.id}:${type}:${targetId}` : null;
+    let lookup = key ? sharedLookups.get(key) : undefined;
+    if (!lookup) {
+        lookup = fetchAuditLogPage(guild, type, delayMs, key);
+        if (key) sharedLookups.set(key, lookup);
+    }
 
+    const entries = await lookup;
+    return entries?.find(match) ?? null;
+}
+
+/**
+ * The latest audit log entries of one type, after giving Discord a moment to write the new one.
+ * @param {import('discord.js').Guild} guild
+ * @param {import('discord.js').AuditLogEvent} type
+ * @param {number} delayMs
+ * @param {string | null} key - Its entry in sharedLookups, closed to newcomers once the fetch starts
+ */
+async function fetchAuditLogPage(guild, type, delayMs, key) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    if (key) sharedLookups.delete(key);
     try {
-        const { entries } = await guild.fetchAuditLogs({ limit: 5, type });
-        return entries.find(match) ?? null;
+        return (await guild.fetchAuditLogs({ limit: 5, type })).entries;
     } catch (error) {
         LogData('Logging', `Guild: ${guild.name} | Audit log fetch failed: ${error.message}`, 'warning');
         return null;

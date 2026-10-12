@@ -35,7 +35,6 @@ export function renderBotSettings(container, overview) {
             if (status === 200) {
                 overview.bot = data;
                 toast('Bot settings saved');
-                render();
                 return { ok: true, saved: editable(data) };
             }
             if (status === 413) return { ok: false, errors: ['The images are too large. Try smaller ones.'] };
