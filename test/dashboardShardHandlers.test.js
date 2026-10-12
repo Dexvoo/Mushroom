@@ -1,3 +1,4 @@
+import './helpers/setupEnv.js';
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { ChannelType, Collection, DiscordAPIError, RESTJSONErrorCodes } from 'discord.js';
@@ -8,6 +9,7 @@ import Guild_Settings_Cache from '../src/shared/cache/guildSettings.cache.js';
 import Auto_Roles_Cache from '../src/features/autoRoles/cache/autoRoles.cache.js';
 import Welcome_Cache from '../src/features/welcome/cache/welcome.cache.js';
 import Ticket_Config_Cache from '../src/features/tickets/cache/ticketConfig.cache.js';
+import Moderation_Config_Cache from '../src/features/moderation/cache/moderationConfig.cache.js';
 import { StreamSubscription } from '../src/features/streams/models/streamSubscription.js';
 import { handle } from '../src/dashboard/shardHandlers.js';
 import { ALLOWED_SIZES } from '@discordjs/rest';
@@ -30,6 +32,7 @@ let welcomeWrites;
 let tickets;
 let ticketWrites;
 let streams;
+let moderation;
 let storedSettings;
 
 /** Image links throw on sizes Discord doesn't serve, like discord.js does. */
@@ -164,6 +167,9 @@ beforeEach(() => {
     tickets = Ticket_Config_Cache.createDefault(GUILD_ID);
     ticketWrites = [];
     Ticket_Config_Cache.get = async () => tickets;
+    moderation = { guildId: GUILD_ID, warnActions: [] };
+    Moderation_Config_Cache.get = async () => moderation;
+    Moderation_Config_Cache.set = async (guildId, updates) => (moderation = { guildId, ...updates });
     streams = [];
     StreamSubscription.find = (filter) => ({
         sort: () => ({
@@ -334,6 +340,35 @@ test('the overview includes logging settings for every log type', async () => {
     assert.deepEqual(result.data.logging.types.leave, { enabled: true, channelId: TEXT });
     assert.deepEqual(result.data.logging.types.voice, { enabled: false, channelId: null });
     assert.deepEqual(result.data.logging.ignoredChannels, []);
+});
+
+test('test logs: posted to each switched-on log channel, failures explained, and not spammable', async () => {
+    const client = makeClient();
+    const sent = [];
+    client.guilds.cache.get(GUILD_ID).channels.cache.get(TEXT).send = async (message) => sent.push(message);
+    const run = (userId = MANAGER) => handle(client, 'testLogs', { guildId: GUILD_ID, userId });
+
+    assert.equal((await run(MEMBER)).status, 403);
+    assert.match((await run()).error, /No log types are switched on/);
+
+    Logs_Cache.get = async () => ({
+        guildId: GUILD_ID,
+        message: { enabled: true, channelId: TEXT },
+        voice: { enabled: true, channelId: '500000000000000099' }, // deleted channel
+        role: { enabled: false, channelId: TEXT },
+    });
+    const result = await run();
+    assert.deepEqual(result.data.results, [
+        { type: 'message', ok: true, channel: 'general' },
+        { type: 'voice', ok: false, error: 'The channel no longer exists' },
+    ]);
+    assert.equal(sent.length, 1, 'switched-off types get nothing');
+    assert.match(sent[0].embeds[0].data.description, /\*\*Messages\*\* logs/);
+    assert.deepEqual(sent[0].allowedMentions, { parse: [] });
+
+    const again = await run();
+    assert.equal(again.status, 429);
+    assert.equal(sent.length, 1);
 });
 
 test('saving logging settings validates, then writes through the logs cache', async () => {
@@ -820,4 +855,29 @@ test('unfollowing and resetting a platform', async () => {
     });
     assert.deepEqual(deleted, { guildId: GUILD_ID, platform: 'youtube' });
     assert.deepEqual(reset.changes, ['Unfollowed YouTube Mushroom TV']);
+});
+
+// ---------- Automatic moderation ----------
+
+test('automatic actions: shown in the overview, saved after validation, and reset without touching cases', async () => {
+    const overview = await handle(makeClient(), 'guildOverview', { guildId: GUILD_ID, userId: MANAGER });
+    assert.deepEqual(overview.data.moderation, { warnActions: [] });
+    assert.equal(overview.data.limits.WARN_ACTIONS.RULES, 10);
+
+    const save = (settings, userId = MANAGER) =>
+        handle(makeClient(), 'saveModerationSettings', { guildId: GUILD_ID, userId, settings });
+    assert.equal((await save({ warnActions: [] }, MEMBER)).status, 403);
+    assert.equal((await save({ warnActions: [{ warnings: 3, action: 'mute' }] })).status, 400);
+
+    const saved = await save({ warnActions: [{ warnings: 3, action: 'kick' }] });
+    assert.deepEqual(saved.data.warnActions, [{ warnings: 3, action: 'kick', durationMs: null }]);
+    assert.deepEqual(saved.changes, ['At 3 warnings: added kick']);
+
+    const reset = await handle(makeClient(), 'resetSettings', {
+        guildId: GUILD_ID,
+        userId: MANAGER,
+        section: 'moderation',
+    });
+    assert.deepEqual(reset.data, { warnActions: [] });
+    assert.deepEqual(reset.changes, ['At 3 warnings: removed kick']);
 });

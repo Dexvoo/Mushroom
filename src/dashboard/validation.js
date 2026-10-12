@@ -1047,3 +1047,74 @@ export function validateStreamUpdates(input, guild, existing) {
 export function isSubscriptionId(id) {
     return typeof id === 'string' && SUBSCRIPTION_ID.test(id);
 }
+
+// ---------- Moderation ----------
+
+export const WARN_ACTION_LIMITS = Object.freeze({
+    RULES: 10,
+    WARNINGS: 50,
+    MIN_MUTE_MS: 10_000,
+    MAX_MUTE_MS: 28 * 24 * 60 * 60_000, // Discord's longest timeout
+});
+const WARN_ACTION_TYPES = new Set(['mute', 'kick', 'ban']);
+const WARN_ACTION_KEYS = new Set(['warnings', 'action', 'durationMs']);
+
+/**
+ * Automatic actions after a number of warnings, e.g. a 1 hour mute at 3 warnings.
+ * Each warning count can have one rule; they're returned sorted by count.
+ * @param {unknown} input
+ * @returns {{ settings: { warnActions?: { warnings: number, action: 'mute' | 'kick' | 'ban', durationMs: number | null }[] },
+ *   errors: string[] }}
+ */
+export function validateModerationSettings(input) {
+    const errors = [];
+    if (!isPlainObject(input)) return { settings: {}, errors: ['Settings must be an object'] };
+    for (const key of Object.keys(input)) {
+        if (key !== 'warnActions') errors.push(`Unknown setting "${key}"`);
+    }
+    if (!Array.isArray(input.warnActions)) errors.push('Automatic actions must be a list');
+    if (errors.length > 0) return { settings: {}, errors };
+    if (input.warnActions.length > WARN_ACTION_LIMITS.RULES) {
+        return { settings: {}, errors: [`You can have up to ${WARN_ACTION_LIMITS.RULES} automatic actions`] };
+    }
+
+    const rules = [];
+    const counts = new Set();
+    input.warnActions.forEach((rule, index) => {
+        const label = `Automatic action ${index + 1}`;
+        if (!isPlainObject(rule) || Object.keys(rule).some((key) => !WARN_ACTION_KEYS.has(key))) {
+            errors.push(`${label} is not valid`);
+            return;
+        }
+        const { warnings, action, durationMs } = rule;
+
+        if (!Number.isInteger(warnings) || warnings < 1 || warnings > WARN_ACTION_LIMITS.WARNINGS) {
+            errors.push(`${label}: the number of warnings must be from 1 to ${WARN_ACTION_LIMITS.WARNINGS}`);
+            return;
+        }
+        if (counts.has(warnings)) {
+            errors.push(`${label}: there is already an action at ${warnings} warnings`);
+            return;
+        }
+        if (!WARN_ACTION_TYPES.has(action)) {
+            errors.push(`${label}: choose mute, kick or ban`);
+            return;
+        }
+        if (action === 'mute') {
+            const valid =
+                Number.isInteger(durationMs) &&
+                durationMs >= WARN_ACTION_LIMITS.MIN_MUTE_MS &&
+                durationMs <= WARN_ACTION_LIMITS.MAX_MUTE_MS;
+            if (!valid) {
+                errors.push(`${label}: a mute can be from 10 seconds up to 28 days`);
+                return;
+            }
+        }
+
+        counts.add(warnings);
+        rules.push({ warnings, action, durationMs: action === 'mute' ? durationMs : null });
+    });
+
+    rules.sort((a, b) => a.warnings - b.warnings);
+    return { settings: { warnActions: rules }, errors };
+}

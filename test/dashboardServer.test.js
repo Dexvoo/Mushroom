@@ -31,6 +31,20 @@ const auditStore = {
     },
 };
 
+// In-memory moderation cases
+const cases = [];
+const caseQueries = [];
+const caseStore = {
+    async list(guildId, filters) {
+        caseQueries.push({ guildId, filters });
+        return { cases: cases.filter((entry) => entry.guildId === guildId), nextCursor: null };
+    },
+    async remove(guildId, number) {
+        const index = cases.findIndex((entry) => entry.guildId === guildId && entry.number === number);
+        return index === -1 ? null : cases.splice(index, 1)[0];
+    },
+};
+
 // Fake shards: records calls and returns canned results
 const bridge = {
     async guild(action, guildId, payload) {
@@ -77,6 +91,7 @@ before(async () => {
         bridge,
         env,
         auditStore,
+        caseStore,
         rateLimits: { auth: 1000, api: 1000, writes: 1000 },
     });
     await new Promise((resolve) => {
@@ -113,6 +128,8 @@ beforeEach(() => {
     saveChanges = ['Max level: 100 → 10'];
     auditEntries.length = 0;
     auditQueries.length = 0;
+    cases.length = 0;
+    caseQueries.length = 0;
     discordUser = { id: USER_ID, username: 'tester', global_name: 'Tester', avatar: null };
 });
 
@@ -510,6 +527,74 @@ test('ticket saves and panel posts go to the shard as the session user and are r
     assert.equal(panel.status, 200);
     const post = bridgeCalls.find((call) => call.action === 'postTicketPanel');
     assert.deepEqual(post.payload, { userId: USER_ID, channelId: '1' });
+});
+
+test('moderation cases: only for server managers, with filters passed through as text', async () => {
+    const client = await login();
+    cases.push({ guildId: GUILD_ID, number: 7, action: 'warn', username: 'target', reason: 'spam' });
+
+    const response = await client.request(`/api/guilds/${GUILD_ID}/cases?member=target&action=warn&before=9`);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).cases[0].number, 7);
+    assert.deepEqual(caseQueries[0], {
+        guildId: GUILD_ID,
+        filters: { member: 'target', action: 'warn', before: '9' },
+    });
+    assert.deepEqual(bridgeCalls.at(-1), { action: 'access', guildId: GUILD_ID, payload: { userId: USER_ID } });
+
+    // Arrays from repeated query parameters are ignored, never passed on as objects
+    await client.request(`/api/guilds/${GUILD_ID}/cases?member=a&member=b`);
+    assert.equal(caseQueries[1].filters.member, undefined);
+
+    denyAccess = true;
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/cases`)).status, 403);
+    assert.equal(caseQueries.length, 2, 'the database is never read for someone without access');
+});
+
+test('deleting a case is recorded in the Web Logs, and odd case numbers never reach the database', async () => {
+    const client = await login();
+    cases.push({ guildId: GUILD_ID, number: 7, action: 'warn', username: 'target', reason: 'spam' });
+
+    const response = await client.request(`/api/guilds/${GUILD_ID}/cases/7`, json({}, 'DELETE'));
+    assert.equal(response.status, 200);
+    assert.equal(cases.length, 0);
+    assert.equal(auditEntries[0].action, 'Deleted a moderation case');
+    assert.deepEqual(auditEntries[0].changes, ['Case #7: Warning for @target: spam']);
+
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/cases/7`, json({}, 'DELETE'))).status, 404);
+    for (const bad of ['0', '-1', 'abc', '1e3', '99999999999']) {
+        assert.equal(
+            (await client.request(`/api/guilds/${GUILD_ID}/cases/${bad}`, json({}, 'DELETE'))).status,
+            404,
+            bad
+        );
+    }
+    assert.equal(auditEntries.length, 1);
+
+    denyAccess = true;
+    cases.push({ guildId: GUILD_ID, number: 8, action: 'ban', username: 'x', reason: null });
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/cases/8`, json({}, 'DELETE'))).status, 403);
+    assert.equal(cases.length, 1, 'not deleted without access');
+});
+
+test('saving automatic moderation is recorded in the Web Logs', async () => {
+    saveChanges = ['At 3 warnings: added kick'];
+    const client = await login();
+    const response = await client.request(`/api/guilds/${GUILD_ID}/moderation`, json({ warnActions: [] }));
+    assert.equal(response.status, 200);
+    assert.equal(bridgeCalls.at(-1).action, 'saveModerationSettings');
+    assert.equal(auditEntries[0].action, 'Updated automatic moderation');
+
+    assert.equal((await client.request(`/api/guilds/${GUILD_ID}/reset/moderation`, json({}, 'POST'))).status, 200);
+    assert.equal(auditEntries[1].action, 'Reset automatic moderation');
+});
+
+test('test logs go to the shard as the session user', async () => {
+    const client = await login();
+    const response = await client.request(`/api/guilds/${GUILD_ID}/logging/test`, json({}, 'POST'));
+    assert.equal(response.status, 200);
+    assert.deepEqual(bridgeCalls.at(-1), { action: 'testLogs', guildId: GUILD_ID, payload: { userId: USER_ID } });
+    assert.equal(auditEntries.length, 0, 'a test is not a settings change');
 });
 
 test('stream routes go to the shard as the session user, and odd IDs never reach it', async () => {

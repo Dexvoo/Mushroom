@@ -5,6 +5,8 @@
  * @typedef {{ channel: (id: string | null) => string, role: (id: string) => string }} NameLookup
  */
 
+import { formatDuration } from '../features/moderation/utils/checks.js';
+
 const onOff = (value) => (value ? 'on' : 'off');
 
 /**
@@ -296,6 +298,30 @@ export function describeStreamChanges(before, after, names) {
     }
     for (const subscription of before) {
         if (!afterIds.has(subscription.id)) changes.push(`Unfollowed ${label(subscription)}`);
+    }
+    return changes;
+}
+
+/**
+ * @param {{ warnActions: { warnings: number, action: string, durationMs: number | null }[] }} before - moderationView
+ * @param {{ warnActions: { warnings: number, action: string, durationMs: number | null }[] }} after - moderationView
+ * @returns {string[]}
+ */
+export function describeModerationChanges(before, after) {
+    const describe = (rule) => (rule.action === 'mute' ? `mute for ${formatDuration(rule.durationMs)}` : rule.action);
+    const beforeByCount = new Map(before.warnActions.map((rule) => [rule.warnings, rule]));
+    const afterByCount = new Map(after.warnActions.map((rule) => [rule.warnings, rule]));
+    const changes = [];
+
+    for (const [count, rule] of afterByCount) {
+        const was = beforeByCount.get(count);
+        if (!was) changes.push(`At ${count} warnings: added ${describe(rule)}`);
+        else if (describe(was) !== describe(rule)) {
+            changes.push(`At ${count} warnings: ${describe(was)} → ${describe(rule)}`);
+        }
+    }
+    for (const [count, rule] of beforeByCount) {
+        if (!afterByCount.has(count)) changes.push(`At ${count} warnings: removed ${describe(rule)}`);
     }
     return changes;
 }

@@ -9,6 +9,7 @@ import { createAuthRouter } from './auth.js';
 import { createApiRouter } from './routes.js';
 import { createShardBridge } from './shardBridge.js';
 import { createMongoAuditStore } from './auditStore.js';
+import { createMongoCaseStore } from '../features/moderation/utils/cases.js';
 import { sameOrigin, requireJson } from './middleware.js';
 import { LogData } from '../shared/utils/logger.js';
 
@@ -33,6 +34,7 @@ const profileJson = express.json({ limit: '6mb' });
  *   env: import('../bootstrap/parseEnvironment.js').Environment,
  *   sessionStore?: session.Store,
  *   auditStore?: import('./auditStore.js').AuditStore,
+ *   caseStore?: ReturnType<typeof createMongoCaseStore>,
  *   rateLimits?: { auth?: number, api?: number, writes?: number },
  * }} options
  */
@@ -41,6 +43,7 @@ export function createDashboardApp({
     env,
     sessionStore,
     auditStore = createMongoAuditStore(),
+    caseStore = createMongoCaseStore(),
     rateLimits = {},
 }) {
     const config = env.DASHBOARD;
@@ -121,7 +124,13 @@ export function createDashboardApp({
         writeLimiter,
         requireJson,
         (req, res, next) => (PROFILE_ROUTE.test(req.path) ? profileJson : smallJson)(req, res, next),
-        createApiRouter({ bridge, applicationId: env.APPLICATION_ID, developerIds: env.DEVELOPER_IDS, auditStore })
+        createApiRouter({
+            bridge,
+            applicationId: env.APPLICATION_ID,
+            developerIds: env.DEVELOPER_IDS,
+            auditStore,
+            caseStore,
+        })
     );
 
     // Browsers re-check every file (a quick 304 when unchanged), so updates always show, including

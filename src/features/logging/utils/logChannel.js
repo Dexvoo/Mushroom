@@ -3,6 +3,7 @@ import Logs_Cache from '../cache/logs.cache.js';
 import { logSettings } from '../models/logging.js';
 import { PermissionCheck } from '../../../shared/utils/permissions.js';
 import { LogData } from '../../../shared/utils/logger.js';
+import { parseAuditReason } from '../../moderation/utils/checks.js';
 
 /**
  * @typedef {import('../models/logging.js').LogType} LogType
@@ -71,15 +72,46 @@ async function disableLogType(guild, type, reason) {
  * @returns {Promise<import('discord.js').User | import('discord.js').PartialUser | null>} null if it can't be determined
  */
 export async function findAuditLogExecutor(guild, type, match, { delayMs = 1500 } = {}) {
+    return (await findAuditLogEntry(guild, type, match, { delayMs }))?.executor ?? null;
+}
+
+/**
+ * Like findAuditLogExecutor, but the whole entry (with its reason).
+ * @param {import('discord.js').Guild} guild
+ * @param {import('discord.js').AuditLogEvent} type
+ * @param {(entry: import('discord.js').GuildAuditLogsEntry) => boolean} match
+ * @param {{ delayMs?: number }} [options]
+ * @returns {Promise<import('discord.js').GuildAuditLogsEntry | null>}
+ */
+export async function findAuditLogEntry(guild, type, match, { delayMs = 1500 } = {}) {
     if (!guild.members.me?.permissions.has(PermissionFlagsBits.ViewAuditLog)) return null;
 
     await new Promise((resolve) => setTimeout(resolve, delayMs));
 
     try {
         const { entries } = await guild.fetchAuditLogs({ limit: 5, type });
-        return entries.find(match)?.executor ?? null;
+        return entries.find(match) ?? null;
     } catch (error) {
         LogData('Logging', `Guild: ${guild.name} | Audit log fetch failed: ${error.message}`, 'warning');
         return null;
     }
+}
+
+/**
+ * Who really did a moderation action, and why. When it was done with /moderation, Discord records Ovx as
+ * the executor and the moderator is in the reason ("By @name: reason"), so they're shown instead.
+ * @param {import('discord.js').GuildAuditLogsEntry | null} entry
+ * @param {string} botId
+ * @param {string | null} [fallbackReason] - e.g. the reason on the ban itself, if there's no entry
+ * @returns {{ moderator: string, reason: string | null }}
+ */
+export function moderationDetails(entry, botId, fallbackReason = null) {
+    const executor = entry?.executor ?? null;
+    const reason = entry?.reason ?? fallbackReason;
+    // Only when the audit log confirms Ovx did it: anyone can type "By @someone:" as a reason in Discord
+    const fromCommand = executor?.id === botId ? parseAuditReason(reason) : null;
+    if (fromCommand) {
+        return { moderator: `@${fromCommand.moderatorName} (via Ovx)`, reason: fromCommand.reason };
+    }
+    return { moderator: executor ? executor.toString() : 'Unknown', reason };
 }

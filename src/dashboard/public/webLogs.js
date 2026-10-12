@@ -1,8 +1,8 @@
-// Web Logs: settings changes made on the dashboard or with slash commands, newest first, searchable by username and action.
+// Web Logs: settings changes made on the dashboard, newest first, searchable by username and action.
 import { el, api } from './ui.js';
 
 const SEARCH_DELAY_MS = 300;
-// New entries (e.g. from slash commands) show up without reloading the page
+// New entries (e.g. from another manager) show up without reloading the page
 const AUTO_REFRESH_MS = 30_000;
 const RETENTION_DAYS = 90;
 
@@ -167,7 +167,7 @@ export function renderWebLogs(container, overview) {
                 ? ''
                 : searching
                   ? 'No entries match your search.'
-                  : 'No changes yet. Settings changed here or with slash commands will show up here.';
+                  : 'No changes yet. Settings changed here will show up here.';
     }
 
     const onSearch = () => {
@@ -192,7 +192,7 @@ export function renderWebLogs(container, overview) {
                 el('h1', { className: 'page-title', textContent: 'Web Logs' }),
                 el('p', {
                     className: 'page-subtitle',
-                    textContent: `Changes made to Ovx’s settings on this dashboard or with slash commands. Entries are kept for ${RETENTION_DAYS} days.`,
+                    textContent: `Changes made to Ovx’s settings on this dashboard. Entries are kept for ${RETENTION_DAYS} days.`,
                 }),
             ]),
             refreshButton,

@@ -1,14 +1,15 @@
-import { ChannelType, PermissionFlagsBits, DiscordAPIError, RESTJSONErrorCodes } from 'discord.js';
+import { ChannelType, PermissionFlagsBits, DiscordAPIError, RESTJSONErrorCodes, EmbedBuilder } from 'discord.js';
 import Guild_Level_Cache from '../features/levels/cache/guildLevels.cache.js';
 import User_Levels_Cache from '../features/levels/cache/userLevels.cache.js';
 import { ExpForLevel } from '../features/levels/utils/levels.js';
 import Logs_Cache from '../features/logging/cache/logs.cache.js';
-import { LOG_TYPES } from '../features/logging/models/logging.js';
-import Guild_Settings_Cache from '../shared/cache/guildSettings.cache.js';
+import { LOG_TYPES, logSettings } from '../features/logging/models/logging.js';
+import Guild_Settings_Cache, { brandColour } from '../shared/cache/guildSettings.cache.js';
 import Auto_Roles_Cache from '../features/autoRoles/cache/autoRoles.cache.js';
 import Welcome_Cache from '../features/welcome/cache/welcome.cache.js';
 import { DEFAULT_MESSAGES } from '../features/welcome/utils/welcomeMessage.js';
 import Ticket_Config_Cache from '../features/tickets/cache/ticketConfig.cache.js';
+import Moderation_Config_Cache from '../features/moderation/cache/moderationConfig.cache.js';
 import { TICKET_DEFAULTS } from '../features/tickets/utils/components.js';
 import { postPanel } from '../features/tickets/utils/panel.js';
 import { StreamSubscription } from '../features/streams/models/streamSubscription.js';
@@ -28,6 +29,8 @@ import {
     validateAutoRoleSettings,
     validateWelcomeSettings,
     validateTicketSettings,
+    validateModerationSettings,
+    WARN_ACTION_LIMITS,
     validateStreamAdd,
     validateStreamUpdates,
     isSubscriptionId,
@@ -49,8 +52,17 @@ import {
     describeWelcomeChanges,
     describeTicketChanges,
     describeStreamChanges,
+    describeModerationChanges,
 } from './describeChanges.js';
-import { levelsView, loggingView, autoRolesView, welcomeView, ticketsView, nameLookup } from './settingsViews.js';
+import {
+    levelsView,
+    loggingView,
+    autoRolesView,
+    welcomeView,
+    ticketsView,
+    moderationView,
+    nameLookup,
+} from './settingsViews.js';
 import { LogData } from '../shared/utils/logger.js';
 
 /**
@@ -94,8 +106,10 @@ const handlers = {
     guildOverview,
     saveLevelSettings,
     saveLoggingSettings,
+    testLogs,
     saveBotSettings,
     saveAutoRoleSettings,
+    saveModerationSettings,
     saveWelcomeSettings,
     saveTicketSettings,
     postTicketPanel,
@@ -156,13 +170,14 @@ async function guildOverview(client, { guildId, userId }) {
     if (!access.ok) return access;
     const { guild } = access;
 
-    const [config, logsConfig, botSettings, autoRoles, welcome, tickets] = await Promise.all([
+    const [config, logsConfig, botSettings, autoRoles, welcome, tickets, moderation] = await Promise.all([
         Guild_Level_Cache.get(guild.id),
         Logs_Cache.get(guild.id),
         Guild_Settings_Cache.get(guild.id),
         Auto_Roles_Cache.get(guild.id),
         Welcome_Cache.get(guild.id),
         Ticket_Config_Cache.get(guild.id),
+        Moderation_Config_Cache.get(guild.id),
     ]);
     const me = guild.members.me;
 
@@ -207,6 +222,7 @@ async function guildOverview(client, { guildId, userId }) {
         tickets: ticketsView(tickets, roleExists(guild)),
         ticketPanel: { channelId: tickets.panel?.channelId ?? null, posted: Boolean(tickets.panel?.messageId) },
         ticketDefaults: TICKET_DEFAULTS,
+        moderation: moderationView(moderation),
         streams: await listSubscriptions(guild.id),
         streamStatus: platformStatus(),
         streamLimit: await streamLimit(guild.id),
@@ -238,6 +254,7 @@ async function guildOverview(client, { guildId, userId }) {
             TICKETS: TICKET_LIMITS,
             TICKET_TYPES: TICKET_TYPE_LIMITS,
             STREAMS: { ...STREAM_LIMITS, MESSAGE_MAX: STREAM_MESSAGE_MAX },
+            WARN_ACTIONS: WARN_ACTION_LIMITS,
         },
     });
 }
@@ -365,6 +382,24 @@ function discordProfileError(error) {
         if (typeof reason === 'string') return `${label}: ${reason}`;
     }
     return 'Discord did not accept these changes. Try a different nickname or image.';
+}
+
+/**
+ * Validates and saves the automatic actions taken when a member reaches a number of warnings.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, settings: unknown }} payload
+ */
+async function saveModerationSettings(client, { guildId, userId, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+
+    const { settings: valid, errors } = validateModerationSettings(settings);
+    if (errors.length > 0) return fail(400, 'Some settings are not valid', errors);
+
+    const before = moderationView(await Moderation_Config_Cache.get(guild.id));
+    const after = moderationView(await Moderation_Config_Cache.set(guild.id, valid));
+    return { ok: true, data: after, changes: describeModerationChanges(before, after) };
 }
 
 /**
@@ -537,6 +572,74 @@ async function removeStream(client, { guildId, userId, subscriptionId }) {
     };
 }
 
+/** Log type names as the dashboard shows them */
+const LOG_TYPE_NAMES = {
+    message: 'Messages',
+    join: 'Joins',
+    leave: 'Leaves',
+    member: 'Members',
+    punishment: 'Punishments',
+    channel: 'Channels',
+    role: 'Roles',
+    voice: 'Voice',
+    server: 'Server',
+};
+const TEST_LOGS_COOLDOWN_MS = 30_000;
+/** Guild ID → when its test logs were last sent, so the button can't be used to spam log channels */
+const lastLogTest = new Map();
+
+/**
+ * Posts a test message in the channel of every log type that is switched on, and reports which worked.
+ * Unlike real logs, a failure here doesn't switch the type off: the result tells the user what to fix.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string }} payload
+ */
+async function testLogs(client, { guildId, userId }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild, member } = access;
+
+    const waitMs = (lastLogTest.get(guild.id) ?? 0) + TEST_LOGS_COOLDOWN_MS - Date.now();
+    if (waitMs > 0) return fail(429, `Test logs were just sent. Try again in ${Math.ceil(waitMs / 1000)} seconds.`);
+
+    const config = await Logs_Cache.get(guild.id);
+    const types = LOG_TYPES.filter((type) => {
+        const settings = logSettings(config, type);
+        return settings?.enabled && settings.channelId;
+    });
+    if (types.length === 0)
+        return fail(400, 'No log types are switched on yet. Choose a channel, switch one on and save.');
+    lastLogTest.set(guild.id, Date.now());
+
+    const colour = await brandColour(guild.id);
+    const results = [];
+    for (const type of types) {
+        const channel = guild.channels.cache.get(logSettings(config, type).channelId);
+        if (!channel?.isTextBased()) {
+            results.push({ type, ok: false, error: 'The channel no longer exists' });
+            continue;
+        }
+        if (!canPostEmbeds(channel, guild.members.me)) {
+            results.push({ type, ok: false, error: `Ovx can't post embeds in #${channel.name}` });
+            continue;
+        }
+
+        const embed = new EmbedBuilder()
+            .setColor(colour)
+            .setTitle('Test log')
+            .setDescription(`**${LOG_TYPE_NAMES[type]}** logs will be posted in this channel.`)
+            .setFooter({ text: `Sent from the dashboard by ${member.user.username}` })
+            .setTimestamp();
+        try {
+            await channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
+            results.push({ type, ok: true, channel: channel.name });
+        } catch (error) {
+            results.push({ type, ok: false, error: `Couldn't post in #${channel.name}: ${error.message}` });
+        }
+    }
+    return ok({ results });
+}
+
 /**
  * Posts an example notification, so people can see what it looks like (and that the bot can post there).
  * @param {Client} client
@@ -583,6 +686,7 @@ const RESET_SECTIONS = new Set([
     'twitch',
     'youtube',
     'kick',
+    'moderation',
 ]);
 
 /**
@@ -647,6 +751,13 @@ async function resetSettings(client, { guildId, userId, section }) {
             await Welcome_Cache.set(guild.id, { welcome: defaults.welcome, goodbye: defaults.goodbye })
         );
         return { ok: true, data: after, changes: describeWelcomeChanges(before, after, names) };
+    }
+
+    // Only the automatic actions: moderation cases are members' records and are never reset
+    if (section === 'moderation') {
+        const before = moderationView(await Moderation_Config_Cache.get(guild.id));
+        const after = moderationView(await Moderation_Config_Cache.set(guild.id, { warnActions: [] }));
+        return { ok: true, data: after, changes: describeModerationChanges(before, after) };
     }
 
     if (section === 'auto-roles') {

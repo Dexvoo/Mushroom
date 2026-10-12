@@ -47,7 +47,7 @@ const FEATURES = [
     },
     {
         title: 'Web logs',
-        text: 'See who changed which setting and when, whether it was done on the dashboard or with a command.',
+        text: 'See who changed which setting and when, so nothing changes without you knowing.',
         icon: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     },
 ];
@@ -122,7 +122,7 @@ export function renderLanding(app, stats) {
             el('h2', { className: 'landing-heading', textContent: 'Built for the way communities run' }),
             el('p', {
                 className: 'landing-subheading',
-                textContent: 'Turn on only what you need. Everything can be set up on the dashboard or with commands.',
+                textContent: 'Turn on only what you need, and set it all up in one place.',
             }),
             el(
                 'div',
@@ -176,7 +176,7 @@ export function renderLanding(app, stats) {
 function preview() {
     const botMessage = (time, children) =>
         el('div', { className: 'mock-message' }, [
-            el('div', { className: 'mock-avatar brand-mark' }),
+            el('div', { className: 'mock-avatar' }),
             el('div', { className: 'mock-content' }, [
                 el('div', { className: 'mock-author' }, [
                     el('span', { className: 'mock-name', textContent: 'Ovx' }),

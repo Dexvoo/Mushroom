@@ -8,6 +8,7 @@ import {
     describeWelcomeChanges,
     describeTicketChanges,
     describeStreamChanges,
+    describeModerationChanges,
 } from '../src/dashboard/describeChanges.js';
 import { searchPattern, createMongoAuditStore, AUDIT_PAGE_SIZE } from '../src/dashboard/auditStore.js';
 import { AuditLog } from '../src/dashboard/models/auditLog.js';
@@ -336,4 +337,25 @@ test('describes stream notification changes', () => {
         ]
     );
     assert.deepEqual(describeStreamChanges([sub('a')], [], names), ['Unfollowed Twitch shroud']);
+});
+
+test('describes automatic moderation changes', () => {
+    const before = {
+        warnActions: [
+            { warnings: 3, action: 'mute', durationMs: 3_600_000 },
+            { warnings: 5, action: 'kick', durationMs: null },
+        ],
+    };
+    const after = {
+        warnActions: [
+            { warnings: 3, action: 'mute', durationMs: 86_400_000 },
+            { warnings: 7, action: 'ban', durationMs: null },
+        ],
+    };
+    assert.deepEqual(describeModerationChanges(before, after), [
+        'At 3 warnings: mute for 1 hour → mute for 1 day',
+        'At 7 warnings: added ban',
+        'At 5 warnings: removed kick',
+    ]);
+    assert.deepEqual(describeModerationChanges(after, after), []);
 });

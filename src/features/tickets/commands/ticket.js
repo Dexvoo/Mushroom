@@ -1,15 +1,6 @@
-import {
-    SlashCommandBuilder,
-    InteractionContextType,
-    ApplicationIntegrationType,
-    ChannelType,
-    MessageFlags,
-} from 'discord.js';
-import Ticket_Config_Cache from '../cache/ticketConfig.cache.js';
-import { withCommandAudit } from '../../../dashboard/commandAudit.js';
-import { describeTicketChanges } from '../../../dashboard/describeChanges.js';
-import { ticketsView, nameLookup } from '../../../dashboard/settingsViews.js';
+import { SlashCommandBuilder, InteractionContextType, ApplicationIntegrationType, MessageFlags } from 'discord.js';
 
+// For running tickets; ticket settings and the panel are on the dashboard
 const handlers = {
     close: () => import('../subcommands/close.js'),
     add: () => import('../subcommands/add.js'),
@@ -18,8 +9,6 @@ const handlers = {
     unlock: () => import('../subcommands/unlock.js'),
     claim: () => import('../subcommands/claim.js'),
     rename: () => import('../subcommands/rename.js'),
-    panel: () => import('../subcommands/panel.js'),
-    setup: () => import('../subcommands/setup.js'),
 };
 
 export const commandData = new SlashCommandBuilder();
@@ -63,47 +52,12 @@ commandData.addSubcommand((s) =>
             o.setName('name').setDescription('The new name').setMinLength(1).setMaxLength(90).setRequired(true)
         )
 );
-commandData.addSubcommand((s) =>
-    s
-        .setName('panel')
-        .setDescription('Post the "Create Ticket" message, or update it. (Manage Server)')
-        .addChannelOption((o) =>
-            o
-                .setName('channel')
-                .setDescription('Where to post it')
-                .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-                .setRequired(true)
-        )
-);
-commandData.addSubcommand((s) =>
-    s
-        .setName('setup')
-        .setDescription('Set up tickets. More settings are on the dashboard. (Manage Server)')
-        .addBooleanOption((o) => o.setName('enabled').setDescription('Turn tickets on or off').setRequired(true))
-        .addChannelOption((o) =>
-            o
-                .setName('category')
-                .setDescription('Category new tickets are created in')
-                .addChannelTypes(ChannelType.GuildCategory)
-        )
-        .addRoleOption((o) => o.setName('staff-role').setDescription('Add a role that can see and manage tickets'))
-        .addChannelOption((o) =>
-            o
-                .setName('transcript-channel')
-                .setDescription('Where transcripts of closed tickets are posted')
-                .addChannelTypes(ChannelType.GuildText)
-        )
-);
-
 export const meta = {
     cooldown: 3,
     developerOnly: false,
     botPermissions: [],
     userPermissions: [],
 };
-
-// Subcommands that change settings, recorded in the dashboard's Web Logs
-const AUDITED = new Set(['setup', 'panel']);
 
 /**
  * @param {import('discord.js').ChatInputCommandInteraction<'cached'>} interaction
@@ -122,30 +76,5 @@ export async function execute(interaction) {
 
     // Errors propagate to the slash command handler, which logs them and replies to the user
     const handlerModule = await handler();
-    const run = () => handlerModule.execute(interaction);
-
-    if (!AUDITED.has(subcommand)) return run();
-    await withCommandAudit(
-        interaction,
-        {
-            action: 'Updated ticket settings',
-            snapshot: async () => {
-                const config = await Ticket_Config_Cache.get(interaction.guildId);
-                return {
-                    settings: ticketsView(config),
-                    panelMessageId: config.panel?.messageId ?? null,
-                    panelChannelId: config.panel?.channelId ?? null,
-                };
-            },
-            describe: (before, after, guild) => {
-                const names = nameLookup(guild);
-                const changes = describeTicketChanges(before.settings, after.settings, names);
-                if (before.panelMessageId !== after.panelMessageId && after.panelMessageId) {
-                    changes.push(`Posted the ticket panel in ${names.channel(after.panelChannelId)}`);
-                }
-                return changes;
-            },
-        },
-        run
-    );
+    return handlerModule.execute(interaction);
 }

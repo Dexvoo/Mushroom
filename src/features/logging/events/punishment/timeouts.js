@@ -1,5 +1,5 @@
 import { Events, AuditLogEvent } from 'discord.js';
-import { getLogChannel, findAuditLogExecutor } from '../../utils/logChannel.js';
+import { getLogChannel, findAuditLogEntry, moderationDetails } from '../../utils/logChannel.js';
 
 export const name = Events.GuildMemberUpdate;
 export const once = false;
@@ -21,12 +21,12 @@ export async function execute(oldMember, newMember) {
     const logChannel = await getLogChannel(guild, 'punishment');
     if (!logChannel) return;
 
-    const executor = await findAuditLogExecutor(
+    const entry = await findAuditLogEntry(
         guild,
         AuditLogEvent.MemberUpdate,
         (entry) => entry.targetId === user.id && Date.now() - entry.createdTimestamp < 5000
     );
-    const moderator = executor ?? 'Unknown';
+    const { moderator } = moderationDetails(entry, client.user.id);
     const footer = { text: `UID: ${user.id}` };
 
     if (newMember.communicationDisabledUntilTimestamp === null) {

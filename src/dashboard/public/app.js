@@ -116,7 +116,8 @@ function renderLoggedOut() {
             el('p', { textContent: 'Log in with Discord to manage Ovx in your servers.' }),
             el('a', {
                 className: 'button button-primary button-large',
-                href: '/auth/login',
+                // Back to this page afterwards, e.g. a server's settings opened from /dashboard
+                href: `/auth/login?returnTo=${encodeURIComponent(location.pathname)}`,
                 textContent: 'Log in with Discord',
             }),
         ])

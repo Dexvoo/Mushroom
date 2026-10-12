@@ -7,16 +7,25 @@ const LEADERBOARD_TYPES = new Set(['level', 'totalMessages', 'totalVoice', 'tota
 const PUBLIC_CACHE_MS = 60_000;
 const PUBLIC_CACHE_MAX = 500;
 const PUBLIC_STATS_MS = 5 * 60_000;
+const CASE_NUMBER = /^[1-9]\d{0,8}$/;
+const CASE_LABELS = { warn: 'Warning', ban: 'Ban', unban: 'Unban', kick: 'Kick', mute: 'Mute', unmute: 'Unmute' };
 
-// What the bot needs for its features (levels, logs, rewards); used in "Add to server" links
+// What the bot needs for its features; used in "Add to server" links. Server admins can untick any of them.
 const BOT_PERMISSIONS = new PermissionsBitField([
     PermissionFlagsBits.ViewChannel,
     PermissionFlagsBits.SendMessages,
     PermissionFlagsBits.EmbedLinks,
     PermissionFlagsBits.AttachFiles,
     PermissionFlagsBits.ReadMessageHistory,
-    PermissionFlagsBits.ManageRoles,
-    PermissionFlagsBits.ViewAuditLog,
+    PermissionFlagsBits.ManageRoles, // Level rewards, auto roles, ticket access
+    PermissionFlagsBits.ViewAuditLog, // Who did what, in logs
+    PermissionFlagsBits.ManageChannels, // Ticket channels
+    PermissionFlagsBits.ManageMessages, // /moderation purge
+    PermissionFlagsBits.ManageNicknames, // /moderation nickname
+    PermissionFlagsBits.KickMembers,
+    PermissionFlagsBits.BanMembers,
+    PermissionFlagsBits.ModerateMembers, // /moderation mute
+    PermissionFlagsBits.ChangeNickname, // Bot Settings nickname
 ]).bitfield.toString();
 
 /**
@@ -27,9 +36,10 @@ const BOT_PERMISSIONS = new PermissionsBitField([
  *   applicationId: string,
  *   developerIds: string[],
  *   auditStore: import('./auditStore.js').AuditStore,
+ *   caseStore: ReturnType<typeof import('../features/moderation/utils/cases.js').createMongoCaseStore>,
  * }} options
  */
-export function createApiRouter({ bridge, applicationId, developerIds, auditStore }) {
+export function createApiRouter({ bridge, applicationId, developerIds, auditStore, caseStore }) {
     const router = Router();
     const publicCache = new Map();
 
@@ -127,6 +137,24 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
             if (result.ok && result.changes?.length) {
                 LogData('Dashboard', `Auto roles saved for ${req.params.guildId} by ${req.session.user.id}`, 'info');
                 await recordAudit(req, 'Updated auto roles', result.changes);
+            }
+            return result;
+        })
+    );
+
+    router.put('/guilds/:guildId/moderation', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('saveModerationSettings', req.params.guildId, {
+                userId: req.session.user.id,
+                settings: req.body,
+            });
+            if (result.ok && result.changes?.length) {
+                LogData(
+                    'Dashboard',
+                    `Moderation settings saved for ${req.params.guildId} by ${req.session.user.id}`,
+                    'info'
+                );
+                await recordAudit(req, 'Updated automatic moderation', result.changes);
             }
             return result;
         })
@@ -239,6 +267,7 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         twitch: 'Reset Twitch notifications',
         youtube: 'Reset YouTube notifications',
         kick: 'Reset Kick notifications',
+        moderation: 'Reset automatic moderation',
     };
 
     router.post('/guilds/:guildId/reset/:section', requireLogin, validGuildId, (req, res) => {
@@ -259,6 +288,10 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         });
     });
 
+    router.post('/guilds/:guildId/logging/test', requireLogin, validGuildId, (req, res) =>
+        respond(res, () => bridge.guild('testLogs', req.params.guildId, { userId: req.session.user.id }))
+    );
+
     router.put('/guilds/:guildId/logging', requireLogin, validGuildId, (req, res) =>
         respond(res, async () => {
             const result = await bridge.guild('saveLoggingSettings', req.params.guildId, {
@@ -277,15 +310,25 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         })
     );
 
-    // Web Logs: changes made through the dashboard. Manage Server is checked live on the shard first.
-    router.get('/guilds/:guildId/audit-log', requireLogin, validGuildId, async (req, res) => {
+    /**
+     * Checks on the shard that the session user can manage this server, for data read from the database here
+     * (Web Logs, moderation cases) rather than through a shard action. Sends the error response and returns false if not.
+     */
+    const canManage = async (req, res) => {
         let access;
         try {
             access = await bridge.guild('access', req.params.guildId, { userId: req.session.user.id });
         } catch {
-            return res.status(503).json({ error: 'The bot is restarting, try again in a moment' });
+            res.status(503).json({ error: 'The bot is restarting, try again in a moment' });
+            return false;
         }
-        if (!access.ok) return res.status(access.status).json({ error: access.error });
+        if (!access.ok) res.status(access.status).json({ error: access.error });
+        return access.ok;
+    };
+
+    // Web Logs: changes made through the dashboard. Manage Server is checked live on the shard first.
+    router.get('/guilds/:guildId/audit-log', requireLogin, validGuildId, async (req, res) => {
+        if (!(await canManage(req, res))) return;
 
         const { username, action, before } = req.query;
         res.json(
@@ -295,6 +338,32 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
                 before: typeof before === 'string' ? before : undefined,
             })
         );
+    });
+
+    router.get('/guilds/:guildId/cases', requireLogin, validGuildId, async (req, res) => {
+        if (!(await canManage(req, res))) return;
+        const { member, action, before } = req.query;
+        res.json(
+            await caseStore.list(req.params.guildId, {
+                member: typeof member === 'string' ? member : undefined,
+                action: typeof action === 'string' ? action : undefined,
+                before: typeof before === 'string' ? before : undefined,
+            })
+        );
+    });
+
+    router.delete('/guilds/:guildId/cases/:number', requireLogin, validGuildId, async (req, res) => {
+        if (!CASE_NUMBER.test(req.params.number)) return res.status(404).json({ error: 'Not found' });
+        if (!(await canManage(req, res))) return;
+
+        const removed = await caseStore.remove(req.params.guildId, Number(req.params.number));
+        if (!removed) return res.status(404).json({ error: 'That case no longer exists' });
+
+        const reason = removed.reason ? `: ${removed.reason.slice(0, 200)}` : '';
+        await recordAudit(req, 'Deleted a moderation case', [
+            `Case #${removed.number}: ${CASE_LABELS[removed.action] ?? removed.action} for @${removed.username}${reason}`,
+        ]);
+        res.json({ removed: removed.number });
     });
 
     router.get('/guilds/:guildId/leaderboard', requireLogin, validGuildId, (req, res) => {

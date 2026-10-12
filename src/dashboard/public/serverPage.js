@@ -8,6 +8,7 @@ import { renderAutoRoles } from './autoRoles.js';
 import { renderWelcome } from './welcome.js';
 import { renderTickets } from './tickets.js';
 import { streamsPage } from './streams.js';
+import { renderModeration } from './moderation.js';
 
 /**
  * Sidebar layout. Items with a `render` are live; the rest are planned and shown as "Soon".
@@ -25,7 +26,7 @@ export const SECTIONS = [
     {
         label: 'Moderation',
         items: [
-            { slug: 'moderation', label: 'Moderation Settings' },
+            { slug: 'moderation', label: 'Moderation', render: renderModeration },
             { slug: 'logging', label: 'Logging', render: renderLogging },
             { slug: 'tickets', label: 'Tickets', render: renderTickets },
         ],

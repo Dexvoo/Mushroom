@@ -51,6 +51,59 @@ export function renderLogging(container, overview) {
         return true;
     }
 
+    /** The last test's results, kept while the page is open */
+    let testResults = null;
+    let testing = false;
+
+    async function sendTestLogs() {
+        if (state.dirty) return toast('Save your changes first, so the test uses them', 'error');
+        testing = true;
+        render();
+        const { status, data } = await apiSend('POST', `/api/guilds/${guild.id}/logging/test`, {});
+        testing = false;
+        if (status === 200) {
+            testResults = data.results;
+            const failed = testResults.filter((result) => !result.ok).length;
+            toast(failed ? `${failed} test log(s) could not be sent` : 'Test logs sent', failed ? 'error' : undefined);
+        } else {
+            toast(data?.error ?? 'Could not send test logs. Try again.', 'error');
+        }
+        render();
+    }
+
+    function testCard() {
+        const button = el('button', {
+            type: 'button',
+            className: 'button button-ghost',
+            textContent: testing ? 'Sending…' : 'Send test logs',
+            disabled: testing,
+        });
+        button.addEventListener('click', sendTestLogs);
+        const names = Object.fromEntries(LOG_TYPES.map(([type, name]) => [type, name]));
+
+        return card(
+            'Test your logs',
+            'Posts a test message in the channel of every log type that is switched on, so you can check Ovx can post there.',
+            [
+                el('div', { className: 'card-actions' }, [button]),
+                ...(testResults
+                    ? [
+                          el(
+                              'ul',
+                              { className: 'test-results' },
+                              testResults.map((result) =>
+                                  el('li', { className: result.ok ? 'test-ok' : 'test-failed' }, [
+                                      el('strong', { textContent: names[result.type] ?? result.type }),
+                                      result.ok ? ` posted in #${result.channel}` : `: ${result.error}`,
+                                  ])
+                              )
+                          ),
+                      ]
+                    : []),
+            ]
+        );
+    }
+
     function logRow([type, name, description]) {
         const settings = state.draft.types[type];
         const id = `log-${type}`;
@@ -120,6 +173,8 @@ export function renderLogging(container, overview) {
                     }),
                 }),
             ]),
+
+            testCard(),
 
             resetCard({
                 description: 'Turns every log type off and clears their channels and the ignored channels.',

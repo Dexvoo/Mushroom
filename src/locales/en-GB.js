@@ -1,52 +1,8 @@
 export default {
     commands: {
-        log_test: {
-            in_progress_title: 'Testing in progress',
-            in_progress_desc: 'User: {user}',
-            test_embed_title: 'Test Log',
-            test_embed_description: 'This is a test log for `{type}` logs',
-            test_embed_footer: 'Tested by @{user}',
-            success_field: 'Successful',
-            failed_field: 'Failed',
-            none: 'None',
-            complete_title: 'Test Complete',
-            log_send_fail: 'Failed to send test log to <#{channelId}>',
-        },
-
-        log_setup: {
-            provide_channel: 'Please provide a channel to send the logs to',
-            setup_success_title: 'Logs Setup Successful',
-            setup_success_desc: 'Successfully {status} `{type}` logs.',
-            enabled: 'enabled',
-            disabled: 'disabled',
-        },
-
-        log_view: {
-            all_title: 'Current Logs Configurations',
-            requested_by: 'Requested by {user}',
-            single_title: 'Current Configuration for {type} Logs',
-            field_enabled: 'Enabled',
-            field_channel: 'Channel',
-            not_set: 'Not set',
-        },
-
-        log_ignore: {
-            title: 'Channel Ignored',
-            ignored_desc: 'Logs will now ignore events from {channel}.',
-            resumed_title: 'Channel Resumed',
-            resumed_desc: 'Logs will now resume for events from {channel}.',
-            already_ignored: '{channel} is already on the ignored list.',
-            not_ignored: '{channel} is not on the log ignore list.',
-        },
-
-        log_ignore_view: {
-            title: 'Current Ignored Channels',
-            no_channels: 'There are no channels on the log ignore list.',
-            no_log_config: 'No current config found for `{type}`',
-        },
-
         level_rank: {
-            not_configured_prompt: 'This guild has not configured levels yet. Ask an admin to use `/levels setup`.',
+            not_configured_prompt:
+                'Levels are not set up in this server yet. A server admin can turn them on with `/dashboard`.',
             bot: '{user} is a bot and cannot gain XP.',
             not_levelled_yet: '{user} does not have a level yet.',
         },
@@ -58,94 +14,87 @@ export default {
             title: '{guild} | {type} Leaderboard 🏆',
         },
 
-        level_setup: {
-            provide_channel: 'Please provide a channel to send the level embed to',
-            test_embed_title: 'Test Levels',
-            test_embed_description: 'This is a test embed for `levels`',
-            test_embed_footer: 'Tested by @{user}',
-            test_send_fail: 'Failed to send test log to <#{channelId}>',
-
-            success_title: 'Levels Setup Successful',
-            success_description: 'Successfully updated the levels configuration.',
-            disabled: 'The leveling system has been disabled.',
-            enabled: 'The leveling system has been enabled.',
+        dashboard: {
+            title: 'Ovx Dashboard',
+            description:
+                "Levels, logs, tickets, welcome messages, auto roles, stream alerts and the bot's look are all set up on the dashboard. You need the Manage Server permission to change them.",
+            button: 'Open settings',
+            offline: 'The dashboard is not available right now.',
         },
 
-        autorole: {
-            title: 'Auto Roles',
-            list_title: 'Auto Roles',
-            members_field: 'New members get',
-            bots_field: 'New bots get',
-            none: 'No roles',
-            deleted_role: 'Deleted role',
-            cannot_give: "Ovx can't give this",
+        moderation: {
+            title: 'Moderation',
+            no_reason: 'No reason given',
+            reason_field: 'Reason',
 
-            added_members: '{role} will be given to people who join.',
-            added_bots: '{role} will be given to bots that join.',
-            removed_members: '{role} will no longer be given to people who join.',
-            removed_bots: '{role} will no longer be given to bots that join.',
-            already_members: '{role} is already given to people who join.',
-            already_bots: '{role} is already given to bots that join.',
-            not_in_members: '{role} is not given to people who join.',
-            not_in_bots: '{role} is not given to bots that join.',
-            list_full: 'You can have at most {max} roles in each list.',
+            user_missing_perms: 'You need these permissions: `{perms}`',
+            bot_missing_perms: 'Ovx needs these permissions first: `{perms}`',
+            not_member: '{user} is not in this server.',
+            target_self: 'You cannot do that to yourself.',
+            target_bot_self: 'Ovx cannot do that to itself.',
+            use_dashboard_nickname: "Change Ovx's nickname on the dashboard, under Bot Settings.",
+            target_owner: 'Nobody can do that to the server owner.',
+            target_higher_than_you: "{user}'s highest role is the same as or above yours.",
+            target_higher_than_bot:
+                "{user}'s highest role is the same as or above Ovx's. Move Ovx's role higher in Server Settings > Roles.",
+            target_admin: '{user} is an administrator, and Discord does not allow timing out administrators.',
+            action_failed: 'Discord refused: {error}',
 
-            everyone: "Everyone already has the {role} role, so it can't be given.",
-            managed: "{role} is managed by an integration, so it can't be given out.",
-            too_high:
-                "{role} is at or above Ovx's highest role, so Ovx can't give it. Move Ovx's role higher in Server Settings → Roles.",
+            already_banned: '{user} is already banned.',
+            not_banned: '{user} is not banned.',
+            not_muted: '{user} is not muted.',
+            bad_duration: 'That is not a length of time. Try something like `10m`, `1h 30m` or `2d`.',
+            duration_range: 'A mute can be from 10 seconds up to 28 days.',
+            purge_channel: 'Messages cannot be purged in this channel.',
+            purge_none: 'There are no messages to delete. Pinned messages and messages older than 14 days are skipped.',
+            purge_fewer:
+                'Some were skipped: pinned messages, and messages older than 14 days (Discord does not allow bulk-deleting those).',
 
-            enabled: 'Roles will be given to people and bots when they join.',
-            disabled: 'Auto roles are off. The role lists are kept for when you turn them back on.',
-            currently_off: 'Auto roles are currently off. Turn them on with `/autorole toggle`.',
-            missing_manage_roles: 'Ovx needs the Manage Roles permission to give roles.',
-        },
+            banned: '{user} was banned.\nReason: {reason}',
+            unbanned: '{user} was unbanned.',
+            kicked: '{user} was kicked.\nReason: {reason}',
+            muted: '{user} is muted for {duration} (until {until}).\nReason: {reason}',
+            unmuted: '{user} is no longer muted.',
+            purged: 'Deleted {count} message(s).',
+            purged_user: "Deleted {count} of {user}'s message(s).",
+            nickname_set: "{user}'s nickname is now **{nickname}**.",
+            nickname_reset: "{user}'s nickname was reset.",
+            dm_failed: 'They could not be sent a message (their DMs are closed).',
 
-        welcome: {
-            label_welcome: 'Welcome Message',
-            label_goodbye: 'Goodbye Message',
+            case_line: 'Case #{number}',
+            case_save_failed: 'The warning could not be saved. Try again in a moment.',
+            warn_bot: 'Bots cannot be warned.',
+            warned: '{user} was warned. They now have {count} warning(s).\nReason: {reason}',
+            no_warning_case: 'There is no warning with case number #{number}. Check `/moderation history`.',
+            unwarned: 'Warning #{number} was removed from {user}.',
+            purge_everyone: 'Everyone',
 
-            channel_set: '{label}s will be posted in {channel}.',
-            cannot_post: 'Ovx needs these permissions in {channel} first: `{perms}`',
-            currently_off: 'This message is currently off. Turn it on with `{command}`.',
-            needs_channel: 'Choose a channel first with `{command}`.',
-            enabled_welcome: 'A welcome message will be posted in {channel} when people join.',
-            disabled_welcome: 'Welcome messages are off. Your settings are kept for when you turn them back on.',
-            enabled_goodbye: 'A goodbye message will be posted in {channel} when people leave.',
-            disabled_goodbye: 'Goodbye messages are off. Your settings are kept for when you turn them back on.',
+            auto_done: '⚡ They reached {warnings} warnings, so they were automatically {action}.',
+            auto_missing_perms:
+                '⚠️ They reached {warnings} warnings, but Ovx could not have them {action}: it is missing the permission.',
+            auto_not_allowed:
+                "⚠️ They reached {warnings} warnings, but Ovx could not have them {action}: their role is the same as or above Ovx's, or they are an administrator.",
+            auto_failed: '⚠️ They reached {warnings} warnings, but Discord refused to have them {action}: {error}',
+            auto_mute: 'muted for {duration}',
+            auto_kick: 'kicked',
+            auto_ban: 'banned',
 
-            message_set: 'Message saved. See how it looks with `{command}`.',
-            message_reset: 'The message is back to the default. See how it looks with `{command}`.',
-            embed_on: 'The message will be sent inside an embed. See how it looks with `{command}`.',
-            embed_off: 'The message will be sent as plain text. See how it looks with `{command}`.',
+            history_title: "{user}'s history",
+            history_empty: '{user} has no warnings, mutes, kicks or bans.',
+            history_totals: '**{warn}** warnings · **{mute}** mutes · **{kick}** kicks · **{ban}** bans',
+            history_more: '{count} older case(s). The full history is on the dashboard (`/dashboard`).',
+            history_by: 'by @{moderator}',
+            action_warn: 'Warning',
+            action_ban: 'Ban',
+            action_unban: 'Unban',
+            action_kick: 'Kick',
+            action_mute: 'Mute',
+            action_unmute: 'Unmute',
 
-            test_note: 'Preview with you as the member. Only you can see this.',
-            test_off: 'This message is not being posted yet: set a channel and turn it on with `{command}`.',
-
-            field_enabled: 'On',
-            field_channel: 'Channel',
-            field_embed: 'Embed',
-            field_title: 'Embed title',
-            field_message: 'Message',
-            field_message_default: 'Message (default)',
-            not_set: 'Not set',
-        },
-
-        streams: {
-            title: 'Stream Notifications',
-            added: 'Now following **{name}** on {platform}. Notifications will be posted in {channel}.',
-            removed: 'No longer following **{name}** on {platform}.',
-            not_followed: 'This server does not follow anyone by that name. See who it follows with `/streams list`.',
-            cannot_post: 'Ovx needs these permissions in {channel} first: `{perms}`',
-            not_configured: '{platform} notifications are not set up on this bot yet.',
-            limit: 'This server can follow up to {max} streamers. Unfollow one first.',
-            limit_premium: 'Premium servers can follow up to {premiumMax}.',
-            not_found: 'Could not find that {platform} channel. Check the name or link.',
-            duplicate: 'This server already follows that {platform} channel.',
-            platform_error: '{platform} could not be reached. Try again in a moment.',
-            usage: '{used} of {max} followed.',
-            none: 'This server does not follow anyone yet. Follow someone with `/streams add` or on the dashboard.',
-            no_ping: 'no ping',
+            dm_warn: 'You were warned in **{server}**.',
+            dm_ban: 'You were banned from **{server}**.',
+            dm_kick: 'You were kicked from **{server}**.',
+            dm_mute: 'You were muted in **{server}** for {duration}.',
         },
 
         ping: {
@@ -194,6 +143,19 @@ export default {
 
             untimeout_title: 'Member Timeout Removed',
             untimeout_description: 'User: {user}\nModerator: {moderator}',
+
+            kick_title: 'Member Kicked',
+            kick_description: 'User: {user}\nReason: `{reason}`\nModerator: {moderator}',
+
+            warn_title: 'Member Warned',
+            warn_description:
+                'User: {user}\nReason: `{reason}`\nModerator: {moderator}\nCase: #{case} · Warning {count}',
+
+            unwarn_title: 'Warning Removed',
+            unwarn_description: 'User: {user}\nWarning: `{reason}`\nRemoved by: {moderator}\nCase: #{case}',
+
+            purge_title: 'Messages Purged',
+            purge_description: '{count} message(s) deleted in {channel}\nFrom: {from}\nModerator: {moderator}',
         },
 
         server: {
@@ -235,8 +197,7 @@ export default {
         // Opening
         created: 'Your ticket is ready: {channel}',
         disabled: 'Tickets are not set up in this server. Ask a server admin to set them up.',
-        no_category:
-            'The ticket category is missing. Ask a server admin to choose one on the dashboard or with `/ticket setup`.',
+        no_category: 'The ticket category is missing. Ask a server admin to choose one on the dashboard.',
         bot_permissions:
             'Ovx is missing permissions in the ticket category: `{perms}`. Ask a server admin to fix this.',
         limit: 'You already have {limit} open ticket(s). Close one before opening another.',
@@ -270,23 +231,6 @@ export default {
         cannot_remove_owner: 'The person who opened the ticket cannot be removed. Lock it instead.',
         bad_name: 'That name has no letters or numbers Discord allows in channel names.',
         renamed: 'Ticket renamed to {name}.',
-
-        // Setup
-        currently_off: 'Tickets are currently off. Turn them on with `/ticket setup enabled:True`.',
-        panel_posted: 'The ticket panel was posted: {url}',
-        panel_updated: 'The ticket panel was updated: {url}',
-        panel_no_channel: 'Choose a text channel to post the panel in.',
-        panel_bot_permissions: 'Ovx needs these permissions in {channel} first: `{perms}`',
-        setup_on: 'Tickets are on. Post the "Create Ticket" message with `/ticket panel`.',
-        setup_off: 'Tickets are off. Open tickets stay open, but no new ones can be created.',
-        setup_needs_category: 'Choose a category for new tickets first.',
-        setup_category_permissions: 'Ovx needs these permissions in {channel} first: `{perms}`',
-        setup_transcript_permissions: 'Ovx needs these permissions in {channel} first: `{perms}`',
-        setup_everyone: 'The everyone role cannot be a staff role, since everyone would see every ticket.',
-        setup_staff_full: 'You can have at most {max} staff roles. Remove one on the dashboard first.',
-        field_category: 'Category',
-        field_transcripts: 'Transcripts',
-        field_staff: 'Staff roles',
     },
 
     levels: {

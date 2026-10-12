@@ -9,6 +9,7 @@ import {
     validateTicketSettings,
     parseButtonEmoji,
     validateStreamAdd,
+    validateModerationSettings,
     validateStreamUpdates,
     IMAGE_MAX_BYTES,
 } from '../src/dashboard/validation.js';
@@ -512,4 +513,46 @@ test('stream settings: only followed streamers, each field checked', () => {
     assert.equal(errorsFor({ notifyLive: 'yes' }).length, 1);
     assert.equal(errorsFor({ guildId: 'x' }).length, 1);
     assert.equal(validateStreamUpdates([], guild, existing).errors.length, 1);
+});
+
+// ---------- Automatic moderation ----------
+
+test('automatic actions: one per warning count, sorted, mutes need a length Discord allows', () => {
+    const HOUR = 3_600_000;
+    assert.deepEqual(
+        validateModerationSettings({
+            warnActions: [
+                { warnings: 5, action: 'kick', durationMs: HOUR },
+                { warnings: 3, action: 'mute', durationMs: HOUR },
+            ],
+        }),
+        {
+            settings: {
+                warnActions: [
+                    { warnings: 3, action: 'mute', durationMs: HOUR },
+                    { warnings: 5, action: 'kick', durationMs: null },
+                ],
+            },
+            errors: [],
+        }
+    );
+
+    const errorsFor = (warnActions) => validateModerationSettings({ warnActions }).errors;
+    assert.equal(errorsFor([{ warnings: 0, action: 'ban' }]).length, 1);
+    assert.equal(errorsFor([{ warnings: 51, action: 'ban' }]).length, 1);
+    assert.equal(errorsFor([{ warnings: 2.5, action: 'ban' }]).length, 1);
+    assert.equal(errorsFor([{ warnings: 3, action: 'nuke' }]).length, 1);
+    assert.equal(errorsFor([{ warnings: 3, action: 'mute' }]).length, 1, 'a mute needs a length');
+    assert.equal(errorsFor([{ warnings: 3, action: 'mute', durationMs: 29 * 24 * HOUR }]).length, 1);
+    assert.match(
+        errorsFor([
+            { warnings: 3, action: 'kick' },
+            { warnings: 3, action: 'ban' },
+        ])[0],
+        /already an action at 3 warnings/
+    );
+    assert.equal(errorsFor([{ warnings: 3, action: 'ban', role: 'x' }]).length, 1, 'unknown fields are refused');
+    assert.equal(errorsFor(Array.from({ length: 11 }, (_, i) => ({ warnings: i + 1, action: 'ban' }))).length, 1);
+    assert.equal(validateModerationSettings({ warnActions: [], extra: 1 }).errors.length, 1);
+    assert.equal(validateModerationSettings('nope').errors.length, 1);
 });

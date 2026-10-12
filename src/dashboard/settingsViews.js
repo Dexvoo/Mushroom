@@ -3,8 +3,7 @@ import { logSettings } from '../features/logging/models/logging.js';
 import { ticketTypes } from '../features/tickets/utils/ticketTypes.js';
 
 /**
- * Plain snapshots of a guild's settings, used by the dashboard API and to describe changes for the Web Logs
- * (both dashboard saves and slash commands, see commandAudit.js).
+ * Plain snapshots of a guild's settings, used by the dashboard API and to describe changes for the Web Logs.
  */
 
 /**
@@ -122,6 +121,20 @@ export function ticketsView(config, roleExists = () => true) {
             staffRoleIds: (type.staffRoleIds ?? []).filter(roleExists),
             allowedRoleIds: (type.allowedRoleIds ?? []).filter(roleExists),
             openMessage: type.openMessage ?? null,
+        })),
+    };
+}
+
+/**
+ * The moderation settings the dashboard can see and edit.
+ * @param {import('../features/moderation/models/moderationConfig.js').ModerationConfigType} config
+ */
+export function moderationView(config) {
+    return {
+        warnActions: (config.warnActions ?? []).map(({ warnings, action, durationMs }) => ({
+            warnings,
+            action,
+            durationMs: durationMs ?? null,
         })),
     };
 }
