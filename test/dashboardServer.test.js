@@ -313,6 +313,40 @@ test('public leaderboards need no login but respect the server opting in', async
     assert.equal(bridgeCalls[0].payload.viewerId, undefined, 'no viewer, so the shard applies the public check');
 });
 
+test('landing page numbers need no login, are cached, and the invite link lets you pick a server', async () => {
+    let calls = 0;
+    const realStats = bridge.stats;
+    bridge.stats = async () => {
+        calls++;
+        return [
+            { shardId: 0, guilds: 3, members: 40 },
+            { shardId: 1, guilds: 2, members: 10 },
+        ];
+    };
+    try {
+        const first = await (await browser().request('/api/public/stats')).json();
+        assert.equal(first.guilds, 5);
+        assert.equal(first.members, 50);
+        const invite = new URL(first.inviteUrl);
+        assert.equal(invite.searchParams.get('client_id'), env.APPLICATION_ID);
+        assert.equal(invite.searchParams.get('guild_id'), null);
+
+        await browser().request('/api/public/stats');
+        assert.equal(calls, 1, 'second visitor gets the cached totals');
+        assert.deepEqual(Object.keys(first).sort(), ['guilds', 'inviteUrl', 'members']);
+    } finally {
+        bridge.stats = realStats;
+    }
+});
+
+test('the legal pages keep their old ovxbot.com addresses', async () => {
+    for (const path of ['/tos', '/privacypolicy']) {
+        const response = await browser().request(path);
+        assert.equal(response.status, 200, path);
+        assert.match(response.headers.get('content-type'), /text\/html/);
+    }
+});
+
 test('logout ends the session', async () => {
     const client = await login();
     const logout = await client.request('/auth/logout', { method: 'POST', headers: { origin: ORIGIN } });

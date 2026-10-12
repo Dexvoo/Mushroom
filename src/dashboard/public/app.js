@@ -1,9 +1,11 @@
 // Ovx dashboard front-end: routing, account bar and start-up.
-// Pages live in picker.js (server picker) and serverPage.js (sidebar + sections).
+// Pages live in landing.js (landing and legal pages), picker.js (server picker) and serverPage.js
+// (sidebar + sections).
 import { el, api } from './ui.js';
 import { confirmLeave } from './forms.js';
 import { renderPicker, renderPickerSkeleton } from './picker.js';
 import { renderServerPage, clearServerCache } from './serverPage.js';
+import { renderLanding, renderLegal } from './landing.js';
 
 const app = document.getElementById('app');
 const banner = document.getElementById('banner');
@@ -19,6 +21,29 @@ let me = null;
 /** Cleanup for the section currently shown (stops its unsaved-changes guard) */
 let cleanup = () => {};
 let currentPath = location.pathname;
+/** Landing page numbers and invite link, fetched once */
+let stats = null;
+
+// Remembers that this browser was logged in last time, so returning users see the server list loading
+// instead of the landing page flashing up first. Only a hint: the session decides what is shown.
+const SIGNED_IN_HINT = 'ovx-signed-in';
+
+function rememberSignedIn(signedIn) {
+    try {
+        if (signedIn) localStorage.setItem(SIGNED_IN_HINT, '1');
+        else localStorage.removeItem(SIGNED_IN_HINT);
+    } catch {
+        // Storage blocked (private window): just skip the hint
+    }
+}
+
+function wasSignedIn() {
+    try {
+        return localStorage.getItem(SIGNED_IN_HINT) === '1';
+    } catch {
+        return false;
+    }
+}
 
 // ---------- Navigation ----------
 
@@ -50,6 +75,7 @@ window.addEventListener('popstate', () => {
 async function loadMe() {
     const { status, data } = await api('/api/me');
     me = status === 200 ? data : null;
+    rememberSignedIn(Boolean(me));
     renderAccount();
     return me;
 }
@@ -57,6 +83,7 @@ async function loadMe() {
 function renderAccount() {
     const account = document.getElementById('account');
     account.hidden = !me;
+    document.getElementById('topnav').hidden = Boolean(me);
     if (!me) return;
 
     const avatar = /** @type {HTMLImageElement} */ (document.getElementById('account-avatar'));
@@ -72,6 +99,7 @@ document.getElementById('logout').addEventListener('click', async () => {
     cleanup = () => {};
     await fetch('/auth/logout', { method: 'POST' });
     me = null;
+    rememberSignedIn(false);
     clearServerCache();
     renderAccount();
     history.pushState(null, '', '/');
@@ -95,17 +123,36 @@ function renderLoggedOut() {
     );
 }
 
+async function loadStats() {
+    if (stats) return stats;
+    const { status, data } = await api('/api/public/stats').catch(() => ({ status: 0, data: null }));
+    if (status !== 200) return { guilds: null, members: null, inviteUrl: null };
+    stats = data;
+    return stats;
+}
+
 async function render() {
     cleanup();
     cleanup = () => {};
     currentPath = location.pathname;
+    document.title = 'Ovx Dashboard';
 
     const route = location.pathname.match(/^\/servers\/(\d{17,20})(?:\/([\w-]+))?\/?$/);
+    const legal = location.pathname.match(/^\/(tos|privacypolicy)\/?$/);
     app.classList.toggle('page-wide', Boolean(route));
 
-    if (!me) {
-        if (!route) renderPickerSkeleton(app);
-        await loadMe();
+    // Open to everyone; the account bar fills in once we know who is looking
+    if (legal) {
+        renderLegal(app, /** @type {'tos' | 'privacypolicy'} */ (legal[1]));
+        if (!me) await loadMe();
+        return;
+    }
+
+    if (!me && route) await loadMe();
+    if (!me && !route) {
+        if (wasSignedIn()) renderPickerSkeleton(app);
+        const [, landingStats] = await Promise.all([loadMe(), loadStats()]);
+        if (!me) return renderLanding(app, landingStats);
     }
     if (!me) return renderLoggedOut();
 

@@ -42,7 +42,7 @@ const FEATURES = [
     },
     {
         title: 'Make it yours',
-        text: "Give Ovx its own nickname, avatar, banner, bio and embed colour in each of your servers.",
+        text: 'Give Ovx its own nickname, avatar, banner, bio and embed colour in each of your servers.',
         icon: '<path d="M12 3a9 9 0 1 0 0 18c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1a1.6 1.6 0 0 1 1.2-2.6H16a5 5 0 0 0 5-5c0-4.3-4-7.8-9-7.8z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/>',
     },
     {
@@ -248,9 +248,7 @@ export function renderLegal(app, page) {
                     el('h2', { textContent: section.heading }),
                     ...section.body.map(paragraph),
                     section.email &&
-                        el('p', {}, [
-                            el('a', { href: `mailto:${CONTACT_EMAIL}`, textContent: CONTACT_EMAIL }),
-                        ]),
+                        el('p', {}, [el('a', { href: `mailto:${CONTACT_EMAIL}`, textContent: CONTACT_EMAIL })]),
                 ])
             ),
             el('p', { className: 'legal-closing', textContent: content.closing }),
