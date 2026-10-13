@@ -85,7 +85,13 @@ export function createDashboardApp({
                 standardHeaders: 'draft-8',
                 legacyHeaders: false,
             }),
-            express.json({ limit: '8kb' }),
+            // The raw body is kept: Top.gg signs it exactly as sent
+            express.json({
+                limit: '8kb',
+                verify: (req, res, buffer) => {
+                    /** @type {any} */ (req).rawBody = buffer.toString('utf8');
+                },
+            }),
             createTopggWebhook({
                 secret: env.TOPGG_WEBHOOK_SECRET,
                 applicationId: env.APPLICATION_ID,

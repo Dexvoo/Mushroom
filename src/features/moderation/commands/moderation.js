@@ -33,7 +33,7 @@ const handlers = {
     slowmode: () => import('../subcommands/slowmode.js'),
 };
 
-/** Channels people talk in (not categories); threads only where noted. */
+/** Channels people talk in (not categories or threads). */
 /** @type {(ChannelType.GuildText | ChannelType.GuildAnnouncement | ChannelType.GuildForum | ChannelType.GuildMedia | ChannelType.GuildVoice | ChannelType.GuildStageVoice)[]} */
 const TALK_CHANNELS = [
     ChannelType.GuildText,
@@ -43,8 +43,6 @@ const TALK_CHANNELS = [
     ChannelType.GuildVoice,
     ChannelType.GuildStageVoice,
 ];
-/** @type {(ChannelType.PublicThread | ChannelType.PrivateThread | ChannelType.AnnouncementThread)[]} */
-const THREADS = [ChannelType.PublicThread, ChannelType.PrivateThread, ChannelType.AnnouncementThread];
 
 const reasonOption = (o) => o.setName('reason').setDescription('Why (shown in the audit log)').setMaxLength(REASON_MAX);
 
@@ -216,7 +214,7 @@ commandData.addSubcommand((s) =>
             o
                 .setName('channel')
                 .setDescription('Which channel (this one if empty)')
-                .addChannelTypes(...TALK_CHANNELS, ...THREADS)
+                .addChannelTypes(...TALK_CHANNELS)
         )
         .addStringOption(reasonOption)
 );

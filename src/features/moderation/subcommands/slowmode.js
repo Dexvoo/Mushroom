@@ -11,7 +11,8 @@ import { replyError } from '../../../shared/utils/commandChecks.js';
 export async function execute(interaction) {
     const { options } = interaction;
     const channel = options.getChannel('channel') ?? interaction.channel;
-    if (!channel || !('setRateLimitPerUser' in channel)) {
+    // Threads need Manage Threads, which Ovx doesn't ask for
+    if (!channel || channel.isThread() || !('setRateLimitPerUser' in channel)) {
         return replyError(interaction, t(interaction, 'slowmode_channel_type'));
     }
     if (!(await hasPermissions(interaction, 'slowmode', channel))) return;

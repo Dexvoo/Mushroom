@@ -4,6 +4,9 @@ import { PermissionsBitField, PermissionFlagsBits, OAuth2Scopes } from 'discord.
 export const SUPPORT_URL = 'https://discord.gg/t7tF2Qs3Qc';
 
 // What the bot needs for its features; used in "Add to server" links. Server admins can untick any of them.
+// Discord only lets a bot allow or deny a permission in a channel's overrides if it has that permission itself,
+// so anything Ovx writes into overrides (tickets, join-to-create, locks, stats channels) must be listed here too.
+// Servers that already added Ovx keep their old permissions: they have to grant new ones themselves.
 export const BOT_PERMISSIONS = new PermissionsBitField([
     PermissionFlagsBits.ViewChannel,
     PermissionFlagsBits.SendMessages,
@@ -23,8 +26,13 @@ export const BOT_PERMISSIONS = new PermissionsBitField([
     PermissionFlagsBits.ManageGuild, // AutoMod rules, and pausing invites during a raid
     PermissionFlagsBits.MoveMembers, // Join-to-create voice channels
     PermissionFlagsBits.Connect, // Join-to-create voice channels
-    PermissionFlagsBits.CreatePublicThreads, // Suggestion discussion threads
-    PermissionFlagsBits.SendMessagesInThreads,
+    PermissionFlagsBits.Speak, // Join-to-create: given to a channel's owner
+    PermissionFlagsBits.Stream, // Join-to-create: given to a channel's owner
+    PermissionFlagsBits.UseVAD, // Join-to-create: given to a channel's owner
+    PermissionFlagsBits.CreatePublicThreads, // Suggestion discussion threads; turned off by /moderation lock
+    PermissionFlagsBits.CreatePrivateThreads, // Turned off by /moderation lock
+    PermissionFlagsBits.SendMessagesInThreads, // Turned off by /moderation lock
+    PermissionFlagsBits.MentionEveryone, // Stream alerts that ping @everyone, and pinging roles that aren't mentionable
 ]).bitfield.toString();
 
 /**

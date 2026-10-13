@@ -2,7 +2,8 @@ import './helpers/setupEnv.js';
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDashboardApp } from '../src/dashboard/server.js';
-import { isAuthorized } from '../src/features/votes/utils/webhook.js';
+import { createHmac } from 'node:crypto';
+import { isAuthorized, isValidSignature } from '../src/features/votes/utils/webhook.js';
 import { UserVote } from '../src/features/votes/models/userVote.js';
 
 const SECRET = 'a-long-random-top-gg-secret';
@@ -118,4 +119,61 @@ test('votes for another bot, or without a valid user, are refused', async () => 
 test('if the vote cannot be saved, Top.gg is told to retry', async () => {
     failRecording = true;
     assert.equal((await vote({ bot: APPLICATION_ID, user: VOTER, type: 'upvote' })).status, 500);
+});
+
+// ---------- Top.gg's current (v1) webhooks: signed instead of a shared Authorization ----------
+
+const sign = (rawBody, { secret = SECRET, at = Date.now() } = {}) => {
+    const t = Math.floor(at / 1000);
+    return `t=${t},v1=${createHmac('sha256', secret).update(`${t}.${rawBody}`).digest('hex')}`;
+};
+
+/** Posts exactly this body, signed (or with the given signature header). */
+const signedVote = (body, signature) => {
+    const raw = JSON.stringify(body);
+    return fetch(`${base}/webhooks/topgg`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-topgg-signature': signature ?? sign(raw) },
+        body: raw,
+    });
+};
+
+const v1Vote = (id = 'vote-1', user = VOTER, bot = APPLICATION_ID) => ({
+    type: 'vote.create',
+    data: {
+        id,
+        weight: 1,
+        project: { id: 'p1', type: 'bot', platform: 'discord', platform_id: bot },
+        user: { id: 'u1', platform_id: user, name: 'voter', avatar_url: null },
+    },
+});
+
+test('signatures are checked against the exact body, the secret and the time', () => {
+    const raw = '{"a":1}';
+    assert.equal(isValidSignature(sign(raw), raw, SECRET), true);
+    assert.equal(isValidSignature(sign(raw), '{"a":2}', SECRET), false, 'body changed');
+    assert.equal(isValidSignature(sign(raw, { secret: 'other' }), raw, SECRET), false);
+    assert.equal(isValidSignature(sign(raw, { at: Date.now() - 2 * 3_600_000 }), raw, SECRET), false, 'too old');
+    assert.equal(isValidSignature('nonsense', raw, SECRET), false);
+    assert.equal(isValidSignature(undefined, raw, SECRET), false);
+});
+
+test('a signed vote is recorded once, even if Top.gg delivers it again', async () => {
+    assert.equal((await signedVote(v1Vote('vote-a'))).status, 200);
+    assert.equal((await signedVote(v1Vote('vote-a'))).status, 200);
+    assert.deepEqual(recorded, [VOTER]);
+});
+
+test('a badly signed request is refused', async () => {
+    assert.equal((await signedVote(v1Vote('vote-b'), sign('{}'))).status, 401);
+    assert.equal((await signedVote(v1Vote('vote-b'), 't=1,v1=abc')).status, 401);
+    assert.deepEqual(recorded, []);
+});
+
+test("signed: Top.gg's test, other bots, and events Ovx doesn't use", async () => {
+    const test = { type: 'webhook.test', data: v1Vote().data };
+    assert.equal((await signedVote(test)).status, 200);
+    assert.equal((await signedVote(v1Vote('vote-c', VOTER, '999999999999999999'))).status, 400);
+    assert.equal((await signedVote({ type: 'something.else', data: {} })).status, 200);
+    assert.deepEqual(recorded, []);
 });

@@ -18,7 +18,7 @@ const SNOWFLAKE = /^\d{17,20}$/;
  * @property {DashboardConfig | null} DASHBOARD - null when the dashboard is disabled
  * @property {StreamsConfig} STREAMS - Keys for stream notifications; a platform without keys is switched off
  * @property {string | null} TRANSLATE_API_KEY - Google Cloud Translation API key; translating is off without it
- * @property {string | null} TOPGG_WEBHOOK_SECRET - The Authorization set for Top.gg vote webhooks (needs the dashboard)
+ * @property {string | null} TOPGG_WEBHOOK_SECRET - Top.gg webhook secret (whs_…), or the older webhooks' Authorization (needs the dashboard)
  * @property {string | null} TOPGG_TOKEN - Top.gg API token, for posting the server count
  * @property {BackupsConfig} BACKUPS - Daily database backups
  */
