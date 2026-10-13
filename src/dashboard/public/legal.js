@@ -3,7 +3,7 @@
 
 export const CONTACT_EMAIL = 'ovxbot@gmail.com';
 
-const UPDATED = '12 October 2026';
+const UPDATED = '13 October 2026';
 
 export const LEGAL_PAGES = {
     tos: {
@@ -108,7 +108,8 @@ export const LEGAL_PAGES = {
                     [
                         'Server settings: the options chosen on the dashboard, such as log channels, welcome messages, auto roles, level rewards, ticket settings and stream alerts, along with server, channel and role IDs',
                         "Levels: for servers with levels switched on, each member's user ID, XP, level, and counts of their messages, voice time and commands. Ovx counts messages but does not store what they say",
-                        "Moderation cases: when a member is warned, muted, kicked, banned or unbanned (with Ovx or through Discord), the member's user ID and username, the moderator, the reason, the length of a mute and the date",
+                        "Moderation cases: when a member is warned, muted, kicked, banned or unbanned (with Ovx or through Discord), or a moderator adds a private note about them, the member's user ID and username, the moderator, the reason or note, the length of a mute or temporary ban and the date. Members are not told about notes; only the server's moderators can see them",
+                        'Temporary bans and channel locks: who is banned and when the ban ends, and for a locked channel, its permissions from before the lock and when it ends. Removed once the ban or lock ends',
                         'Tickets: who opened, claimed and closed each ticket, who was added to it, the close reason and a link to its transcript',
                         'Stream alerts: the public Twitch, YouTube or Kick channels a server follows, with their names, pictures and latest stream or video',
                         "Web Logs: when someone changes a server's settings on the dashboard, their user ID, username, display name, avatar and what they changed",
@@ -119,6 +120,7 @@ export const LEGAL_PAGES = {
                         'AutoMod: the server’s filter settings, such as its blocked words and allowed sites. The filters run in Discord’s own AutoMod. For anti-raid, Ovx only keeps the times of recent joins in memory for a few minutes, never stored',
                         "Starboard: for each message that reaches the starboard, its ID, channel and author's user ID, how many stars it has, and the ID of its starboard post. The message's text is not stored: the starboard post shows it from the original",
                         'Giveaways: the prize, channel, host, requirements and winners, and for each person who enters, their user ID, how many entries they have and when they entered',
+                        'Usage counts: how many times each command is used per day, which servers used a command that day, and how many servers added or removed Ovx. No user IDs or message content. Only Ovx’s developers see these, to decide what to improve',
                         'Top.gg votes: if you vote for Ovx on Top.gg, your user ID, how many times you have voted and when you last voted. This gives 10% extra XP and bonus giveaway entries for 12 hours after voting. If you turn on vote reminders, Ovx also stores that, and when it last reminded you',
                     ],
                 ],

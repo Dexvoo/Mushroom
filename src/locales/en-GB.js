@@ -213,6 +213,7 @@ export default {
                 custom_embeds: 'Custom embeds',
                 join_to_create: 'Join-to-create voice channels',
                 server_stats: 'Server stats channels',
+                auto_messages: 'Auto and sticky messages',
                 streams: 'Twitch, YouTube and Kick alerts',
             },
             footer: 'Pick a category below, or use /help command: for details on one command.',
@@ -373,8 +374,9 @@ export default {
             auto_ban: 'banned',
 
             history_title: "{user}'s history",
-            history_empty: '{user} has no warnings, mutes, kicks or bans.',
-            history_totals: '**{warn}** warnings · **{mute}** mutes · **{kick}** kicks · **{ban}** bans',
+            history_empty: '{user} has no warnings, mutes, kicks, bans or notes.',
+            history_totals:
+                '**{warn}** warnings · **{mute}** mutes · **{kick}** kicks · **{ban}** bans · **{note}** notes',
             history_more: '{count} older case(s). The full history is on the dashboard (`/dashboard`).',
             history_by: 'by @{moderator}',
             action_warn: 'Warning',
@@ -383,11 +385,39 @@ export default {
             action_kick: 'Kick',
             action_mute: 'Mute',
             action_unmute: 'Unmute',
+            action_note: '📝 Note',
 
             dm_warn: 'You were warned in **{server}**.',
             dm_ban: 'You were banned from **{server}**.',
             dm_kick: 'You were kicked from **{server}**.',
             dm_mute: 'You were muted in **{server}** for {duration}.',
+            dm_tempban: 'You were banned from **{server}** for {duration}.',
+
+            ban_duration_range: 'A temporary ban can be from 1 minute up to 1 year.',
+            banned_temp: '{user} was banned for {duration} (until {until}).\nReason: {reason}',
+            tempban_save_failed:
+                '{user} was banned, but Ovx could not save when to unban them. Unban them yourself when it should end.',
+
+            note_empty: 'Write the note.',
+            note_save_failed: 'The note could not be saved. Try again in a moment.',
+            note_added: "Note added to {user}'s record. Only moderators can see it; they were not told.",
+
+            lock_channel_type:
+                'That channel cannot be locked. Pick a text, voice or forum channel (to lock a thread, lock its channel).',
+            lock_duration_range: 'A lock can last from 1 minute up to 28 days.',
+            already_locked: '{channel} is already locked. Use `/moderation unlock` first.',
+            not_locked: '{channel} was not locked with Ovx.',
+            locked: '{channel} is locked. Use `/moderation unlock` to open it again.',
+            locked_until: '{channel} is locked for {duration} (until {until}).',
+            unlocked: '{channel} is unlocked.',
+            lock_notice: '🔒 This channel is locked by the moderators.',
+            lock_notice_until: '🔒 This channel is locked by the moderators. It opens again {until}.',
+            unlock_notice: '🔓 This channel is unlocked.',
+
+            slowmode_channel_type: 'Slowmode cannot be set in that channel.',
+            slowmode_range: 'Slowmode can be up to 6 hours.',
+            slowmode_set: 'Members in {channel} now wait {duration} between messages.',
+            slowmode_off: 'Slowmode is off in {channel}.',
         },
 
         ping: {

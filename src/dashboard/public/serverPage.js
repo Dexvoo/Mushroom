@@ -20,6 +20,7 @@ import { renderSuggestions } from './suggestions.js';
 import { renderVerification } from './verification.js';
 import { renderCommands } from './commands.js';
 import { renderServerStats } from './serverStats.js';
+import { renderAutoMessages } from './autoMessages.js';
 
 /**
  * Sidebar layout. Items with a `render` are live; the rest are planned and shown as "Soon".
@@ -69,6 +70,7 @@ export const SECTIONS = [
             { slug: 'suggestions', label: 'Suggestions', render: renderSuggestions },
             { slug: 'join-to-create', label: 'Join to Create', render: renderTempVoice },
             { slug: 'server-stats', label: 'Server Stats', render: renderServerStats },
+            { slug: 'auto-messages', label: 'Auto Messages', render: renderAutoMessages },
             { slug: 'custom-embeds', label: 'Custom Embeds', render: renderCustomEmbeds },
             { slug: 'starboard', label: 'Starboard', render: renderStarboard },
         ],

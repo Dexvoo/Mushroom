@@ -68,6 +68,7 @@ import { reactionRolesDashboard } from '../features/reactionRoles/utils/dashboar
 import { customEmbedsDashboard } from '../features/customEmbeds/utils/dashboard.js';
 import { automodDashboard } from '../features/automod/utils/dashboard.js';
 import { ServerStats } from '../features/serverStats/models/serverStats.js';
+import { autoMessagesDashboard, AUTO_MESSAGE_LIMITS } from '../features/autoMessages/utils/dashboard.js';
 import { serverStatsDashboard, serverStatsView, SERVER_STATS_LIMITS } from '../features/serverStats/utils/dashboard.js';
 import Command_Settings_Cache from '../features/commandSettings/cache/commandSettings.cache.js';
 import {
@@ -173,6 +174,7 @@ const handlers = {
     saveVerification,
     saveCommandSettings,
     serverStats,
+    autoMessages,
     logVote,
     voteReceived,
     resetSettings,
@@ -340,6 +342,7 @@ async function guildOverview(client, { guildId, userId }) {
             VERIFICATION: VERIFICATION_LIMITS,
             COMMANDS: COMMAND_SETTINGS_LIMITS,
             SERVER_STATS: SERVER_STATS_LIMITS,
+            AUTO_MESSAGES: AUTO_MESSAGE_LIMITS,
             CUSTOM_EMBEDS: CUSTOM_EMBED_LIMITS,
         },
         votesEnabled: votesEnabled(),
@@ -464,6 +467,17 @@ async function serverStats(client, { guildId, userId, ...payload }) {
         return ok(serverStatsView(access.guild, await ServerStats.findOne({ guildId: access.guild.id }).lean()));
     }
     return serverStatsDashboard(access.guild, access.member, payload);
+}
+
+/**
+ * The Auto Messages page: repeating messages and sticky messages.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, op: string }} payload
+ */
+async function autoMessages(client, { guildId, userId, ...payload }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    return autoMessagesDashboard(access.guild, payload, guildContext(access.guild));
 }
 
 /**

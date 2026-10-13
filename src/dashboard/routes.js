@@ -2,14 +2,24 @@ import { Router } from 'express';
 import { requireLogin, requireDeveloper, validGuildId } from './middleware.js';
 import { LogData } from '../shared/utils/logger.js';
 import { inviteUrl } from '../shared/utils/invite.js';
+import { usageReport as defaultUsageReport, USAGE_WINDOWS } from '../features/usage/utils/report.js';
 
 const LEADERBOARD_TYPES = new Set(['level', 'totalMessages', 'totalVoice', 'totalCommands']);
 const PUBLIC_CACHE_MS = 60_000;
 const PUBLIC_CACHE_MAX = 500;
 const PUBLIC_STATS_MS = 5 * 60_000;
 const PUBLIC_HEALTH_MS = 15_000;
+const USAGE_CACHE_MS = 5 * 60_000;
 const CASE_NUMBER = /^[1-9]\d{0,8}$/;
-const CASE_LABELS = { warn: 'Warning', ban: 'Ban', unban: 'Unban', kick: 'Kick', mute: 'Mute', unmute: 'Unmute' };
+const CASE_LABELS = {
+    warn: 'Warning',
+    ban: 'Ban',
+    unban: 'Unban',
+    kick: 'Kick',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    note: 'Note',
+};
 
 /**
  * JSON API for the dashboard UI.
@@ -20,9 +30,17 @@ const CASE_LABELS = { warn: 'Warning', ban: 'Ban', unban: 'Unban', kick: 'Kick',
  *   developerIds: string[],
  *   auditStore: import('./auditStore.js').AuditStore,
  *   caseStore: ReturnType<typeof import('../features/moderation/utils/cases.js').createMongoCaseStore>,
+ *   usageReport?: typeof defaultUsageReport,
  * }} options
  */
-export function createApiRouter({ bridge, applicationId, developerIds, auditStore, caseStore }) {
+export function createApiRouter({
+    bridge,
+    applicationId,
+    developerIds,
+    auditStore,
+    caseStore,
+    usageReport = defaultUsageReport,
+}) {
     const router = Router();
     const publicCache = new Map();
 
@@ -260,6 +278,39 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         if (!STATS_CHANNEL.test(req.params.channelId)) return res.status(404).json({ error: 'Not found' });
         return serverStatsAction(req, res, { op: 'remove', channelId: req.params.channelId });
     });
+
+    const AUTO_ID = /^[a-f\d]{24}$/i;
+    const autoMessagesAction = (req, res, payload) =>
+        respond(res, async () => {
+            const result = await bridge.guild('autoMessages', req.params.guildId, {
+                userId: req.session.user.id,
+                ...payload,
+            });
+            if (result.ok && result.action && result.changes?.length)
+                await recordAudit(req, result.action, result.changes);
+            return result;
+        });
+
+    router.get('/guilds/:guildId/auto-messages', requireLogin, validGuildId, (req, res) =>
+        autoMessagesAction(req, res, { op: 'list' })
+    );
+
+    for (const [kind, op] of [
+        ['auto', 'saveAuto'],
+        ['sticky', 'saveSticky'],
+    ]) {
+        router.post(`/guilds/:guildId/auto-messages/${kind}`, requireLogin, validGuildId, (req, res) =>
+            autoMessagesAction(req, res, { op, message: req.body })
+        );
+        router.put(`/guilds/:guildId/auto-messages/${kind}/:id`, requireLogin, validGuildId, (req, res) => {
+            if (!AUTO_ID.test(req.params.id)) return res.status(404).json({ error: 'Not found' });
+            return autoMessagesAction(req, res, { op, id: req.params.id, message: req.body });
+        });
+        router.delete(`/guilds/:guildId/auto-messages/${kind}/:id`, requireLogin, validGuildId, (req, res) => {
+            if (!AUTO_ID.test(req.params.id)) return res.status(404).json({ error: 'Not found' });
+            return autoMessagesAction(req, res, { op: op.replace('save', 'delete'), id: req.params.id });
+        });
+    }
 
     router.put('/guilds/:guildId/commands', requireLogin, validGuildId, (req, res) =>
         respond(res, async () => {
@@ -686,6 +737,23 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
             });
         } catch {
             res.status(503).json({ error: 'The bot is restarting, try again in a moment' });
+        }
+    });
+
+    // Which commands and features servers use. Cached briefly: it reads every feature's settings
+    const usageCache = new Map();
+    router.get('/dev/usage', requireLogin, requireDeveloper(developerIds), async (req, res) => {
+        const days = USAGE_WINDOWS.includes(Number(req.query.days)) ? Number(req.query.days) : 30;
+        const cached = usageCache.get(days);
+        if (cached && Date.now() - cached.at < USAGE_CACHE_MS) return res.json(cached.data);
+        try {
+            const [report, shards] = await Promise.all([usageReport({ days }), bridge.stats().catch(() => null)]);
+            const data = { ...report, serverCount: shards?.reduce((total, shard) => total + shard.guilds, 0) ?? null };
+            usageCache.set(days, { at: Date.now(), data });
+            res.json(data);
+        } catch (error) {
+            LogData('Dashboard', `Usage report failed: ${error.message}`, 'error');
+            res.status(500).json({ error: 'Could not build the usage report' });
         }
     });
 

@@ -17,6 +17,7 @@ const ACTIONS = {
     kick: 'Kick',
     ban: 'Ban',
     unban: 'Unban',
+    note: 'Note',
 };
 
 const fullDate = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });

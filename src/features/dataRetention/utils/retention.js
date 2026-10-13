@@ -22,6 +22,9 @@ import { Suggestion, SuggestionCounter, SuggestionConfig } from '../../suggestio
 import { VerificationConfig } from '../../verification/models/verification.js';
 import { CommandSettings } from '../../commandSettings/models/commandSettings.js';
 import { ServerStats } from '../../serverStats/models/serverStats.js';
+import { AutoMessage, StickyMessage } from '../../autoMessages/models/autoMessages.js';
+import { TempBan, ChannelLock } from '../../moderation/models/moderationTimers.js';
+import { UsageDay } from '../../usage/models/usageDay.js';
 import { AuditLog } from '../../../dashboard/models/auditLog.js';
 import { LogData } from '../../../shared/utils/logger.js';
 
@@ -67,6 +70,10 @@ export const GUILD_DATA_MODELS = [
     VerificationConfig,
     CommandSettings,
     ServerStats,
+    AutoMessage,
+    StickyMessage,
+    TempBan,
+    ChannelLock,
     AuditLog,
 ];
 
@@ -108,6 +115,8 @@ export async function deleteGuildData(guildId, now = new Date()) {
         await GuildSettings.updateOne({ guildId }, { $set: { embedColour: null, bio: null } });
     }
 
+    // The developer usage page keeps which servers used a command each day: this one is taken out
+    await UsageDay.updateMany({ guilds: guildId }, { $pull: { guilds: guildId } });
     await GuildDeparture.deleteOne({ guildId });
     return deleted;
 }

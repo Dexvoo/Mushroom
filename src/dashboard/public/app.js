@@ -7,6 +7,7 @@ import { renderPicker, renderPickerSkeleton } from './picker.js';
 import { renderServerPage, clearServerCache } from './serverPage.js';
 import { renderLanding, renderLegal } from './landing.js';
 import { renderStatus } from './status.js';
+import { renderDeveloper } from './developer.js';
 
 const app = document.getElementById('app');
 const banner = document.getElementById('banner');
@@ -92,6 +93,7 @@ function renderAccount() {
     avatar.hidden = !me.user.avatar;
     if (me.user.avatar) avatar.src = me.user.avatar;
     document.getElementById('account-name').textContent = me.user.displayName;
+    document.getElementById('dev-link').hidden = !me.user.isDeveloper;
 }
 
 document.getElementById('logout').addEventListener('click', async () => {
@@ -162,6 +164,11 @@ async function render() {
         if (!me) return renderLanding(app, landingStats);
     }
     if (!me) return renderLoggedOut();
+
+    if (/^\/dev\/?$/.test(location.pathname)) {
+        cleanup = renderDeveloper(app);
+        return;
+    }
 
     if (route) {
         cleanup = await renderServerPage(app, route[1], route[2] ?? '', () => {

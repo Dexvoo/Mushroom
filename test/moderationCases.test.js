@@ -293,7 +293,7 @@ test('history: totals and the latest cases, newest first', async () => {
     await execute(interaction());
 
     const { description } = replies[0];
-    assert.match(description, /history_totals {"warn":1,"mute":1,"kick":0,"ban":0}/);
+    assert.match(description, /history_totals {"warn":1,"mute":1,"kick":0,"ban":0,"note":0}/);
     assert.ok(description.indexOf('**#2**') < description.indexOf('**#1**'));
     assert.match(description, /\(1 hour\)/);
 });

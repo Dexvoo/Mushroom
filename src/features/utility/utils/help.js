@@ -45,6 +45,7 @@ const DASHBOARD_FEATURES = [
     'custom_embeds',
     'join_to_create',
     'server_stats',
+    'auto_messages',
     'streams',
 ];
 

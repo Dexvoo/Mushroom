@@ -1,5 +1,5 @@
 import { EmbedBuilder, MessageFlags } from 'discord.js';
-import { ACTION_PERMISSIONS, RECORD_ONLY_ACTIONS, checkTarget } from './checks.js';
+import { ACTION_PERMISSIONS, BOT_EXTRA_PERMISSIONS, RECORD_ONLY_ACTIONS, checkTarget } from './checks.js';
 import { createCase } from './cases.js';
 import { replyError } from '../../../shared/utils/commandChecks.js';
 import { brandColour } from '../../../shared/cache/guildSettings.cache.js';
@@ -28,16 +28,17 @@ function permissionNames(permissions) {
 
 /**
  * Checks the moderator and Ovx both have the permissions for this action, replying with what's missing if not.
- * Purge is checked in this channel, since channel overwrites can change who may delete messages there.
+ * Checked in this channel (or the one the action is for), since channel overwrites can change who may do what there.
  * @param {Interaction} interaction
  * @param {ModerationAction} action
+ * @param {Interaction | import('discord.js').GuildBasedChannel} [where] - The channel the action is for
  * @returns {Promise<boolean>}
  */
-export async function hasPermissions(interaction, action) {
+export async function hasPermissions(interaction, action, where = interaction) {
     const { client, member, guild } = interaction;
     const needed = ACTION_PERMISSIONS[action];
 
-    const [userOk, userMissing] = client.utils.PermissionCheck(interaction, needed, member);
+    const [userOk, userMissing] = client.utils.PermissionCheck(where, needed, member);
     if (!userOk) {
         await replyError(
             interaction,
@@ -46,7 +47,8 @@ export async function hasPermissions(interaction, action) {
         return false;
     }
     if (RECORD_ONLY_ACTIONS.has(action)) return true;
-    const [botOk, botMissing] = client.utils.PermissionCheck(interaction, needed, guild.members.me);
+    const botNeeded = [...needed, ...(BOT_EXTRA_PERMISSIONS[action] ?? [])];
+    const [botOk, botMissing] = client.utils.PermissionCheck(where, botNeeded, guild.members.me);
     if (!botOk) {
         await replyError(
             interaction,
@@ -86,7 +88,7 @@ export async function targetMember(interaction, action) {
  * Moderators aren't named, so members can't go after them.
  * @param {Interaction} interaction
  * @param {import('discord.js').User} user
- * @param {'ban' | 'kick' | 'mute' | 'warn'} action
+ * @param {'ban' | 'tempban' | 'kick' | 'mute' | 'warn'} action
  * @param {{ reason: string | null, duration?: string }} details
  */
 export async function notifyMember(interaction, user, action, { reason, duration }) {

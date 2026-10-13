@@ -2599,6 +2599,15 @@ body {
     background: var(--surface-raised);
 }
 
+.giveaway-editor {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    border: 1px solid var(--accent, var(--border));
+    border-radius: 12px;
+    background: var(--surface-raised);
+}
+
 .giveaway-main {
     flex: 1 1 260px;
     min-width: 0;
@@ -2942,4 +2951,131 @@ a.giveaway-prize:hover {
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--surface-raised);
+}
+
+/* ---------- Developer page ---------- */
+
+.usage-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 16px;
+}
+
+.usage-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.usage-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.usage-tile-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent-text);
+}
+
+.usage-tile-label {
+    font-weight: 600;
+}
+
+.usage-tile-note {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.usage-columns {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 160px;
+    padding-top: 8px;
+}
+
+.usage-column {
+    flex: 1 1 0;
+    min-width: 2px;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    border-radius: 4px 4px 0 0;
+}
+
+.usage-column:hover {
+    background: var(--accent-soft);
+}
+
+.usage-column-fill {
+    width: 100%;
+    min-height: 1px;
+    border-radius: 4px 4px 0 0;
+    background: var(--accent);
+}
+
+.usage-columns-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.usage-bars {
+    display: grid;
+    gap: 6px;
+}
+
+.usage-bar-row {
+    display: grid;
+    grid-template-columns: minmax(0, 220px) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+}
+
+.usage-bar-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font);
+}
+
+.usage-bar {
+    height: 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    overflow: hidden;
+}
+
+.usage-bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+}
+
+.usage-bar-value {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+    .usage-bar-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .usage-bar {
+        grid-column: 1 / -1;
+        grid-row: 2;
+    }
 }

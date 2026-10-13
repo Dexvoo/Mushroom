@@ -20,8 +20,8 @@ export async function execute(interaction) {
     const lines = [];
     if (total === 0) lines.push(t(interaction, 'history_empty', { user: user.toString() }));
     else {
-        const { warn, mute, kick, ban } = counts;
-        lines.push(t(interaction, 'history_totals', { warn, mute, kick, ban }), '');
+        const { warn, mute, kick, ban, note } = counts;
+        lines.push(t(interaction, 'history_totals', { warn, mute, kick, ban, note }), '');
         lines.push(...cases.map((entry) => caseLine(interaction, entry)));
         if (total > SHOWN_CASES) lines.push(`-# ${t(interaction, 'history_more', { count: total - SHOWN_CASES })}`);
     }

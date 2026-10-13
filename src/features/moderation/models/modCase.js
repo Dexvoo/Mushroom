@@ -1,8 +1,9 @@
 import mongoose from 'mongoose';
 const { Schema, model } = mongoose;
 
-/** @typedef {'warn' | 'ban' | 'unban' | 'kick' | 'mute' | 'unmute'} CaseAction */
-export const CASE_ACTIONS = Object.freeze(['warn', 'ban', 'unban', 'kick', 'mute', 'unmute']);
+/** @typedef {'warn' | 'ban' | 'unban' | 'kick' | 'mute' | 'unmute' | 'note'} CaseAction */
+/** A note is private to moderators: the member isn't told, and it doesn't count as a warning */
+export const CASE_ACTIONS = Object.freeze(['warn', 'ban', 'unban', 'kick', 'mute', 'unmute', 'note']);
 
 /**
  * One moderation action against a member: a server's case history.
@@ -16,7 +17,7 @@ export const CASE_ACTIONS = Object.freeze(['warn', 'ban', 'unban', 'kick', 'mute
  * @property {string | null} moderatorId - null when Discord's audit log didn't say who
  * @property {string | null} moderatorName
  * @property {string | null} reason
- * @property {number | null} durationMs - How long a mute was for
+ * @property {number | null} durationMs - How long a mute or temporary ban was for
  * @property {'command' | 'discord'} source - /moderation, or done in Discord directly (found in the audit log)
  * @property {Date} createdAt
  */

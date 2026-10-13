@@ -12,6 +12,15 @@ import {
 import { messagesToPurge } from '../src/features/moderation/subcommands/purge.js';
 import { autocomplete } from '../src/features/moderation/commands/moderation.js';
 import Guild_Settings_Cache from '../src/shared/cache/guildSettings.cache.js';
+import { ModCase, ModCaseCounter } from '../src/features/moderation/models/modCase.js';
+import { TempBan, ChannelLock } from '../src/features/moderation/models/moderationTimers.js';
+import {
+    lockChannel,
+    unlockChannel,
+    endTempBans,
+    endLocks,
+    parseSlowmode,
+} from '../src/features/moderation/utils/timers.js';
 
 const OWNER = '100000000000000001';
 const MOD = '100000000000000002';
@@ -84,8 +93,8 @@ test('the audit log names the moderator, since Discord would only show Ovx', () 
 
 test('mute length suggestions explain what was typed', async () => {
     let choices;
-    const interaction = (typed) => ({
-        options: { getFocused: () => typed },
+    const interaction = (typed, subcommand = 'mute') => ({
+        options: { getFocused: () => typed, getSubcommand: () => subcommand },
         respond: async (list) => (choices = list),
     });
 
@@ -100,6 +109,11 @@ test('mute length suggestions explain what was typed', async () => {
 
     await autocomplete(interaction('60d'));
     assert.ok(!choices.some((choice) => choice.value === '60d'), 'longer than Discord allows');
+
+    await autocomplete(interaction('60d', 'ban'));
+    assert.deepEqual(choices[0], { name: '8 weeks 4 days', value: '60d' }, 'a ban can be longer');
+    await autocomplete(interaction('', 'slowmode'));
+    assert.equal(choices[0].value, 'off');
 });
 
 // ---------- Purge ----------
@@ -201,11 +215,78 @@ function fakeInteraction({ options = {}, targetInGuild = true, missing = [] } = 
     return interaction;
 }
 
+let cases;
+let tempBans;
+let locks;
+
 beforeEach(() => {
     replies = [];
     bans = new Map();
     actions = [];
+    cases = [];
+    tempBans = [];
+    locks = [];
     Guild_Settings_Cache.get = async () => ({ embedColour: null });
+    ModCaseCounter.findOneAndUpdate = /** @type {any} */ (async () => ({ lastCase: cases.length + 1 }));
+    ModCase.create = /** @type {any} */ (async (doc) => (cases.push(doc), doc));
+
+    const matches = (doc, filter) =>
+        Object.entries(filter).every(([key, value]) =>
+            value && typeof value === 'object' && !(value instanceof Date)
+                ? true
+                : String(doc[key]) === String(value) ||
+                  (value instanceof Date && doc[key]?.getTime() === value.getTime())
+        );
+    TempBan.deleteOne = /** @type {any} */ (
+        async (filter) => {
+            const before = tempBans.length;
+            tempBans = tempBans.filter((doc) => !matches(doc, filter));
+            return { deletedCount: before - tempBans.length };
+        }
+    );
+    TempBan.updateOne = /** @type {any} */ (
+        async (filter, update, options) => {
+            let doc = tempBans.find((item) => matches(item, filter));
+            if (!doc && options?.upsert) tempBans.push((doc = { _id: `t${tempBans.length}`, ...filter }));
+            if (doc) Object.assign(doc, update.$set);
+            return { modifiedCount: doc ? 1 : 0 };
+        }
+    );
+    TempBan.find = /** @type {any} */ (
+        (filter) => ({
+            limit: () => ({
+                lean: async () =>
+                    tempBans.filter((doc) => doc.expiresAt <= filter.expiresAt.$lte).map((doc) => ({ ...doc })),
+            }),
+        })
+    );
+    ChannelLock.create = /** @type {any} */ (
+        async (doc) => {
+            if (locks.some((lock) => lock.channelId === doc.channelId))
+                throw Object.assign(new Error('dup'), { code: 11000 });
+            locks.push({ _id: `l${locks.length}`, ...doc });
+        }
+    );
+    ChannelLock.deleteOne = /** @type {any} */ (
+        async (filter) => {
+            locks = locks.filter((lock) => !matches(lock, filter));
+        }
+    );
+    ChannelLock.updateOne = /** @type {any} */ (
+        async (filter, update) => {
+            const lock = locks.find((item) => matches(item, filter));
+            if (lock) Object.assign(lock, update.$set);
+            return { modifiedCount: lock ? 1 : 0 };
+        }
+    );
+    ChannelLock.find = /** @type {any} */ (
+        (filter) => ({
+            limit: () => ({
+                lean: async () =>
+                    locks.filter((lock) => lock.until && lock.until <= filter.until.$lte).map((lock) => ({ ...lock })),
+            }),
+        })
+    );
 });
 
 test('ban: records the moderator in the audit log and can delete recent messages', async () => {
@@ -265,6 +346,249 @@ test('/moderation has its actions', async () => {
     const { commandData } = await import('../src/features/moderation/commands/moderation.js');
     assert.deepEqual(
         commandData.toJSON().options.map((option) => option.name),
-        ['ban', 'unban', 'kick', 'mute', 'unmute', 'purge', 'nickname', 'warn', 'unwarn', 'history']
+        [
+            'ban',
+            'unban',
+            'kick',
+            'mute',
+            'unmute',
+            'purge',
+            'nickname',
+            'warn',
+            'unwarn',
+            'history',
+            'note',
+            'lock',
+            'unlock',
+            'slowmode',
+        ]
     );
+});
+
+// ---------- Temporary bans ----------
+
+test('ban with a duration: saved to end by itself, and the member is told how long', async () => {
+    const { execute } = await import('../src/features/moderation/subcommands/ban.js');
+    const before = Date.now();
+    await execute(fakeInteraction({ options: { duration: '1w', reason: 'raid' } }));
+
+    assert.equal(actions[0][2].reason, 'By @mod: raid (for 1 week)');
+    assert.equal(tempBans.length, 1);
+    assert.ok(tempBans[0].expiresAt.getTime() >= before + 604_800_000);
+    assert.equal(cases[0].durationMs, 604_800_000);
+    assert.match(replies[0].description, /banned_temp/);
+
+    await execute(fakeInteraction({ options: { duration: '400d' } }));
+    assert.match(replies[1].description, /ban_duration_range/);
+});
+
+test('a permanent ban replaces an older temporary one', async () => {
+    const { execute } = await import('../src/features/moderation/subcommands/ban.js');
+    tempBans.push({ _id: 'old', guildId: '400000000000000001', userId: TARGET, expiresAt: new Date(0) });
+    await execute(fakeInteraction());
+    assert.equal(tempBans.length, 0);
+});
+
+/** A client whose one server has the given bans, for the timers. */
+function timerClient(removeBan) {
+    const guild = {
+        id: '400000000000000001',
+        name: 'Test',
+        bans: { remove: removeBan },
+        channels: { cache: new Map() },
+    };
+    return {
+        guild,
+        client: /** @type {any} */ ({
+            user: { id: BOT, username: 'Ovx' },
+            guilds: { cache: new Map([[guild.id, guild]]) },
+        }),
+    };
+}
+
+test('temporary bans end when due, recorded as an unban by Ovx', async () => {
+    const removed = [];
+    const { client } = timerClient(async (id, reason) => removed.push([id, reason]));
+    const now = new Date('2026-10-13T12:00:00Z');
+    tempBans.push(
+        {
+            _id: 'a',
+            guildId: '400000000000000001',
+            userId: TARGET,
+            username: 'target',
+            expiresAt: new Date('2026-10-13T11:00:00Z'),
+            caseNumber: 4,
+        },
+        {
+            _id: 'b',
+            guildId: '400000000000000001',
+            userId: MOD,
+            username: 'later',
+            expiresAt: new Date('2026-10-14T00:00:00Z'),
+        }
+    );
+
+    assert.equal(await endTempBans(client, now), 1);
+    assert.deepEqual(removed, [[TARGET, 'Temporary ban ended (case #4)']]);
+    assert.deepEqual(
+        tempBans.map((ban) => ban._id),
+        ['b'],
+        'the later one waits'
+    );
+    assert.equal(cases[0].action, 'unban');
+    assert.equal(cases[0].moderatorId, BOT);
+});
+
+test('a temporary ban that cannot be ended yet is tried again later; one already lifted is dropped', async () => {
+    const now = new Date('2026-10-13T12:00:00Z');
+    const failing = timerClient(async () => {
+        throw Object.assign(new Error('Missing Permissions'), { code: 50013 });
+    });
+    tempBans.push({
+        _id: 'a',
+        guildId: '400000000000000001',
+        userId: TARGET,
+        username: 'target',
+        expiresAt: new Date(0),
+    });
+    assert.equal(await endTempBans(failing.client, now), 0);
+    assert.equal(tempBans.length, 1);
+    assert.ok(tempBans[0].expiresAt > now, 'moved an hour on');
+    assert.equal(cases.length, 0);
+
+    const lifted = timerClient(async () => {
+        throw Object.assign(new Error('Unknown Ban'), { code: 10026 });
+    });
+    tempBans[0].expiresAt = new Date(0);
+    await endTempBans(lifted.client, now);
+    assert.equal(tempBans.length, 0);
+    assert.equal(cases.length, 0, 'someone else unbanned them; that was recorded then');
+});
+
+// ---------- Locks ----------
+
+/** A permission set like discord.js's, from permission names. */
+const perms = (names) => ({
+    has: (name) => names.includes(name),
+    get bitfield() {
+        return BigInt(names.length);
+    },
+});
+
+/** A channel whose @everyone overwrite starts as given (or missing). */
+function fakeChannel(start) {
+    const everyone = '400000000000000001';
+    const overwrites = new Map(start ? [[everyone, { allow: perms(start.allow), deny: perms(start.deny) }]] : []);
+    const edits = [];
+    const channel = {
+        id: '500000000000000001',
+        type: 0,
+        isThread: () => false,
+        guild: { id: everyone, roles: { everyone: { id: everyone } } },
+        permissionOverwrites: {
+            cache: overwrites,
+            edit: async (id, values) => {
+                edits.push(values);
+                const current = overwrites.get(id) ?? { allow: perms([]), deny: perms([]) };
+                const allow = new Set(LOCKED.filter((name) => current.allow.has(name)));
+                const deny = new Set(LOCKED.filter((name) => current.deny.has(name)));
+                const others = {
+                    allow: start?.allow.filter((n) => !LOCKED.includes(n)) ?? [],
+                    deny: start?.deny.filter((n) => !LOCKED.includes(n)) ?? [],
+                };
+                for (const [name, value] of Object.entries(values)) {
+                    allow.delete(name);
+                    deny.delete(name);
+                    if (value === true) allow.add(name);
+                    if (value === false) deny.add(name);
+                }
+                overwrites.set(id, {
+                    allow: perms([...others.allow, ...allow]),
+                    deny: perms([...others.deny, ...deny]),
+                });
+            },
+            delete: async (id) => overwrites.delete(id),
+        },
+    };
+    return { channel, overwrites, edits, everyone };
+}
+const LOCKED = ['SendMessages', 'SendMessagesInThreads', 'CreatePublicThreads', 'CreatePrivateThreads'];
+
+test('a lock stops everyone talking, and unlocking puts back exactly what was there', async () => {
+    const { channel, overwrites, everyone } = fakeChannel({
+        allow: ['SendMessages'],
+        deny: ['AddReactions', 'CreatePublicThreads'],
+    });
+    const details = { moderatorName: 'mod', reason: null, until: null, auditReason: 'By @mod' };
+    assert.equal(await lockChannel(channel, details), 'locked');
+    for (const name of LOCKED) assert.ok(overwrites.get(everyone).deny.has(name), name);
+    assert.equal(await lockChannel(channel, details), 'already_locked');
+
+    await unlockChannel(channel, locks[0], 'By @mod');
+    const after = overwrites.get(everyone);
+    assert.ok(after.allow.has('SendMessages'), 'was allowed, allowed again');
+    assert.ok(after.deny.has('CreatePublicThreads'), 'was denied, still denied');
+    assert.ok(after.deny.has('AddReactions'), 'other permissions untouched');
+    assert.ok(!after.deny.has('SendMessagesInThreads'));
+    assert.equal(locks.length, 0);
+});
+
+test('unlocking a channel that had no overwrite removes the one the lock made', async () => {
+    const { channel, overwrites, everyone } = fakeChannel(null);
+    await lockChannel(channel, { moderatorName: 'mod', reason: null, until: null, auditReason: 'x' });
+    assert.ok(overwrites.has(everyone));
+    await unlockChannel(channel, locks[0], 'x');
+    assert.equal(overwrites.has(everyone), false);
+});
+
+test('a lock that fails in Discord is not left saved', async () => {
+    const { channel } = fakeChannel(null);
+    channel.permissionOverwrites.edit = async () => {
+        throw new Error('Missing Permissions');
+    };
+    await assert.rejects(lockChannel(channel, { moderatorName: 'mod', reason: null, until: null, auditReason: 'x' }));
+    assert.equal(locks.length, 0);
+});
+
+test('timed locks end by themselves, with a notice', async () => {
+    const { channel, overwrites, everyone } = fakeChannel(null);
+    const { client, guild } = timerClient(async () => {});
+    guild.channels.cache.set(channel.id, channel);
+    const now = new Date('2026-10-13T12:00:00Z');
+    await lockChannel(channel, {
+        moderatorName: 'mod',
+        reason: null,
+        until: new Date('2026-10-13T11:59:00Z'),
+        auditReason: 'x',
+    });
+
+    const notices = [];
+    assert.equal(await endLocks(client, { now, notice: async (target) => notices.push(target.id) }), 1);
+    assert.equal(overwrites.has(everyone), false);
+    assert.deepEqual(notices, [channel.id]);
+    assert.equal(locks.length, 0);
+});
+
+test('slowmode lengths: a plain number is seconds, "off" turns it off', () => {
+    assert.equal(parseSlowmode('off'), 0);
+    assert.equal(parseSlowmode('0'), 0);
+    assert.equal(parseSlowmode('30'), 30);
+    assert.equal(parseSlowmode('2m'), 120);
+    assert.equal(parseSlowmode('1h 30m'), 5400);
+    assert.equal(parseSlowmode('fast'), null);
+});
+
+// ---------- Notes ----------
+
+test('note: recorded privately, and the member is not messaged', async () => {
+    const { execute } = await import('../src/features/moderation/subcommands/note.js');
+    let messaged = false;
+    const interaction = fakeInteraction({ options: { note: '  Was rude in voice, keep an eye on them ' } });
+    interaction.options.getUser('user').send = async () => (messaged = true);
+    await execute(interaction);
+
+    assert.equal(cases[0].action, 'note');
+    assert.equal(cases[0].reason, 'Was rude in voice, keep an eye on them');
+    assert.equal(messaged, false);
+    assert.match(replies[0].description, /note_added/);
 });

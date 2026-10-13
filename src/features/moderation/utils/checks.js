@@ -1,8 +1,8 @@
 import { PermissionFlagsBits } from 'discord.js';
 
 /**
- * @typedef {'ban' | 'unban' | 'kick' | 'mute' | 'unmute' | 'purge' | 'nickname' | 'warn' | 'unwarn' | 'history'}
- *   ModerationAction
+ * @typedef {'ban' | 'unban' | 'kick' | 'mute' | 'unmute' | 'purge' | 'nickname' | 'warn' | 'unwarn' | 'history'
+ *   | 'note' | 'lock' | 'unlock' | 'slowmode'} ModerationAction
  */
 
 /** What both the moderator and Ovx need for each action. */
@@ -17,10 +17,20 @@ export const ACTION_PERMISSIONS = Object.freeze({
     warn: [PermissionFlagsBits.ModerateMembers],
     unwarn: [PermissionFlagsBits.ModerateMembers],
     history: [PermissionFlagsBits.ModerateMembers],
+    note: [PermissionFlagsBits.ModerateMembers],
+    lock: [PermissionFlagsBits.ManageChannels],
+    unlock: [PermissionFlagsBits.ManageChannels],
+    slowmode: [PermissionFlagsBits.ManageChannels],
+});
+
+/** What Ovx needs on top: changing a channel's permissions takes Manage Permissions (Manage Roles) there. */
+export const BOT_EXTRA_PERMISSIONS = Object.freeze({
+    lock: [PermissionFlagsBits.ManageRoles],
+    unlock: [PermissionFlagsBits.ManageRoles],
 });
 
 /** Actions Ovx only records, so it needs no permission of its own for them. */
-export const RECORD_ONLY_ACTIONS = new Set(['warn', 'unwarn', 'history']);
+export const RECORD_ONLY_ACTIONS = new Set(['warn', 'unwarn', 'history', 'note']);
 
 /** Discord's longest timeout is 28 days. */
 export const MAX_MUTE_MS = 28 * 24 * 60 * 60_000;

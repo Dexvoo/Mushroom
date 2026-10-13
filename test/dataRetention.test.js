@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { ShardClientUtil } from 'discord.js';
 import { GuildDeparture } from '../src/features/dataRetention/models/guildDeparture.js';
 import { GuildSettings } from '../src/shared/models/guildSettings.js';
+import { UsageDay } from '../src/features/usage/models/usageDay.js';
 import {
     GUILD_DATA_MODELS,
     DATA_RETENTION_DAYS,
@@ -23,6 +24,7 @@ let departures;
 /** model → guildIds it holds */
 let stored;
 let settings;
+let usagePulls;
 
 /** @param {string[]} guildIds */
 const fakeClient = (guildIds, shard = null) => ({
@@ -70,6 +72,8 @@ beforeEach(() => {
         model.distinct = /** @type {any} */ (async () => [...new Set(stored.get(model))]);
     }
 
+    usagePulls = [];
+    UsageDay.updateMany = /** @type {any} */ (async (filter) => usagePulls.push(filter.guilds));
     GuildSettings.distinct = /** @type {any} */ (async () => settings.map((doc) => doc.guildId));
     GuildSettings.deleteOne = /** @type {any} */ (
         async ({ guildId }) => {
@@ -100,6 +104,7 @@ test('deleteGuildData removes the server from every collection, and only that se
         [PRESENT]
     );
     assert.equal(departures.has(GONE), false);
+    assert.deepEqual(usagePulls, [GONE], 'taken out of the usage stats too');
 });
 
 test('deleteGuildData keeps active premium but clears the other bot settings', async () => {
