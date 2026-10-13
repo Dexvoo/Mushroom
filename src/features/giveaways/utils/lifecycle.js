@@ -121,7 +121,7 @@ async function postGiveaway(guild, giveaway) {
         return await Giveaway.findByIdAndUpdate(
             giveaway._id,
             { $set: { messageId: message.id, status: 'running' } },
-            { new: true }
+            { returnDocument: 'after' }
         ).lean();
     } catch (error) {
         LogData('Giveaways', `Guild: ${guild.name} | Could not post giveaway: ${error.message}`, 'warning');
@@ -139,7 +139,7 @@ export async function startScheduledGiveaway(guild, giveaway) {
     const claimed = await Giveaway.findOneAndUpdate(
         { _id: giveaway._id, status: 'scheduled' },
         { $set: { status: 'running' } },
-        { new: true }
+        { returnDocument: 'after' }
     ).lean();
     if (!claimed) return;
     if (!(await postGiveaway(guild, claimed))) {
@@ -164,7 +164,7 @@ export async function endGiveaway(guild, giveawayId, now = new Date()) {
     const claimed = await Giveaway.findOneAndUpdate(
         { _id: giveawayId, guildId: guild.id, status: 'running' },
         { $set: { status: 'ending' } },
-        { new: true }
+        { returnDocument: 'after' }
     ).lean();
     if (!claimed) return { ok: false, reason: 'not_running' };
 
@@ -172,7 +172,7 @@ export async function endGiveaway(guild, giveawayId, now = new Date()) {
     const ended = await Giveaway.findByIdAndUpdate(
         claimed._id,
         { $set: { status: 'ended', winners, endedAt: now } },
-        { new: true }
+        { returnDocument: 'after' }
     ).lean();
 
     await refreshMessage(guild, ended);
@@ -197,7 +197,7 @@ export async function rerollGiveaway(guild, giveawayId, count = 1) {
     const updated = await Giveaway.findByIdAndUpdate(
         giveaway._id,
         { $push: { winners: { $each: winners } } },
-        { new: true }
+        { returnDocument: 'after' }
     ).lean();
     await refreshMessage(guild, updated);
     await announce(guild, updated, winners, true);
@@ -214,7 +214,7 @@ export async function cancelGiveaway(guild, giveawayId) {
     const cancelled = await Giveaway.findOneAndUpdate(
         { _id: giveawayId, guildId: guild.id, status: { $in: ['scheduled', 'running'] } },
         { $set: { status: 'cancelled', endedAt: new Date() } },
-        { new: true }
+        { returnDocument: 'after' }
     ).lean();
     if (!cancelled) return { ok: false, reason: 'not_active' };
     await refreshMessage(guild, cancelled);

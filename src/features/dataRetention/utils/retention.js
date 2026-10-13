@@ -16,6 +16,12 @@ import { ReactionRolePanel, LegacyReactionRoles } from '../../reactionRoles/mode
 import { InviteConfig } from '../../inviteBlocker/models/inviteConfig.js';
 import { CustomMessage } from '../../customEmbeds/models/customMessage.js';
 import { StarboardConfig, StarboardPost } from '../../starboard/models/starboard.js';
+import { AutomodConfig } from '../../automod/models/automodConfig.js';
+import { TempVoiceConfig, TempChannel } from '../../tempVoice/models/tempVoice.js';
+import { Suggestion, SuggestionCounter, SuggestionConfig } from '../../suggestions/models/suggestion.js';
+import { VerificationConfig } from '../../verification/models/verification.js';
+import { CommandSettings } from '../../commandSettings/models/commandSettings.js';
+import { ServerStats } from '../../serverStats/models/serverStats.js';
 import { AuditLog } from '../../../dashboard/models/auditLog.js';
 import { LogData } from '../../../shared/utils/logger.js';
 
@@ -52,6 +58,15 @@ export const GUILD_DATA_MODELS = [
     CustomMessage,
     StarboardConfig,
     StarboardPost,
+    AutomodConfig,
+    TempVoiceConfig,
+    TempChannel,
+    Suggestion,
+    SuggestionCounter,
+    SuggestionConfig,
+    VerificationConfig,
+    CommandSettings,
+    ServerStats,
     AuditLog,
 ];
 

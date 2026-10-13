@@ -57,6 +57,38 @@ export function createShardBridge(manager) {
         voteReceived: (userId) => run('voteReceived', { userId }),
 
         /**
+         * Each shard's state, asked one at a time with a time limit, so a shard that's down shows as down
+         * instead of making the whole check fail (as one broadcast to every shard would).
+         * @param {number} [timeoutMs]
+         * @returns {Promise<{ id: number, status: 'online' | 'reconnecting' | 'down', ping: number | null }[]>}
+         */
+        async health(timeoutMs = 5000) {
+            const total = Number(manager.totalShards) || manager.shards.size;
+            const results = [];
+            for (let id = 0; id < total; id++) {
+                const shard = manager.shards.get(id);
+                if (!shard?.ready) {
+                    results.push({ id, status: 'down', ping: null });
+                    continue;
+                }
+                const state = await Promise.race([
+                    shard.eval((client) => ({ ready: client.ws.status === 0, ping: client.ws.ping })),
+                    new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs).unref()),
+                ]).catch(() => null);
+                results.push(
+                    state
+                        ? {
+                              id,
+                              status: state.ready ? 'online' : 'reconnecting',
+                              ping: Math.max(0, Math.round(state.ping)),
+                          }
+                        : { id, status: 'down', ping: null }
+                );
+            }
+            return results;
+        },
+
+        /**
          * Stats from every shard, ordered by shard ID.
          * @returns {Promise<any[]>}
          */

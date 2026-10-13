@@ -2,6 +2,8 @@ import { MessageFlags, Events } from 'discord.js';
 import User_Level_Cache from '../../levels/cache/userLevels.cache.js';
 import { isHandledComponent } from '../../../shared/constants/componentIds.js';
 import { reportError } from '../../../shared/utils/errorReport.js';
+import Command_Settings_Cache from '../../commandSettings/cache/commandSettings.cache.js';
+import { commandBlocker } from '../../commandSettings/utils/commandSettings.js';
 
 export const name = Events.InteractionCreate;
 export const once = false;
@@ -32,8 +34,10 @@ export async function execute(interaction) {
         return;
     }
 
-    // Buttons that a feature handles itself (e.g. tickets) are left to it
-    if (interaction.isMessageComponent() && isHandledComponent(interaction.customId)) return;
+    // Buttons and forms that a feature handles itself (e.g. tickets, temp voice) are left to it
+    if ((interaction.isMessageComponent() || interaction.isModalSubmit()) && isHandledComponent(interaction.customId)) {
+        return;
+    }
     if (interaction.isMessageComponent())
         return client.utils.Embed(
             interaction,
@@ -74,6 +78,22 @@ export async function execute(interaction) {
                 msg,
                 { flags: MessageFlags.Ephemeral }
             );
+        }
+
+        // The server's Commands page: turned off, or only in some channels or for some roles
+        if (interaction.inCachedGuild() && !command.meta.developerOnly) {
+            const blocked = commandBlocker(interaction, await Command_Settings_Cache.get(interaction.guildId));
+            if (blocked) {
+                return interaction.reply({
+                    content: client.utils.Translate(
+                        `commands.settings.${blocked.key}`,
+                        interaction.locale,
+                        blocked.vars
+                    ),
+                    flags: MessageFlags.Ephemeral,
+                    allowedMentions: { parse: [] },
+                });
+            }
         }
 
         if (!commandCooldown(interaction, command)) return;

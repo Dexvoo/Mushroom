@@ -20,6 +20,11 @@ export const BOT_PERMISSIONS = new PermissionsBitField([
     PermissionFlagsBits.ModerateMembers, // /moderation mute
     PermissionFlagsBits.ChangeNickname, // Bot Settings nickname
     PermissionFlagsBits.ManageGuildExpressions, // /emoji and /sticker
+    PermissionFlagsBits.ManageGuild, // AutoMod rules, and pausing invites during a raid
+    PermissionFlagsBits.MoveMembers, // Join-to-create voice channels
+    PermissionFlagsBits.Connect, // Join-to-create voice channels
+    PermissionFlagsBits.CreatePublicThreads, // Suggestion discussion threads
+    PermissionFlagsBits.SendMessagesInThreads,
 ]).bitfield.toString();
 
 /**
@@ -33,6 +38,19 @@ export function inviteUrl(applicationId, guildId) {
         scope: [OAuth2Scopes.Bot, OAuth2Scopes.ApplicationsCommands].join(' '),
         permissions: BOT_PERMISSIONS,
         ...(guildId && { guild_id: guildId, disable_guild_select: 'true' }),
+    });
+    return `https://discord.com/oauth2/authorize?${params}`;
+}
+
+/**
+ * The link to add Ovx to your own Discord account (a user install), so its user commands work in any DM or server.
+ * @param {string} applicationId
+ */
+export function userInstallUrl(applicationId) {
+    const params = new URLSearchParams({
+        client_id: applicationId,
+        integration_type: '1',
+        scope: OAuth2Scopes.ApplicationsCommands,
     });
     return `https://discord.com/oauth2/authorize?${params}`;
 }

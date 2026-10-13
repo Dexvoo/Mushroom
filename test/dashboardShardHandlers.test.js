@@ -11,6 +11,14 @@ import Welcome_Cache from '../src/features/welcome/cache/welcome.cache.js';
 import Ticket_Config_Cache from '../src/features/tickets/cache/ticketConfig.cache.js';
 import Moderation_Config_Cache from '../src/features/moderation/cache/moderationConfig.cache.js';
 import { StreamSubscription } from '../src/features/streams/models/streamSubscription.js';
+import Invite_Config_Cache from '../src/features/inviteBlocker/cache/inviteConfig.cache.js';
+import { withInviteDefaults } from '../src/features/inviteBlocker/models/inviteConfig.js';
+import Starboard_Config_Cache, { starboardDefaults } from '../src/features/starboard/cache/starboardConfig.cache.js';
+import Temp_Voice_Config_Cache, { tempVoiceDefaults } from '../src/features/tempVoice/cache/tempVoiceConfig.cache.js';
+import Verification_Config_Cache from '../src/features/verification/cache/verificationConfig.cache.js';
+import { verificationDefaults } from '../src/features/verification/models/verification.js';
+import Command_Settings_Cache from '../src/features/commandSettings/cache/commandSettings.cache.js';
+import { commandSettingsDefaults } from '../src/features/commandSettings/models/commandSettings.js';
 import { handle } from '../src/dashboard/shardHandlers.js';
 import { ALLOWED_SIZES } from '@discordjs/rest';
 
@@ -170,6 +178,12 @@ beforeEach(() => {
     moderation = { guildId: GUILD_ID, warnActions: [] };
     Moderation_Config_Cache.get = async () => moderation;
     Moderation_Config_Cache.set = async (guildId, updates) => (moderation = { guildId, ...updates });
+    // Settings the overview also shows; without these the tests would wait on a database that isn't there
+    Invite_Config_Cache.get = /** @type {any} */ (async (guildId) => withInviteDefaults(guildId));
+    Starboard_Config_Cache.get = /** @type {any} */ (async (guildId) => starboardDefaults(guildId));
+    Temp_Voice_Config_Cache.get = /** @type {any} */ (async (guildId) => tempVoiceDefaults(guildId));
+    Verification_Config_Cache.get = /** @type {any} */ (async (guildId) => verificationDefaults(guildId));
+    Command_Settings_Cache.get = /** @type {any} */ (async (guildId) => commandSettingsDefaults(guildId));
     streams = [];
     StreamSubscription.find = (filter) => ({
         sort: () => ({

@@ -66,6 +66,29 @@ import {
 import { giveawayDashboard } from '../features/giveaways/utils/dashboard.js';
 import { reactionRolesDashboard } from '../features/reactionRoles/utils/dashboard.js';
 import { customEmbedsDashboard } from '../features/customEmbeds/utils/dashboard.js';
+import { automodDashboard } from '../features/automod/utils/dashboard.js';
+import { ServerStats } from '../features/serverStats/models/serverStats.js';
+import { serverStatsDashboard, serverStatsView, SERVER_STATS_LIMITS } from '../features/serverStats/utils/dashboard.js';
+import Command_Settings_Cache from '../features/commandSettings/cache/commandSettings.cache.js';
+import {
+    commandList,
+    commandSettingsView,
+    validateCommandSettings,
+    describeCommandChanges,
+    COMMAND_SETTINGS_LIMITS,
+} from '../features/commandSettings/utils/commandSettings.js';
+import { CATEGORIES } from '../features/utility/utils/help.js';
+import { Translate } from '../shared/utils/i18n.js';
+import Verification_Config_Cache from '../features/verification/cache/verificationConfig.cache.js';
+import {
+    verificationDashboard,
+    verificationView,
+    VERIFICATION_LIMITS,
+} from '../features/verification/utils/dashboard.js';
+import { suggestionsDashboard, SUGGESTION_LIMITS } from '../features/suggestions/utils/dashboard.js';
+import Temp_Voice_Config_Cache from '../features/tempVoice/cache/tempVoiceConfig.cache.js';
+import { tempVoiceDashboard, tempVoiceView, TEMP_VOICE_LIMITS } from '../features/tempVoice/utils/dashboard.js';
+import { AUTOMOD_LIMITS } from '../features/automod/utils/settings.js';
 import { CUSTOM_EMBED_LIMITS } from '../features/customEmbeds/utils/validation.js';
 import Invite_Config_Cache from '../features/inviteBlocker/cache/inviteConfig.cache.js';
 import Starboard_Config_Cache from '../features/starboard/cache/starboardConfig.cache.js';
@@ -144,6 +167,12 @@ const handlers = {
     giveaways,
     reactionRoles,
     customEmbeds,
+    automod,
+    tempVoice,
+    suggestions,
+    saveVerification,
+    saveCommandSettings,
+    serverStats,
     logVote,
     voteReceived,
     resetSettings,
@@ -256,6 +285,15 @@ async function guildOverview(client, { guildId, userId }) {
         moderation: moderationView(moderation),
         inviteBlocker: inviteView(await Invite_Config_Cache.get(guild.id)),
         starboard: starboardView(await Starboard_Config_Cache.get(guild.id)),
+        tempVoice: tempVoiceView(await Temp_Voice_Config_Cache.get(guild.id)),
+        verification: verificationView(await Verification_Config_Cache.get(guild.id)),
+        commands: commandList(client),
+        commandCategories: CATEGORIES.map(({ id, emoji }) => ({
+            id,
+            emoji,
+            name: Translate(`commands.help.categories.${id}.name`, 'en-GB'),
+        })),
+        commandSettings: commandSettingsView(await Command_Settings_Cache.get(guild.id)),
         streams: await listSubscriptions(guild.id),
         streamStatus: platformStatus(),
         streamLimit: await streamLimit(guild.id),
@@ -276,7 +314,11 @@ async function guildOverview(client, { guildId, userId }) {
                 name: category.name,
                 botCanUse: me.permissionsIn(category).has(TICKET_CATEGORY_PERMISSIONS),
             })),
-        botPermissions: { manageRoles: me.permissions.has(PermissionFlagsBits.ManageRoles) },
+        botPermissions: {
+            manageRoles: me.permissions.has(PermissionFlagsBits.ManageRoles),
+            moveMembers: me.permissions.has(PermissionFlagsBits.MoveMembers),
+            manageChannels: me.permissions.has(PermissionFlagsBits.ManageChannels),
+        },
         limits: {
             ...LIMITS,
             NICKNAME_MAX,
@@ -292,6 +334,12 @@ async function guildOverview(client, { guildId, userId }) {
             REACTION_ROLES: REACTION_ROLE_LIMITS,
             INVITES: INVITE_LIMITS,
             STARBOARD: STARBOARD_LIMITS,
+            AUTOMOD: AUTOMOD_LIMITS,
+            TEMP_VOICE: TEMP_VOICE_LIMITS,
+            SUGGESTIONS: SUGGESTION_LIMITS,
+            VERIFICATION: VERIFICATION_LIMITS,
+            COMMANDS: COMMAND_SETTINGS_LIMITS,
+            SERVER_STATS: SERVER_STATS_LIMITS,
             CUSTOM_EMBEDS: CUSTOM_EMBED_LIMITS,
         },
         votesEnabled: votesEnabled(),
@@ -333,6 +381,89 @@ async function customEmbeds(client, { guildId, userId, ...payload }) {
     const access = await getManagedGuild(client, guildId, userId);
     if (!access.ok) return access;
     return customEmbedsDashboard(access.guild, payload, guildContext(access.guild));
+}
+
+/**
+ * The AutoMod page: Discord AutoMod rules made by Ovx, and anti-raid.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, op: string, settings?: unknown }} payload
+ */
+async function automod(client, { guildId, userId, ...payload }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    return automodDashboard(access.guild, access.member, payload, guildContext(access.guild), nameLookup(access.guild));
+}
+
+/**
+ * The Temp Voice page: join-to-create channels.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, op: string, settings?: unknown }} payload
+ */
+async function tempVoice(client, { guildId, userId, ...payload }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    return tempVoiceDashboard(access.guild, access.member, payload);
+}
+
+/**
+ * The Suggestions page: settings, and deciding or deleting suggestions.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, op: string }} payload
+ */
+async function suggestions(client, { guildId, userId, ...payload }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    return suggestionsDashboard(
+        access.guild,
+        access.member,
+        payload,
+        guildContext(access.guild),
+        nameLookup(access.guild)
+    );
+}
+
+/**
+ * The Verification page: saves the settings and posts or updates the panel.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, settings: unknown }} payload
+ */
+async function saveVerification(client, { guildId, userId, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    return verificationDashboard(access.guild, { settings }, guildContext(access.guild), nameLookup(access.guild));
+}
+
+/**
+ * The Commands page: commands turned off, or limited to some channels or roles.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, settings: unknown }} payload
+ */
+async function saveCommandSettings(client, { guildId, userId, settings }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    const { guild } = access;
+
+    const names = new Set(commandList(client).map((command) => command.name));
+    const { settings: valid, errors } = validateCommandSettings(settings, guildContext(guild), names);
+    if (errors.length > 0) return fail(400, 'Some settings are not valid', errors);
+
+    const before = commandSettingsView(await Command_Settings_Cache.get(guild.id));
+    const after = commandSettingsView(await Command_Settings_Cache.set(guild.id, valid));
+    return { ok: true, data: after, changes: describeCommandChanges(before, after, nameLookup(guild)) };
+}
+
+/**
+ * The Server Stats page: counter channels.
+ * @param {Client} client
+ * @param {{ guildId: string, userId: string, op: string }} payload
+ */
+async function serverStats(client, { guildId, userId, ...payload }) {
+    const access = await getManagedGuild(client, guildId, userId);
+    if (!access.ok) return access;
+    if (payload.op === 'get') {
+        return ok(serverStatsView(access.guild, await ServerStats.findOne({ guildId: access.guild.id }).lean()));
+    }
+    return serverStatsDashboard(access.guild, access.member, payload);
 }
 
 /**
@@ -829,6 +960,7 @@ const RESET_SECTIONS = new Set([
     'moderation',
     'invites',
     'starboard',
+    'commands',
 ]);
 
 /**
@@ -900,6 +1032,12 @@ async function resetSettings(client, { guildId, userId, section }) {
         const before = moderationView(await Moderation_Config_Cache.get(guild.id));
         const after = moderationView(await Moderation_Config_Cache.set(guild.id, { warnActions: [] }));
         return { ok: true, data: after, changes: describeModerationChanges(before, after) };
+    }
+
+    if (section === 'commands') {
+        const before = commandSettingsView(await Command_Settings_Cache.get(guild.id));
+        const after = commandSettingsView(await Command_Settings_Cache.reset(guild.id));
+        return { ok: true, data: after, changes: describeCommandChanges(before, after, names) };
     }
 
     if (section === 'starboard') {

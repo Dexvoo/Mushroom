@@ -87,7 +87,7 @@ export async function publishPanel(guild, panel, previous) {
     const updated = await ReactionRolePanel.findByIdAndUpdate(
         panel._id,
         { $set: { messageId: result.messageId } },
-        { new: true }
+        { returnDocument: 'after' }
     ).lean();
     return { ok: true, panel: updated ?? { ...panel, messageId: result.messageId } };
 }

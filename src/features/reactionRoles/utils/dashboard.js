@@ -119,7 +119,7 @@ export async function reactionRolesDashboard(guild, payload, context) {
     }
 
     const saved = existing
-        ? await ReactionRolePanel.findByIdAndUpdate(existing._id, { $set: valid }, { new: true }).lean()
+        ? await ReactionRolePanel.findByIdAndUpdate(existing._id, { $set: valid }, { returnDocument: 'after' }).lean()
         : (await ReactionRolePanel.create({ guildId: guild.id, ...valid })).toObject();
 
     const published = await publishPanel(

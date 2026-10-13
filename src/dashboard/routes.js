@@ -7,6 +7,7 @@ const LEADERBOARD_TYPES = new Set(['level', 'totalMessages', 'totalVoice', 'tota
 const PUBLIC_CACHE_MS = 60_000;
 const PUBLIC_CACHE_MAX = 500;
 const PUBLIC_STATS_MS = 5 * 60_000;
+const PUBLIC_HEALTH_MS = 15_000;
 const CASE_NUMBER = /^[1-9]\d{0,8}$/;
 const CASE_LABELS = { warn: 'Warning', ban: 'Ban', unban: 'Unban', kick: 'Kick', mute: 'Mute', unmute: 'Unmute' };
 
@@ -138,6 +139,135 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
                 );
                 await recordAudit(req, 'Updated automatic moderation', result.changes);
             }
+            return result;
+        })
+    );
+
+    /** Runs a temp voice action on the shard, recording a Web Logs entry when it changed something. */
+    const tempVoiceAction = (req, res, payload) =>
+        respond(res, async () => {
+            const result = await bridge.guild('tempVoice', req.params.guildId, {
+                userId: req.session.user.id,
+                ...payload,
+            });
+            if (result.ok && result.changes?.length) await recordAudit(req, result.action, result.changes);
+            return result;
+        });
+
+    router.put('/guilds/:guildId/temp-voice', requireLogin, validGuildId, (req, res) =>
+        tempVoiceAction(req, res, { op: 'save', settings: req.body })
+    );
+
+    router.post('/guilds/:guildId/temp-voice/setup', requireLogin, validGuildId, (req, res) =>
+        tempVoiceAction(req, res, { op: 'setup' })
+    );
+
+    const SUGGESTION_ID = /^[a-f\d]{24}$/i;
+    const suggestionsAction = (req, res, payload) =>
+        respond(res, async () => {
+            const result = await bridge.guild('suggestions', req.params.guildId, {
+                userId: req.session.user.id,
+                ...payload,
+            });
+            if (result.ok && result.action && result.changes?.length)
+                await recordAudit(req, result.action, result.changes);
+            return result;
+        });
+
+    router.get('/guilds/:guildId/suggestions', requireLogin, validGuildId, (req, res) =>
+        suggestionsAction(req, res, {
+            op: 'list',
+            status: typeof req.query.status === 'string' ? req.query.status : null,
+        })
+    );
+
+    router.put('/guilds/:guildId/suggestion-settings', requireLogin, validGuildId, (req, res) =>
+        suggestionsAction(req, res, { op: 'settings', settings: req.body })
+    );
+
+    router.post('/guilds/:guildId/suggestions/:suggestionId/decide', requireLogin, validGuildId, (req, res) => {
+        if (!SUGGESTION_ID.test(req.params.suggestionId)) return res.status(404).json({ error: 'Not found' });
+        return suggestionsAction(req, res, {
+            op: 'decide',
+            suggestionId: req.params.suggestionId,
+            status: req.body?.status,
+            reason: req.body?.reason,
+        });
+    });
+
+    router.delete('/guilds/:guildId/suggestions/:suggestionId', requireLogin, validGuildId, (req, res) => {
+        if (!SUGGESTION_ID.test(req.params.suggestionId)) return res.status(404).json({ error: 'Not found' });
+        return suggestionsAction(req, res, { op: 'delete', suggestionId: req.params.suggestionId });
+    });
+
+    router.put('/guilds/:guildId/verification', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('saveVerification', req.params.guildId, {
+                userId: req.session.user.id,
+                settings: req.body,
+            });
+            if (result.ok && result.changes?.length) await recordAudit(req, result.action, result.changes);
+            return result;
+        })
+    );
+
+    router.get('/guilds/:guildId/automod', requireLogin, validGuildId, (req, res) =>
+        respond(res, () => bridge.guild('automod', req.params.guildId, { userId: req.session.user.id, op: 'get' }))
+    );
+
+    router.put('/guilds/:guildId/automod', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('automod', req.params.guildId, {
+                userId: req.session.user.id,
+                op: 'save',
+                settings: req.body,
+            });
+            if (result.ok && result.changes?.length) await recordAudit(req, result.action, result.changes);
+            return result;
+        })
+    );
+
+    const STATS_CHANNEL = /^\d{17,20}$/;
+    const serverStatsAction = (req, res, payload) =>
+        respond(res, async () => {
+            const result = await bridge.guild('serverStats', req.params.guildId, {
+                userId: req.session.user.id,
+                ...payload,
+            });
+            if (result.ok && result.action && result.changes?.length)
+                await recordAudit(req, result.action, result.changes);
+            return result;
+        });
+
+    router.get('/guilds/:guildId/server-stats', requireLogin, validGuildId, (req, res) =>
+        serverStatsAction(req, res, { op: 'get' })
+    );
+
+    router.post('/guilds/:guildId/server-stats', requireLogin, validGuildId, (req, res) =>
+        serverStatsAction(req, res, { op: 'add', type: req.body?.type, roleId: req.body?.roleId })
+    );
+
+    router.put('/guilds/:guildId/server-stats/:channelId', requireLogin, validGuildId, (req, res) => {
+        if (!STATS_CHANNEL.test(req.params.channelId)) return res.status(404).json({ error: 'Not found' });
+        return serverStatsAction(req, res, {
+            op: 'rename',
+            channelId: req.params.channelId,
+            template: req.body?.template,
+        });
+    });
+
+    router.delete('/guilds/:guildId/server-stats/:channelId', requireLogin, validGuildId, (req, res) => {
+        if (!STATS_CHANNEL.test(req.params.channelId)) return res.status(404).json({ error: 'Not found' });
+        return serverStatsAction(req, res, { op: 'remove', channelId: req.params.channelId });
+    });
+
+    router.put('/guilds/:guildId/commands', requireLogin, validGuildId, (req, res) =>
+        respond(res, async () => {
+            const result = await bridge.guild('saveCommandSettings', req.params.guildId, {
+                userId: req.session.user.id,
+                settings: req.body,
+            });
+            if (result.ok && result.changes?.length) await recordAudit(req, 'Updated command settings', result.changes);
             return result;
         })
     );
@@ -377,6 +507,7 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
         moderation: 'Reset automatic moderation',
         invites: 'Reset the invite blocker',
         starboard: 'Reset the starboard',
+        commands: 'Reset command settings',
     };
 
     router.post('/guilds/:guildId/reset/:section', requireLogin, validGuildId, (req, res) => {
@@ -520,6 +651,21 @@ export function createApiRouter({ bridge, applicationId, developerIds, auditStor
             }
         }
         res.json({ guilds: publicStats.guilds, members: publicStats.members, inviteUrl: inviteUrl(applicationId) });
+    });
+
+    // Public: whether Ovx is working, for the Status page and uptime monitors (UptimeRobot, Better Stack...).
+    // 503 when any shard is down, which is what monitors watch for. Cached briefly so it can't be used to
+    // make the shards do work on every request.
+    let health = { at: 0, body: null };
+    router.get('/public/health', async (req, res) => {
+        if (!health.body || Date.now() - health.at >= PUBLIC_HEALTH_MS) {
+            const shards = await bridge.health().catch(() => []);
+            const online = shards.filter((shard) => shard.status === 'online').length;
+            const status =
+                shards.length > 0 && online === shards.length ? 'operational' : online > 0 ? 'degraded' : 'down';
+            health = { at: Date.now(), body: { status, shards, checkedAt: new Date().toISOString() } };
+        }
+        res.status(health.body.status === 'operational' ? 200 : 503).json(health.body);
     });
 
     router.get('/dev/stats', requireLogin, requireDeveloper(developerIds), async (req, res) => {

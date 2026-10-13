@@ -14,6 +14,12 @@ import { renderReactionRoles } from './reactionRoles.js';
 import { renderInviteBlocker } from './inviteBlocker.js';
 import { renderCustomEmbeds } from './customEmbeds.js';
 import { renderStarboard } from './starboard.js';
+import { renderAutomod } from './automod.js';
+import { renderTempVoice } from './tempVoice.js';
+import { renderSuggestions } from './suggestions.js';
+import { renderVerification } from './verification.js';
+import { renderCommands } from './commands.js';
+import { renderServerStats } from './serverStats.js';
 
 /**
  * Sidebar layout. Items with a `render` are live; the rest are planned and shown as "Soon".
@@ -24,7 +30,7 @@ export const SECTIONS = [
         label: 'Settings',
         items: [
             { slug: 'bot-settings', label: 'Bot Settings', render: renderBotSettings },
-            { slug: 'commands', label: 'Commands' },
+            { slug: 'commands', label: 'Commands', render: renderCommands },
             { slug: 'web-logs', label: 'Web Logs', render: renderWebLogs },
         ],
     },
@@ -33,6 +39,8 @@ export const SECTIONS = [
         items: [
             { slug: 'moderation', label: 'Moderation', render: renderModeration },
             { slug: 'logging', label: 'Logging', render: renderLogging },
+            { slug: 'automod', label: 'AutoMod', render: renderAutomod },
+            { slug: 'verification', label: 'Verification', render: renderVerification },
             { slug: 'invite-blocker', label: 'Invite Blocker', render: renderInviteBlocker },
             { slug: 'tickets', label: 'Tickets', render: renderTickets },
         ],
@@ -58,6 +66,9 @@ export const SECTIONS = [
             { slug: 'levels', label: 'Levels', render: renderLevels },
             { slug: 'welcome-messages', label: 'Welcome Messages', render: renderWelcome },
             { slug: 'giveaways', label: 'Giveaways', render: renderGiveaways },
+            { slug: 'suggestions', label: 'Suggestions', render: renderSuggestions },
+            { slug: 'join-to-create', label: 'Join to Create', render: renderTempVoice },
+            { slug: 'server-stats', label: 'Server Stats', render: renderServerStats },
             { slug: 'custom-embeds', label: 'Custom Embeds', render: renderCustomEmbeds },
             { slug: 'starboard', label: 'Starboard', render: renderStarboard },
         ],

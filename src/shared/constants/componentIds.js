@@ -11,6 +11,9 @@ export const HANDLED_COMPONENT_PREFIXES = Object.freeze([
     'select-role.', // Reaction role dropdowns from the old Ovx bot, also answered by roleButtons.js
     'vote:', // features/votes/events/remindButton.js
     'help:', // features/utility/events/helpMenu.js
+    'sg:', // features/suggestions/events/voteButtons.js
+    'vf:', // features/verification/events/verifyButtons.js (buttons and the code form)
+    'tv:', // features/tempVoice/events/voiceControls.js (buttons, forms and member pickers)
     'ovx-ticket-', // Ticket buttons from the old Ovx bot, still on panels in servers that used it
 ]);
 

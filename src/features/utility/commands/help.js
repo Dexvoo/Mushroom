@@ -6,6 +6,7 @@ import {
     PermissionFlagsBits,
 } from 'discord.js';
 import { overviewPage, commandPage, commandIds, featureOf } from '../utils/help.js';
+import Command_Settings_Cache from '../../commandSettings/cache/commandSettings.cache.js';
 
 export const commandData = new SlashCommandBuilder();
 commandData.setName('help');
@@ -38,6 +39,10 @@ export async function helpContext(interaction) {
         guildId: interaction.inCachedGuild() ? interaction.guildId : null,
         context: interaction.context ?? null,
         ids: await commandIds(interaction.client),
+        // Commands this server turned off on its Commands page are left out
+        disabled: interaction.inCachedGuild()
+            ? new Set((await Command_Settings_Cache.get(interaction.guildId)).disabled)
+            : new Set(),
     };
 }
 

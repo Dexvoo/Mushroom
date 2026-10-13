@@ -24,7 +24,7 @@ export async function recordVote(userId, now = new Date()) {
     const updated = await UserVote.findOneAndUpdate(
         { userId },
         { $inc: { votes: 1 }, $set: { lastVotedAt: now } },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
     ).lean();
     return updated?.votes ?? 1;
 }

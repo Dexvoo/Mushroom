@@ -94,7 +94,7 @@ export async function customEmbedsDashboard(guild, payload, context) {
     }
 
     const saved = existing
-        ? await CustomMessage.findByIdAndUpdate(existing._id, { $set: valid }, { new: true }).lean()
+        ? await CustomMessage.findByIdAndUpdate(existing._id, { $set: valid }, { returnDocument: 'after' }).lean()
         : (await CustomMessage.create({ guildId: guild.id, ...valid })).toObject();
 
     const published = await publishMessage(guild, {
@@ -109,7 +109,7 @@ export async function customEmbedsDashboard(guild, payload, context) {
         current = (await CustomMessage.findByIdAndUpdate(
             saved._id,
             { $set: { messageId: published.messageId } },
-            { new: true }
+            { returnDocument: 'after' }
         ).lean()) ?? { ...saved, messageId: published.messageId };
     }
 

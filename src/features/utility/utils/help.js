@@ -26,6 +26,7 @@ export const CATEGORIES = Object.freeze([
     { id: 'levels', emoji: '📈', features: ['levels'] },
     { id: 'tickets', emoji: '🎫', features: ['tickets'] },
     { id: 'giveaways', emoji: '🎉', features: ['giveaways'] },
+    { id: 'suggestions', emoji: '💡', features: ['suggestions'] },
     { id: 'expressions', emoji: '😀', features: ['expressions'] },
     { id: 'translate', emoji: '🌐', features: ['translate'] },
     { id: 'utility', emoji: '🧰', features: ['utility', 'information', 'votes'] },
@@ -37,15 +38,20 @@ const DASHBOARD_FEATURES = [
     'welcome',
     'auto_roles',
     'reaction_roles',
+    'automod',
+    'verification',
     'invite_blocker',
     'starboard',
     'custom_embeds',
+    'join_to_create',
+    'server_stats',
     'streams',
 ];
 
 /**
  * @typedef {import('../../../core/baseCommands.js').Command} Command
- * @typedef {{ locale: string, guildId: string | null, context: number | null, ids: Map<string, string> }} HelpContext
+ * @typedef {{ locale: string, guildId: string | null, context: number | null, ids: Map<string, string>,
+ *   disabled?: Set<string> }} HelpContext - disabled: commands the server turned off (hidden)
  */
 
 /**
@@ -62,11 +68,16 @@ export function featureOf(command) {
  * @param {string} categoryId
  * @param {number | null} context - The interaction's context (InteractionContextType)
  */
-export function categoryCommands(commands, categoryId, context) {
+export function categoryCommands(commands, categoryId, context, disabled = new Set()) {
     const category = CATEGORIES.find((item) => item.id === categoryId);
     if (!category) return [];
     return [...commands]
-        .filter((command) => !command.meta.developerOnly && category.features.includes(featureOf(command)))
+        .filter(
+            (command) =>
+                !command.meta.developerOnly &&
+                !disabled.has(command.commandData.name) &&
+                category.features.includes(featureOf(command))
+        )
         .filter((command) => {
             const contexts = command.commandData.toJSON().contexts;
             return context === null || !contexts || contexts.includes(context);
@@ -164,14 +175,14 @@ function menu(client, help, selected) {
     const commands = [...client.commands.values()];
     const options = [
         { label: t('overview'), value: 'overview', emoji: '👋', description: t('overview_short') },
-        ...CATEGORIES.filter((category) => categoryCommands(commands, category.id, help.context).length > 0).map(
-            (category) => ({
-                label: t(`categories.${category.id}.name`),
-                value: category.id,
-                emoji: category.emoji,
-                description: t(`categories.${category.id}.short`).slice(0, 100),
-            })
-        ),
+        ...CATEGORIES.filter(
+            (category) => categoryCommands(commands, category.id, help.context, help.disabled).length > 0
+        ).map((category) => ({
+            label: t(`categories.${category.id}.name`),
+            value: category.id,
+            emoji: category.emoji,
+            description: t(`categories.${category.id}.short`).slice(0, 100),
+        })),
     ].map((option) => ({ ...option, default: option.value === selected }));
 
     return /** @type {ActionRowBuilder<StringSelectMenuBuilder>} */ (new ActionRowBuilder()).addComponents(
@@ -218,7 +229,7 @@ export async function overviewPage(client, help, { canManage }) {
 
     const categories = CATEGORIES.map((category) => ({
         category,
-        count: categoryCommands(commands, category.id, help.context).length,
+        count: categoryCommands(commands, category.id, help.context, help.disabled).length,
     }))
         .filter(({ count }) => count > 0)
         .map(
@@ -258,7 +269,7 @@ export async function categoryPage(client, help, categoryId) {
     if (!category) return null;
 
     const lines = [];
-    for (const command of categoryCommands(client.commands.values(), categoryId, help.context)) {
+    for (const command of categoryCommands(client.commands.values(), categoryId, help.context, help.disabled)) {
         const json = command.commandData.toJSON();
         if (json.type === ApplicationCommandType.Message || json.type === ApplicationCommandType.User) {
             lines.push(

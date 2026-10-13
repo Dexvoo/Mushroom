@@ -43,6 +43,12 @@ export default async function loadEvents(client, dir) {
                 }
             };
 
+            // Each feature listens for its own events (every feature with buttons has an interactionCreate listener),
+            // so there are more than Node's default of 10. The limit grows only here, while features load at startup:
+            // a listener added later while running (a real leak) still gets Node's warning.
+            const needed = client.listenerCount(event.name) + 1;
+            if (needed > client.getMaxListeners()) client.setMaxListeners(needed);
+
             if (event.once) {
                 client.once(event.name, listener);
             } else {
