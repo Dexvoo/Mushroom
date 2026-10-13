@@ -3079,3 +3079,61 @@ a.giveaway-prize:hover {
         grid-row: 2;
     }
 }
+
+/* ---------- Levels: where members earn XP ---------- */
+
+.coverage-summary {
+    margin: 0 0 8px;
+    font-weight: 600;
+}
+
+.coverage-list {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.coverage-row {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--surface-raised);
+}
+
+.coverage-icon {
+    font-weight: 700;
+    color: var(--accent-text);
+}
+
+.coverage-off .coverage-icon,
+.coverage-off .coverage-reason {
+    color: var(--danger-text);
+}
+
+.coverage-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.coverage-reason {
+    color: var(--muted);
+    font-size: 0.9rem;
+    text-align: right;
+}
+
+@media (max-width: 560px) {
+    .coverage-row {
+        grid-template-columns: 20px minmax(0, 1fr);
+    }
+
+    .coverage-reason {
+        grid-column: 2;
+        text-align: left;
+    }
+}

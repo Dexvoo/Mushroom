@@ -12,6 +12,7 @@ import {
     createSettingsState,
     resetCard,
 } from './forms.js';
+import { channelXPStatus, levelsBlocker } from './levelsStatus.js';
 
 const DEFAULT_MESSAGE = '{user} leveled up to **{level}**!';
 
@@ -54,7 +55,81 @@ export function renderLevels(container, overview) {
     const set = (key, value) => {
         state.draft[key] = value;
         state.changed();
+        updateCoverage();
     };
+
+    // "Where members earn XP": follows the settings as they're changed, before saving
+    const coverage = el('div');
+    let showChannels = false;
+
+    function updateCoverage() {
+        const draft = state.draft;
+        const blocker = levelsBlocker(draft, overview.levels, channels);
+        const xpChannels = channels.filter((channel) => channel.type !== 'other');
+        const statuses = xpChannels.map((channel) => ({ channel, ...channelXPStatus(channel, draft) }));
+        const earning = statuses.filter((status) => status.earns).length;
+        const excludedRoles = roles.filter((role) => draft.blacklisted.roleIds.includes(role.id));
+
+        const lines = [];
+        if (blocker) lines.push(el('p', { className: 'notice notice-warn', textContent: blocker.text }));
+        lines.push(
+            el('p', {
+                className: 'coverage-summary',
+                textContent: blocker
+                    ? `Once that’s fixed, members will earn XP in ${earning} of ${xpChannels.length} channels.`
+                    : `Members earn XP in ${earning} of ${xpChannels.length} channels.`,
+            })
+        );
+        if (excludedRoles.length) {
+            lines.push(
+                el('p', {
+                    className: 'field-description',
+                    textContent: `Members with ${excludedRoles.map((role) => `@${role.name}`).join(', ')} don’t earn XP anywhere.`,
+                })
+            );
+        }
+
+        const toggleList = el('button', {
+            type: 'button',
+            className: 'button button-ghost button-small',
+            textContent: showChannels ? 'Hide channels' : 'Show every channel',
+            'aria-expanded': String(showChannels),
+        });
+        toggleList.addEventListener('click', () => {
+            showChannels = !showChannels;
+            updateCoverage();
+        });
+        lines.push(toggleList);
+
+        if (showChannels) {
+            // Channels that don't earn XP first: those are what people come here to find
+            const sorted = [...statuses].sort((a, b) => Number(a.earns) - Number(b.earns));
+            lines.push(
+                el(
+                    'ul',
+                    { className: 'coverage-list' },
+                    sorted.map(({ channel, earns, reason }) =>
+                        el('li', { className: `coverage-row${earns ? '' : ' coverage-off'}` }, [
+                            el('span', {
+                                className: 'coverage-icon',
+                                textContent: earns ? '✓' : '✕',
+                                'aria-hidden': 'true',
+                            }),
+                            el('span', {
+                                className: 'coverage-name',
+                                textContent: `${channel.type === 'voice' ? '🔊 ' : '# '}${channel.name}`,
+                            }),
+                            el('span', {
+                                className: 'coverage-reason',
+                                textContent: earns ? `Earns XP · ${reason}` : `No XP · ${reason}`,
+                            }),
+                        ])
+                    )
+                )
+            );
+        }
+        coverage.replaceChildren(...lines);
+    }
 
     function rewardsList() {
         const list = el('div', { className: 'rewards' });
@@ -169,6 +244,12 @@ export function renderLevels(container, overview) {
                 }),
             ]),
 
+            card(
+                'Where members earn XP',
+                'Ovx only sees messages in channels it can view. Messages under 5 characters (without an attachment) don’t count, and voice XP needs 2 or more people in the channel who aren’t deafened.',
+                [coverage]
+            ),
+
             card('XP', null, [
                 field({
                     label: 'Message cooldown',
@@ -224,6 +305,7 @@ export function renderLevels(container, overview) {
                         onChange: (ids) => {
                             draft.blacklisted.roleIds = ids;
                             state.changed();
+                            updateCoverage();
                         },
                     }),
                 }),
@@ -238,6 +320,7 @@ export function renderLevels(container, overview) {
                         onChange: (ids) => {
                             draft.blacklisted.channelIds = ids;
                             state.changed();
+                            updateCoverage();
                         },
                     }),
                 }),
@@ -269,6 +352,7 @@ export function renderLevels(container, overview) {
             state.bar
         );
         state.changed();
+        updateCoverage();
     }
 
     render();

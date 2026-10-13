@@ -252,6 +252,9 @@ async function guildOverview(client, { guildId, userId }) {
             type: channel.isVoiceBased() ? 'voice' : channel.isTextBased() ? 'text' : 'other',
             category: channel.parent?.name ?? null,
             botCanPost: canPostEmbeds(channel, me),
+            // For the Levels page: Ovx only sees messages in channels it can view
+            botCanView: me.permissionsIn(channel).has(PermissionFlagsBits.ViewChannel),
+            afk: channel.id === guild.afkChannelId,
         }));
 
     const roles = guild.roles.cache
