@@ -208,7 +208,8 @@ export function renderCustomEmbeds(container, overview) {
      * @param {string} key
      * @param {{ max?: number, placeholder?: string, id?: string, type?: string }} [options]
      */
-    function input(obj, key, { max, placeholder, id, type = 'text' } = {}) {
+    function input(obj, key, { max = limits.URL_MAX, placeholder, id, type = 'text' } = {}) {
+        // max must always be a number: maxLength = undefined becomes 0, which blocks all typing
         const element = el('input', {
             className: 'input input-wide',
             type,
